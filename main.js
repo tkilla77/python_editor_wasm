@@ -18,7 +18,7 @@ output.value = "Initializing...\n";
 
 // Add pyodide returned value to the output
 function addToOutput(stdout) {
-  output.value += ">>> " + "\n" + stdout + "\n";
+  output.value = stdout;
 }
 
 // Clean the output section
@@ -31,11 +31,11 @@ async function main() {
   let pyodide = await loadPyodide({
     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.19.1/full/",
   });
-  output.value = pyodide.runPython(`
+  pyodide.runPython(`
       import sys
       sys.version
   `);
-  output.value += "\n" + "Python Ready !" + "\n";
+  addToOutput("Python Ready !");
   return pyodide;
 }
 // run the main funciton
