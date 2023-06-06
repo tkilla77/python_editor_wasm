@@ -58,6 +58,8 @@ async function preInit() {
   if (params.has('code')) {
     const code = params.get('code');
     editor.setValue(code);
+    window.history.replaceState({}, '', window.location.pathname);
+
   } else {
     editor.setValue("print('Hello, world!')");
   }
