@@ -26,6 +26,7 @@ function clearHistory() {
   output.value = "";
 }
 
+
 // init Pyodide and show sys.version when it's loaded successfully
 async function main() {
   let pyodide = await loadPyodide({
@@ -40,6 +41,19 @@ async function main() {
 }
 // run the main funciton
 let pyodideReadyPromise = main();
+init();
+
+async function installFilesFromZip(url) {
+  let pyodide = await pyodideReadyPromise;
+  let zipResponse = await fetch(url);
+  let zipBinary = await zipResponse.arrayBuffer();
+  pyodide.unpackArchive(zipBinary, "zip");
+  console.log("files written!")
+}
+
+async function init() {
+  installFilesFromZip('files/2m.zip');
+}
 
 // pass the editor value to the pyodide.runPython function and show the result in the output section
 async function evaluatePython() {
