@@ -12,8 +12,6 @@ const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
               indentUnit: 4,
               matchBrackets: true,
             });
-// set the initial value of the editor
-editor.setValue("print('Hello world')");
 output.value = "Initializing...\n";
 
 // Add pyodide returned value to the output
@@ -39,7 +37,9 @@ async function main() {
   addToOutput("Python Ready !");
   return pyodide;
 }
-// run the main funciton
+
+// run the main function
+preInit();
 let pyodideReadyPromise = main();
 init();
 
@@ -51,6 +51,19 @@ async function installFilesFromZip(url) {
   console.log("files written!")
 }
 
+// Runs initialization before pyodide initialization
+async function preInit() {
+  const queryString = window.location.search;
+  const params = new URLSearchParams(queryString);
+  if (params.has('code')) {
+    const code = params.get('code');
+    editor.setValue(code);
+  } else {
+    editor.setValue("print('Hello, world!')");
+  }
+}
+
+// Runs initialization after pyodide initialization
 async function init() {
   installFilesFromZip('files/2m.zip');
 }
