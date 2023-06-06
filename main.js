@@ -56,10 +56,10 @@ async function preInit() {
   const queryString = window.location.search;
   const params = new URLSearchParams(queryString);
   if (params.has('code')) {
+    // Set editor contents and clear URL params.
     const code = params.get('code');
     editor.setValue(code);
     window.history.replaceState({}, '', window.location.pathname);
-
   } else {
     editor.setValue("print('Hello, world!')");
   }
