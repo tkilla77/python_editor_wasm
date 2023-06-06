@@ -59,7 +59,9 @@ async function preInit() {
     // Set editor contents and clear URL params.
     const code = params.get('code');
     editor.setValue(code);
-    window.history.replaceState({}, '', window.location.pathname);
+    let url = new URL(document.location.href);
+    url.searchParams.delete('code');
+    window.history.replaceState({}, '', url.href);
   } else {
     editor.setValue("print('Hello, world!')");
   }
@@ -84,4 +86,12 @@ async function evaluatePython() {
   } catch (err) {
     addToOutput(err);
   }
+}
+
+async function copyPermalink() {
+  const code = editor.getValue();
+  const encoded = encodeURIComponent(code);
+  let url = new URL(document.location.href);
+  url.searchParams.set('code', code);
+  navigator.clipboard.writeText(url.href);
 }
