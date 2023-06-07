@@ -5,22 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- installing tailwindcss from cdn, don't do this for production application -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- installing pyodide version 0.19.1 -->
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.19.1/full/pyodide.js"></script>
+  <!-- installing pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.2/full/pyodide.js"></script>
   <!-- importing codemirror stylings -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.min.css" />
-  <!-- installing codemirror.js version /5.63.3 from cdn -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/codemirror.min.js"
-  integrity="sha512-XMlgZzPyVXf1I/wbGnofk1Hfdx+zAWyZjh6c21yGo/k1zNC4Ve6xcQnTDTCHrjFGsOrVicJsBURLYktVEu/8vQ=="
-  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- installing codemirror.js from cdn -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"
+      integrity="sha512-8RnEqURPUc5aqFEN04aQEiPlSAdE0jlFS/9iGgUyNtwFnSKCXhmB6ZTNl7LnDtDWKabJIASzXrzD0K+LYexU9g=="
+      crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- installing codemirror python language support -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/mode/python/python.min.js"
-  integrity="sha512-/mavDpedrvPG/0Grj2Ughxte/fsm42ZmZWWpHz1jCbzd5ECv8CB7PomGtw0NAnhHmE/lkDFkRMupjoohbKNA1Q=="
-  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"
+      integrity="sha512-2M0GdbU5OxkGYMhakED69bw0c1pW3Nb0PeF3+9d+SnwN1ryPx3wiDdNqK3gSM7KAU/pEV+2tFJFbMKjKAahOkQ=="
+      crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- import codemirror dracula theme styles from cdn -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/theme/dracula.css"/> 
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/dracula.min.css"
+      integrity="sha512-gFMl3u9d0xt3WR8ZeW05MWm3yZ+ZfgsBVXLSOiFz2xeVrZ8Neg0+V1kkRIo9LikyA/T9HuS91kDfc2XWse0K0A=="
+      crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
-      /* set codemirror ide height to 100% of the textaread */
+      /* set codemirror ide height to 100% of the textarea */
       .CodeMirror {
           height: 100%;
       }
