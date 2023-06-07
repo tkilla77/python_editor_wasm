@@ -47,7 +47,7 @@ async function installFilesFromZip(url) {
   let pyodide = await pyodideReadyPromise;
   let zipResponse = await fetch(url);
   let zipBinary = await zipResponse.arrayBuffer();
-  pyodide.unpackArchive(zipBinary, "zip");
+  await pyodide.unpackArchive(zipBinary, "zip");
   console.log("files written!")
 }
 
@@ -69,7 +69,8 @@ async function preInit() {
 
 // Runs initialization after pyodide initialization
 async function init() {
-  installFilesFromZip('files/2m.zip');
+  await installFilesFromZip('files/2m.zip');
+  evaluatePython();
 }
 
 // pass the editor value to the pyodide.runPython function and show the result in the output section
