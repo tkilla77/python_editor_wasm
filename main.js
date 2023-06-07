@@ -81,7 +81,9 @@ async function evaluatePython() {
       import io
       sys.stdout = io.StringIO()
       `);
-    let result = pyodide.runPython(editor.getValue());
+    let code = editor.getValue();
+    code = code.replace('\t', '    ');
+    let result = pyodide.runPython(code);
     let stdout = pyodide.runPython("sys.stdout.getvalue()");
     addToOutput(stdout);
   } catch (err) {
