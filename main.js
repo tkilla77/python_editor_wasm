@@ -82,7 +82,7 @@ async function evaluatePython() {
       sys.stdout = io.StringIO()
       `);
     let code = editor.getValue();
-    code = code.replace('\t', '    ');
+    code = code.replaceAll('\t', '    ');
     let result = pyodide.runPython(code);
     let stdout = pyodide.runPython("sys.stdout.getvalue()");
     addToOutput(stdout);
