@@ -7,7 +7,7 @@ const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
                   version: 3,
                   singleLineStringErrors: false,
               },
-              theme: "dracula",
+              theme: "eclipse",
               lineNumbers: true,
               indentUnit: 4,
               matchBrackets: true,
