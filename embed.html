@@ -38,11 +38,11 @@
 
 <body class="h-full flex flex-col overflow-hidden max-w-7xl px-1 mt-1">
     <div class="h-full flex md:flex-row flex-col gap-2">
-        <div class="grid h-2/3 md:h-full md:w-2/3 border border-1 border-slate-300 rounded m-0">
+        <div class="grid h-2/3 md:h-full md:w-2/3 bg-neutral-100 border border-1 border-slate-300 rounded p-px">
             <!-- our code editor, where codemirror renders it's editor -->
             <textarea id="code" name="code" class="h-full"></textarea>
         </div>
-        <div class="grid h-1/3 md:h-full md:w-1/3 border border-1 border-slate-300 rounded m-0">
+        <div class="grid h-1/3 md:h-full md:w-1/3 bg-neutral-100 m-0 border border-1 border-slate-300 rounded p-px">
             <!-- output section where we show the stdout of the python code execution -->
             <textarea readonly style="font-family:monospace; resize:none;" class="p-2 text-slate-800 bg-neutral-100" id="output"
                 name="output"></textarea>
