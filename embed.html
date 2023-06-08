@@ -37,7 +37,7 @@
 </head>
 
 <body class="h-full flex flex-col overflow-hidden px-1 mt-1">
-    <div class="h-full flex md:flex-row flex-col gap-2">
+    <div class="h-5/6 grow flex md:flex-row flex-col gap-2">
         <div class="grid h-2/3 md:h-full md:w-2/3 bg-neutral-100 border border-1 border-neutral-300 rounded p-px">
             <!-- our code editor, where codemirror renders it's editor -->
             <textarea id="code" name="code" class="h-full"></textarea>
@@ -48,7 +48,7 @@
                 name="output"></textarea>
         </div>
     </div>
-    <div>
+    <div class="h-fit">
         <!-- Run button to pass the code to pyodide.runPython() -->
         <button onclick="evaluatePython()" type="button"
             class="mx-3 my-3 h-8 px-3 py-1 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-700 hover:bg-green-900 focus:outline-none focus:ring-1 focus:ring-offset-2 focus:ring-green-700 text-slate-300">Run</button>
