@@ -1,6 +1,18 @@
 // find the output element
 const output = document.getElementById("output");
 // initializing the codemirror and pass configuration to support python and dracula theme
+function betterTab(cm) {
+  if (cm.somethingSelected()) {
+    cm.indentSelection("add");
+  } else {
+    cm.replaceSelection(cm.getOption("indentWithTabs")? "\t":
+      Array(cm.getOption("indentUnit") + 1).join(" "), "end", "+input");
+  }
+}
+function run(cm) {
+  evaluatePython();
+}
+
 const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
               mode: {
                   name: "python",
@@ -10,7 +22,12 @@ const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
               theme: "eclipse",
               lineNumbers: true,
               indentUnit: 4,
+              tabSize: 4,
               matchBrackets: true,
+              extraKeys: {
+                Tab: betterTab,
+                'Ctrl-Enter': run,
+              },
             });
 output.value = "Initializing...\n";
 
@@ -126,8 +143,6 @@ async function evaluatePython() {
       sys.stdout = io.StringIO()
       `);
     let code = editor.getValue();
-    code = code.replaceAll('\t', '    ');
-    editor.setValue(code);
     let result = pyodide.runPython(code);
     let stdout = pyodide.runPython("sys.stdout.getvalue()");
     addToOutput(stdout);
