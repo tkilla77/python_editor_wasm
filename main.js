@@ -132,6 +132,12 @@ async function evaluatePython() {
     let stdout = pyodide.runPython("sys.stdout.getvalue()");
     addToOutput(stdout);
   } catch (err) {
+    // Drop uninteresting output from runPython
+    err = err.toString();
+    let debug_idx = err.indexOf('  File "<exec>"');
+    if (debug_idx > 0) {
+      err = err.substring(debug_idx);
+    }
     addToOutput(err);
   }
 }
