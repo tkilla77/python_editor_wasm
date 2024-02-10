@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="h-full bg-neutral-50">
+<html class="h-full m-0 bg-neutral-50">
 
 <head>
     <meta charset="UTF-8">
@@ -33,29 +33,9 @@
     </style>
 </head>
 
-<body class="h-full overflow-hidden max-w-7xl mx-auto px-4 m-4">
-    <p class="text-slate-800 text-3xl my-2 font-extrabold pt-6">Python im Browser</p>
-    <div class="h-3/4 flex md:flex-row flex-col gap-2">
-        <div class="grid h-2/3 md:h-full md:w-2/3 border-dashed border-2 border-slate-500 m-0">
-            <!-- our code editor, where codemirror renders it's editor -->
-            <textarea id="code" name="code" class="h-full"></textarea>
-        </div>
-        <div class="grid h-1/3 md:h-full md:w-1/3 border-dashed border-2 border-slate-500 m-0">
-            <!-- output section where we show the stdout of the python code execution -->
-            <textarea readonly style="resize: none;" class="p-2 text-slate-800 bg-neutral-100" id="output" name="output"></textarea>
-        </div>
-    </div>
-    <!-- Run button to pass the code to pyodide.runPython() -->
-    <button onclick="evaluatePython()" type="button"
-        class="mx-2 my-4 h-12 px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-700 hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700 text-slate-300">Run</button>
-    <!-- Cleaning the output section -->
-    <button onclick="clearHistory()" type="button"
-        class="mx-2 my-4 h-12 px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-700 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700 text-slate-300">Clear
-        History</button>
-    <button onclick="copyPermalink()" type="button"
-        class="mx-2 my-4 h-12 px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-700 text-slate-300">Copy
-        Permalink</button>
-    <script src="main.js"></script>
+<body class="h-full flex flex-col overflow-hidden max-w-7xl mx-auto px-4 m-0">
+    <p class="text-slate-800 text-3xl my-2 font-extrabold pt-6 flex-0">Python im Browser</p>
+    <iframe src="embed.html" class="w-full flex-1 mb-4"/>
 </body>
 
 </html>
