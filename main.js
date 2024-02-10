@@ -68,11 +68,14 @@ async function installFileFromUri(url) {
 
 
 /** Returns the containing page (if accessible) or iframe's search params. */
-function getParams() {
+function getUrl() {
   const uri = new URL((window.location != window.parent.location)
       ? document.referrer
       : document.location.href);
-  return uri.searchParams;
+  return uri;
+}
+function getParams() {
+  return getUrl().searchParams;
 }
 
 // Runs initialization before pyodide initialization
@@ -136,7 +139,7 @@ async function evaluatePython() {
 async function copyPermalink() {
   const code = editor.getValue();
   const encoded = encodeURIComponent(code);
-  let url = new URL(document.location.href);
+  let url = getUrl();
   url.searchParams.set('code', code);
   navigator.clipboard.writeText(url.href);
 }
