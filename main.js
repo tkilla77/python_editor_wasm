@@ -29,6 +29,7 @@ const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
                 'Ctrl-Enter': run,
               },
             });
+
 output.value = "Initializing...\n";
 
 // Add pyodide returned value to the output
