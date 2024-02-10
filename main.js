@@ -34,7 +34,7 @@ async function main() {
       import sys
       sys.version
   `);
-  addToOutput("Python Ready !");
+  addToOutput("Python Ready!");
   return pyodide;
 }
 
@@ -43,18 +43,41 @@ preInit();
 let pyodideReadyPromise = main();
 init();
 
+/** Loads data files available from the working directory of the code. */
 async function installFilesFromZip(url) {
   let pyodide = await pyodideReadyPromise;
   let zipResponse = await fetch(url);
   let zipBinary = await zipResponse.arrayBuffer();
   await pyodide.unpackArchive(zipBinary, "zip");
-  console.log("files written!")
+  console.log(`Loaded files from '${url}!`)
+}
+
+/** Loads single files available as imports. */
+async function installFileFromUri(url) {
+  let filename = url.split('/').pop();
+  let pyodide = await pyodideReadyPromise;
+  await pyodide.runPythonAsync(`
+    from pyodide.http import pyfetch
+    response = await pyfetch("${url}")
+
+    with open("${filename}", "wb") as f:
+      f.write(await response.bytes())
+  `);
+  console.log(`Loaded files from '${url}!`)
+}
+
+
+/** Returns the containing page (if accessible) or iframe's search params. */
+function getParams() {
+  const uri = new URL((window.location != window.parent.location)
+      ? document.referrer
+      : document.location.href);
+  return uri.searchParams;
 }
 
 // Runs initialization before pyodide initialization
 async function preInit() {
-  const queryString = window.location.search;
-  const params = new URLSearchParams(queryString);
+  const params = getParams();
   if (params.has('code')) {
     // Set editor contents and clear URL params.
     const code = params.get('code');
@@ -69,8 +92,23 @@ async function preInit() {
 
 // Runs initialization after pyodide initialization
 async function init() {
-  await installFilesFromZip('files/2m.zip');
-  evaluatePython();
+  const params = getParams();
+  for (let fileUri of params.getAll('zip')) {
+    try {
+      await installFilesFromZip(fileUri);
+    } catch (err) {
+      addToOutput(`Unable to load ${fileUri}: ${err}`);
+    }
+  }
+  for (let fileUri of params.getAll('file')) {
+    try {
+      await installFileFromUri(fileUri);
+    } catch (err) {
+      addToOutput(`Unable to load ${fileUri}: ${err}`);
+    }
+  }
+
+  //evaluatePython();
 }
 
 // pass the editor value to the pyodide.runPython function and show the result in the output section
