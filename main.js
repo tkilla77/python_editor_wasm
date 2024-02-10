@@ -16,7 +16,7 @@ output.value = "Initializing...\n";
 
 // Add pyodide returned value to the output
 function addToOutput(stdout) {
-  output.value = stdout;
+  output.value += stdout;
 }
 
 // Clean the output section
@@ -108,12 +108,15 @@ async function init() {
     }
   }
 
-  //evaluatePython();
+  if (params.has('autorun')) {
+    evaluatePython();
+  }
 }
 
 // pass the editor value to the pyodide.runPython function and show the result in the output section
 async function evaluatePython() {
   let pyodide = await pyodideReadyPromise;
+  clearHistory();
   try {
     pyodide.runPython(`
       import io
