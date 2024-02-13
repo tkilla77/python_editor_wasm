@@ -37,8 +37,14 @@ function addToOutput(stdout) {
   output.value += stdout;
 }
 
+// Add information to the log
+function addToLog(s) {
+  // for now, put log and program output into the same area
+  addToOutput(s);
+}
+
 // Clean the output section
-function clearHistory() {
+async function clearHistory() {
   output.value = "";
 }
 
@@ -52,7 +58,8 @@ async function main() {
       import sys
       sys.version
   `);
-  addToOutput("Python Ready!");
+  clearHistory();
+  addToOutput("Python Ready!\n");
   return pyodide;
 }
 
@@ -64,16 +71,23 @@ init();
 /** Loads data files available from the working directory of the code. */
 async function installFilesFromZip(url) {
   let pyodide = await pyodideReadyPromise;
+  addToLog(`Loading ${url}... `)
   let zipResponse = await fetch(url);
-  let zipBinary = await zipResponse.arrayBuffer();
-  await pyodide.unpackArchive(zipBinary, "zip");
-  console.log(`Loaded files from '${url}!`)
+  if (zipResponse.ok) {
+    let zipBinary = await zipResponse.arrayBuffer();
+    await pyodide.unpackArchive(zipBinary, "zip");
+    addToLog(`Done!\n`);
+  } else {
+    addToLog('Failed!\n');
+  }
 }
 
 /** Loads single files available as imports. */
 async function installFileFromUri(url) {
   let filename = url.split('/').pop();
   let pyodide = await pyodideReadyPromise;
+
+  addToLog(`Loading ${url}... `)
   await pyodide.runPythonAsync(`
     from pyodide.http import pyfetch
     response = await pyfetch("${url}")
@@ -81,7 +95,7 @@ async function installFileFromUri(url) {
     with open("${filename}", "wb") as f:
       f.write(await response.bytes())
   `);
-  console.log(`Loaded files from '${url}!`)
+  addToLog(`Done!\n`)
 }
 
 
@@ -113,19 +127,20 @@ async function preInit() {
 
 // Runs initialization after pyodide initialization
 async function init() {
+  // run everything sequentially...
   const params = getParams();
   for (let fileUri of params.getAll('zip')) {
     try {
       await installFilesFromZip(fileUri);
     } catch (err) {
-      addToOutput(`Unable to load ${fileUri}: ${err}`);
+      addToLog(`Unable to load ${fileUri}: ${err}\n`);
     }
   }
   for (let fileUri of params.getAll('file')) {
     try {
       await installFileFromUri(fileUri);
     } catch (err) {
-      addToOutput(`Unable to load ${fileUri}: ${err}`);
+      addToLog(`Unable to load ${fileUri}: ${err}\n`);
     }
   }
 
