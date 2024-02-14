@@ -22,11 +22,17 @@ Properties:
  * https://pyodide.org/
    * The basis for client-side python execution
  * https://console.basthon.fr/
-   * similar
+   * [x] supports deep links
+   * [x] turtle
+   * [x] pyiodide-based
+   * [ ] no additional files / modules
  * https://futurecoder.io/course/
-   * Focuses on elaborate tutoring, step completion etc.
-   * No multi-file, no turtle
-   * features 'birds-eye' view
+   * [x] Editor OK
+   * [ ] no turtle
+   * [ ] no deep links (?)
+   * [ ] no multi-file
+   * [x] Really elaborate tutoring, step completion etc.
+   * [x] features 'birds-eye' view
 
 ## Want to use this project?
 
