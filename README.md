@@ -17,6 +17,17 @@ Properties:
 6. Multi-file support (hidden in the initial setup).
 7. Simple debugging support.
 
+## Related Projects
+
+ * https://pyodide.org/
+   * The basis for client-side python execution
+ * https://console.basthon.fr/
+   * similar
+ * https://futurecoder.io/course/
+   * Focuses on elaborate tutoring, step completion etc.
+   * No multi-file, no turtle
+   * features 'birds-eye' view
+
 ## Want to use this project?
 
 TBD
