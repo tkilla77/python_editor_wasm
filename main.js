@@ -57,6 +57,7 @@ async function main() {
   pyodide.runPython(`
       import sys
       sys.version
+      
   `);
   clearHistory();
   addToOutput("Python Ready!\n");
@@ -101,9 +102,11 @@ async function installFileFromUri(url) {
 
 /** Returns the containing page (if accessible) or iframe's search params. */
 function getUrl() {
-  const uri = new URL((window.location != window.parent.location)
-      ? document.referrer
-      : document.location.href);
+  let uri = new URL(document.location.href);
+  if (uri.searchParams.size == 0 && window.location != window.parent.location) {
+    // Attempt to read URL params from containing page.
+    uri = new URL(document.referrer);
+  }
   return uri;
 }
 function getParams() {
