@@ -1,13 +1,16 @@
 // find the output element
 const output = document.getElementById("output");
 // initializing the codemirror and pass configuration to support python and dracula theme
-function betterTab(cm) {
+function indent(cm) {
   if (cm.somethingSelected()) {
     cm.indentSelection("add");
   } else {
     cm.replaceSelection(cm.getOption("indentWithTabs")? "\t":
       Array(cm.getOption("indentUnit") + 1).join(" "), "end", "+input");
   }
+}
+function unindent(cm) {
+  cm.indentSelection("subtract");
 }
 function run(cm) {
   evaluatePython();
@@ -25,7 +28,8 @@ const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
               tabSize: 4,
               matchBrackets: true,
               extraKeys: {
-                Tab: betterTab,
+                Tab: indent,
+                'Shift-Tab': unindent,
                 'Ctrl-Enter': run,
               },
             });
