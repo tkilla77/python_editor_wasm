@@ -1,6 +1,11 @@
 import { LitElement, css, html } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 
+import {EditorState} from "@codemirror/state"
+import {basicSetup} from "codemirror"
+import {EditorView, keymap} from "@codemirror/view"
+import {defaultKeymap} from "@codemirror/commands"
+
 @customElement('bottom-editor')
 class BottomEditor extends LitElement {
     constructor() {
@@ -31,23 +36,33 @@ class BottomEditor extends LitElement {
     }  
 
     firstUpdated() {
-        this._editor = CodeMirror.fromTextArea(this._code, {
-            mode: {
-                name: "python",
-                version: 3,
-                singleLineStringErrors: false,
-            },
-            theme: "eclipse",
-            lineNumbers: true,
-            indentUnit: 4,
-            tabSize: 4,
-            matchBrackets: true,
-            extraKeys: {
-              Tab: this.indent,
-              'Shift-Tab': this.unindent,
-              'Ctrl-Enter': this.run,
-            },
-          });
+        let editorState = EditorState.create({
+            doc: "Hello World",
+            extensions: [keymap.of(defaultKeymap)]
+          })
+          
+        this._editor = new EditorView({
+            state: editorState,
+            extensions: [basicSetup],
+            parent: this._code
+          })
+        // this._editor = CodeMirror.fromTextArea(this._code, {
+        //     mode: {
+        //         name: "python",
+        //         version: 3,
+        //         singleLineStringErrors: false,
+        //     },
+        //     theme: "eclipse",
+        //     lineNumbers: true,
+        //     indentUnit: 4,
+        //     tabSize: 4,
+        //     matchBrackets: true,
+        //     extraKeys: {
+        //       Tab: this.indent,
+        //       'Shift-Tab': this.unindent,
+        //       'Ctrl-Enter': this.run,
+        //     },
+        //   });
         this._output.value = "Initializing..."
 
               
@@ -79,7 +94,7 @@ class BottomEditor extends LitElement {
             import io
             sys.stdout = io.StringIO()
             `);
-            let code = this._editor.getValue();
+            let code = this._editor.state.doc.text;
             let result = pyodide.runPython(code);
             let stdout = pyodide.runPython("sys.stdout.getvalue()");
             this.addToOutput(stdout);
@@ -111,9 +126,8 @@ class BottomEditor extends LitElement {
         return html`
             <div class="h-full flex flex-col overflow-hidden px-1 mt-1">
                 <div class="h-5/6 grow flex md:flex-row flex-col gap-2">
-                    <div class="grid h-2/3 md:h-full md:w-2/3 bg-neutral-100 border border-1 border-neutral-300 rounded p-px">
+                    <div id="code" class="grid h-2/3 md:h-full md:w-2/3 bg-neutral-100 border border-1 border-neutral-300 rounded p-px">
                         <!-- our code editor, where codemirror renders it's editor -->
-                        <textarea id="code" name="code" class="h-full"></textarea>
                     </div>
                     <div class="grid h-1/3 md:h-full md:w-1/3 bg-neutral-100 m-0 border border-1 border-neutral-300 rounded p-px">
                         <!-- output section where we show the stdout of the python code execution -->
