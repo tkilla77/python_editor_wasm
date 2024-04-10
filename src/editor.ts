@@ -120,41 +120,85 @@ class BottomEditor extends LitElement {
         this.clearHistory();
         this.addToOutput("Python Ready!\n");
         return pyodide;
-    }        
-
-    render() {
-        return html`
-            <div class="h-full flex flex-col overflow-hidden px-1 mt-1">
-                <div class="h-5/6 grow flex md:flex-row flex-col gap-2">
-                    <div id="code" class="grid h-2/3 md:h-full md:w-2/3 bg-neutral-100 border border-1 border-neutral-300 rounded p-px">
-                        <!-- our code editor, where codemirror renders it's editor -->
-                    </div>
-                    <div class="grid h-1/3 md:h-full md:w-1/3 bg-neutral-100 m-0 border border-1 border-neutral-300 rounded p-px">
-                        <!-- output section where we show the stdout of the python code execution -->
-                        <textarea readonly style="font-family:monospace; resize:none;" class="p-2 text-neutral-700 bg-neutral-100" id="output"
-                            name="output"></textarea>
-                    </div>
-                </div>
-                <div class="h-fit my-2">
-                    <!-- Run button to pass the code to pyodide.runPython() -->
-                    <button id="run" @click="${this.evaluatePython}" type="button" title="Ctrl+Enter"
-                        class="me-1 my-2 h-8 px-3 py-1 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-700 hover:bg-green-900 focus:outline-none focus:ring-1 focus:ring-offset-2 focus:ring-green-700 text-slate-300">Run</button>
-                    <!-- Cleaning the output section -->
-                    <button id="clear" @click="${this.clearHistory}" type="button"
-                        class="me-1 my-2 h-8 px-3 py-1 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-700 hover:bg-red-900 focus:outline-none focus:ring-1   focus:ring-offset-2 focus:ring-red-700 text-slate-300">Clear
-                    Output</button>
-                    <button id="permalink" type="button"
-                        class="ms-1 my-2 h-8 px-3 py-1 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-900 focus:outline-none focus:ring-1 focus:ring-offset-2 focus:ring-gray-700 text-slate-300">Copy
-                        Permalink</button>
-                </div>
-            </div>`
     }
 
     static styles = css`
         :host {
-            /* display: block; */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        bottom-container {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0 0.25rem;
+            margin-top: 0.25rem;
+            flex-grow: 1;
+        }
+        bottom-editorarea {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            height: 83%;
+        }
+        bottom-code {
+            height: 66%;
+            background-color: #f5f5f5;
+            border: 1px #d4d4d4 solid;
+            border-radius: 0.5rem;
+        }
+        bottom-output {
+            display: grid;
+            height: 33%;
+            background-color: #f5f5f5;
+            border: 1px #d4d4d4 solid;
+            border-radius: 0.5rem;
+        }
+        bottom-output textarea {
+            font-family: monospace;
+            resize: none;
+            padding: 0.5rem;
+            color: #404040;
+        }
+        bottom-buttons {
+            height: fit-content;
+            margin-block: 0.5rem; 
+        }
+        bottom-buttons button {
+            margin-inline-end: 0.5rem;
+            margin-block: 0.5rem;
+            height: 2rem;
+            padding-inline: 0.75rem;
+            padding-block: 0.25rem;
+            border: 1px solid transparent;
+            border-radius: 0.25rem;
+            color: slategray;
         }
     `
+
+    render() {
+        return html`
+            <bottom-container>
+                <bottom-editorarea>
+                    <bottom-code id="code">
+                        <!-- our code editor, where codemirror renders it's editor -->
+                    </bottom-code>
+                    <bottom-output>
+                        <!-- output section where we show the stdout of the python code execution -->
+                        <textarea readonly id="output" name="output"></textarea>
+                    </bottom-output>
+                </bottom-editorarea>
+                <bottom-buttons>
+                    <!-- Run button to pass the code to pyodide.runPython() -->
+                    <button id="run" @click="${this.evaluatePython}" type="button" title="Ctrl+Enter">Run</button>
+                    <!-- Cleaning the output section -->
+                    <button id="clear" @click="${this.clearHistory}" type="button">Clear Output</button>
+                    <button id="permalink" type="button">Copy Permalink</button>
+                </bottom-buttons>
+            </bottom-container>`
+    }
 }
 
 declare global {
