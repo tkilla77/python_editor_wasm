@@ -94,7 +94,7 @@ class BottomEditor extends LitElement {
             import io
             sys.stdout = io.StringIO()
             `);
-            let code = this._editor.state.doc.text;
+            let code = this._editor.state.doc.text.toString();
             let result = pyodide.runPython(code);
             let stdout = pyodide.runPython("sys.stdout.getvalue()");
             this.addToOutput(stdout);
