@@ -37,7 +37,7 @@ class BottomEditor extends LitElement {
 
     firstUpdated() {
         let editorState = EditorState.create({
-            doc: "Hello World",
+            doc: "print(42)",
             extensions: [keymap.of(defaultKeymap)]
           })
           
@@ -94,7 +94,7 @@ class BottomEditor extends LitElement {
             import io
             sys.stdout = io.StringIO()
             `);
-            let code = this._editor.state.doc.text.toString();
+            let code = this._editor.state.doc.toString();
             let result = pyodide.runPython(code);
             let stdout = pyodide.runPython("sys.stdout.getvalue()");
             this.addToOutput(stdout);
@@ -128,7 +128,6 @@ class BottomEditor extends LitElement {
             flex-direction: column;
             height: 100vh;
         }
-        
         bottom-container {
             display: flex;
             flex-direction: column;
@@ -145,22 +144,22 @@ class BottomEditor extends LitElement {
         }
         bottom-code {
             height: 66%;
-            background-color: #f5f5f5;
+            background-color: white;
             border: 1px #d4d4d4 solid;
             border-radius: 0.5rem;
         }
         bottom-output {
             display: grid;
             height: 33%;
-            background-color: #f5f5f5;
-            border: 1px #d4d4d4 solid;
-            border-radius: 0.5rem;
         }
         bottom-output textarea {
             font-family: monospace;
             resize: none;
             padding: 0.5rem;
             color: #404040;
+            background-color: #f5f5f5;
+            border: 1px #d4d4d4 solid;
+            border-radius: 0.5rem;
         }
         bottom-buttons {
             height: fit-content;
