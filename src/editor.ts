@@ -3,20 +3,27 @@ import { customElement, property, query } from 'lit/decorators.js'
 
 import {EditorState} from "@codemirror/state"
 import {basicSetup} from "codemirror"
-import {EditorView, keymap} from "@codemirror/view"
-import {defaultKeymap} from "@codemirror/commands"
+import {EditorView, keymap, gutter, lineNumbers, KeyBinding} from "@codemirror/view"
+import {defaultKeymap, indentWithTab} from "@codemirror/commands"
+import {indentUnit, bracketMatching, codeFolding} from "@codemirror/language"
+import {python, localCompletionSource} from "@codemirror/lang-python"
+import {espresso} from 'thememirror';
+
 
 @customElement('bottom-editor')
 class BottomEditor extends LitElement {
+    private _editor?: EditorView
+    private pyodideReadyPromise?: Promise<any>
+
     constructor() {
         super();
     }
 
     @query('#code')
-    _code;
+    _code?: Element;
   
     @query('#output')
-    _output;
+    _output?: Element;
   
 
     indent(cm) {
@@ -28,41 +35,34 @@ class BottomEditor extends LitElement {
         }
     }
     unindent(cm) {
-        cm.indentSelection("subtract");
+        this.indentSelection("subtract");
     }
     
     run(cm) {
-        evaluatePython();
+        this.evaluatePython();
     }  
 
     firstUpdated() {
         let editorState = EditorState.create({
             doc: "print(42)",
-            extensions: [keymap.of(defaultKeymap)]
+            extensions: [
+                basicSetup,
+                python(),
+                EditorState.tabSize.of(4),
+                indentUnit.of('    '),
+                keymap.of(defaultKeymap),
+                keymap.of([indentWithTab]),
+                lineNumbers(),
+                bracketMatching(),
+                gutter({class: "cm-mygutter"}),
+                espresso
+            ]
           })
           
         this._editor = new EditorView({
             state: editorState,
-            extensions: [basicSetup],
             parent: this._code
           })
-        // this._editor = CodeMirror.fromTextArea(this._code, {
-        //     mode: {
-        //         name: "python",
-        //         version: 3,
-        //         singleLineStringErrors: false,
-        //     },
-        //     theme: "eclipse",
-        //     lineNumbers: true,
-        //     indentUnit: 4,
-        //     tabSize: 4,
-        //     matchBrackets: true,
-        //     extraKeys: {
-        //       Tab: this.indent,
-        //       'Shift-Tab': this.unindent,
-        //       'Ctrl-Enter': this.run,
-        //     },
-        //   });
         this._output.value = "Initializing..."
 
               
@@ -75,7 +75,7 @@ class BottomEditor extends LitElement {
     }
 
     // Add pyodide returned value to the output
-    addToOutput(stdout) {
+    addToOutput(stdout: string) {
         this._output.value += stdout;
     }
     
@@ -100,18 +100,18 @@ class BottomEditor extends LitElement {
             this.addToOutput(stdout);
         } catch (err) {
             // Drop uninteresting output from runPython
-            err = err.toString();
-            let debug_idx = err.indexOf('  File "<exec>"');
+            let error_text = err?.toString();
+            let debug_idx = error_text.indexOf('  File "<exec>"');
             if (debug_idx > 0) {
-            err = err.substring(debug_idx);
+                error_text = error_text.substring(debug_idx);
             }
-            this.addToOutput(err);
+            this.addToOutput(error_text);
         }
     }
     
     async main() {
         let pyodide = await loadPyodide({
-          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/",
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/",
         });
         pyodide.runPython(`
             import sys
@@ -120,6 +120,28 @@ class BottomEditor extends LitElement {
         this.clearHistory();
         this.addToOutput("Python Ready!\n");
         return pyodide;
+    }
+
+    render() {
+        return html`
+            <bottom-container>
+                <bottom-editorarea>
+                    <bottom-code id="code">
+                        <!-- our code editor, where codemirror renders it's editor -->
+                    </bottom-code>
+                    <bottom-output>
+                        <!-- output section where we show the stdout of the python code execution -->
+                        <textarea readonly id="output" name="output"></textarea>
+                    </bottom-output>
+                </bottom-editorarea>
+                <bottom-buttons>
+                    <!-- Run button to pass the code to pyodide.runPython() -->
+                    <button id="run" @click="${this.evaluatePython}" type="button" title="Ctrl+Enter">Run</button>
+                    <!-- Cleaning the output section -->
+                    <button id="clear" @click="${this.clearHistory}" type="button">Clear Output</button>
+                    <button id="permalink" type="button">Copy Permalink</button>
+                </bottom-buttons>
+            </bottom-container>`
     }
 
     static styles = css`
@@ -176,28 +198,6 @@ class BottomEditor extends LitElement {
             color: slategray;
         }
     `
-
-    render() {
-        return html`
-            <bottom-container>
-                <bottom-editorarea>
-                    <bottom-code id="code">
-                        <!-- our code editor, where codemirror renders it's editor -->
-                    </bottom-code>
-                    <bottom-output>
-                        <!-- output section where we show the stdout of the python code execution -->
-                        <textarea readonly id="output" name="output"></textarea>
-                    </bottom-output>
-                </bottom-editorarea>
-                <bottom-buttons>
-                    <!-- Run button to pass the code to pyodide.runPython() -->
-                    <button id="run" @click="${this.evaluatePython}" type="button" title="Ctrl+Enter">Run</button>
-                    <!-- Cleaning the output section -->
-                    <button id="clear" @click="${this.clearHistory}" type="button">Clear Output</button>
-                    <button id="permalink" type="button">Copy Permalink</button>
-                </bottom-buttons>
-            </bottom-container>`
-    }
 }
 
 declare global {
