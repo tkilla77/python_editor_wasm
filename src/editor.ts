@@ -1,15 +1,15 @@
 import { LitElement, css, html } from 'lit'
 import { customElement, query } from 'lit/decorators.js'
 
-import {basicSetup} from "codemirror"
-import {EditorState} from "@codemirror/state"
-import {EditorView, keymap, gutter, lineNumbers} from "@codemirror/view"
-import {defaultKeymap, indentWithTab} from "@codemirror/commands"
-import {indentUnit, bracketMatching} from "@codemirror/language"
-import {python} from "@codemirror/lang-python"
-import {espresso} from 'thememirror';
+import { basicSetup } from "codemirror"
+import { EditorState } from "@codemirror/state"
+import { EditorView, keymap, gutter, lineNumbers } from "@codemirror/view"
+import { defaultKeymap, indentWithTab } from "@codemirror/commands"
+import { indentUnit, bracketMatching } from "@codemirror/language"
+import { python } from "@codemirror/lang-python"
+import { espresso } from 'thememirror';
 
-import {loadPyodide} from 'pyodide';
+import { loadPyodide } from 'pyodide';
 
 @customElement('bottom-editor')
 class BottomEditor extends LitElement {
@@ -22,26 +22,26 @@ class BottomEditor extends LitElement {
 
     @query('#code')
     _code?: Element;
-  
+
     @query('#output')
     _output?: Element;
-  
+
 
     indent(cm) {
         if (cm.somethingSelected()) {
-          cm.indentSelection("add");
+            cm.indentSelection("add");
         } else {
-          cm.replaceSelection(cm.getOption("indentWithTabs")? "\t":
-            Array(cm.getOption("indentUnit") + 1).join(" "), "end", "+input");
+            cm.replaceSelection(cm.getOption("indentWithTabs") ? "\t" :
+                Array(cm.getOption("indentUnit") + 1).join(" "), "end", "+input");
         }
     }
     unindent(cm) {
         this.indentSelection("subtract");
     }
-    
+
     run(cm) {
         this.evaluatePython();
-    }  
+    }
 
     firstUpdated() {
         let editorState = EditorState.create({
@@ -55,18 +55,18 @@ class BottomEditor extends LitElement {
                 keymap.of([indentWithTab]),
                 lineNumbers(),
                 bracketMatching(),
-                gutter({class: "cm-mygutter"}),
+                gutter({ class: "cm-mygutter" }),
                 espresso
             ]
-          })
-          
+        })
+
         this._editor = new EditorView({
             state: editorState,
             parent: this._code
-          })
+        })
         this._output.value = "Initializing..."
 
-              
+
         // run the main function
         this.pyodideReadyPromise = this.main();
     }
@@ -79,13 +79,13 @@ class BottomEditor extends LitElement {
     addToOutput(stdout: string) {
         this._output.value += stdout;
     }
-    
+
     // Add information to the log
     addToLog(s) {
         // for now, put log and program output into the same area
         this.addToOutput(s);
     }
-        
+
     // pass the editor value to the pyodide.runPython function and show the result in the output section
     async evaluatePython() {
         let pyodide = await this.pyodideReadyPromise;
@@ -109,9 +109,9 @@ class BottomEditor extends LitElement {
             this.addToOutput(error_text);
         }
     }
-    
+
     async main() {
-        const py = await loadPyodide({indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full'});
+        const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full' });
         py.runPython(`
             import sys
             sys.version
@@ -201,6 +201,6 @@ class BottomEditor extends LitElement {
 
 declare global {
     interface HTMLElementTagNameMap {
-      'bottom-editor': BottomEditor
+        'bottom-editor': BottomEditor
     }
 }
