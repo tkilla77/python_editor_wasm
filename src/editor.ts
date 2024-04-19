@@ -164,6 +164,19 @@ class BottomEditor extends LitElement {
             display: grid;
             height: 33%;
         }
+        @media (min-width: 768px) {
+            bottom-editorarea {
+                flex-direction: row;
+            }
+            bottom-code {
+                height:100%;
+                width: 66%;
+            }
+            bottom-output {
+                height:100%;
+                width: 33%;
+            }
+        }
         bottom-output textarea {
             font-family: monospace;
             resize: none;
