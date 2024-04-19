@@ -1,15 +1,15 @@
 import { LitElement, css, html } from 'lit'
-import { customElement, property, query } from 'lit/decorators.js'
+import { customElement, query } from 'lit/decorators.js'
 
-import {EditorState} from "@codemirror/state"
 import {basicSetup} from "codemirror"
-import {EditorView, keymap, gutter, lineNumbers, KeyBinding} from "@codemirror/view"
+import {EditorState} from "@codemirror/state"
+import {EditorView, keymap, gutter, lineNumbers} from "@codemirror/view"
 import {defaultKeymap, indentWithTab} from "@codemirror/commands"
-import {indentUnit, bracketMatching, codeFolding} from "@codemirror/language"
-import {python, localCompletionSource} from "@codemirror/lang-python"
+import {indentUnit, bracketMatching} from "@codemirror/language"
+import {python} from "@codemirror/lang-python"
 import {espresso} from 'thememirror';
 
-import pyodide from 'https://cdn.jsdelivr.net/npm/pyodide@0.25.1/+esm';
+import {loadPyodide} from 'pyodide';
 
 @customElement('bottom-editor')
 class BottomEditor extends LitElement {
