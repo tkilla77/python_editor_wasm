@@ -24,24 +24,7 @@ class BottomEditor extends LitElement {
     _code?: Element;
 
     @query('#output')
-    _output?: Element;
-
-
-    indent(cm) {
-        if (cm.somethingSelected()) {
-            cm.indentSelection("add");
-        } else {
-            cm.replaceSelection(cm.getOption("indentWithTabs") ? "\t" :
-                Array(cm.getOption("indentUnit") + 1).join(" "), "end", "+input");
-        }
-    }
-    unindent(cm) {
-        this.indentSelection("subtract");
-    }
-
-    run(cm) {
-        this.evaluatePython();
-    }
+    _output?: HTMLTextAreaElement;
 
     firstUpdated() {
         let editorState = EditorState.create({
@@ -64,7 +47,8 @@ class BottomEditor extends LitElement {
             state: editorState,
             parent: this._code
         })
-        this._output.value = "Initializing..."
+        this.clearHistory();
+        this.addToOutput("Initializing...");
 
 
         // run the main function
@@ -72,23 +56,30 @@ class BottomEditor extends LitElement {
     }
 
     async clearHistory() {
-        this._output.value = ""
+        if (this._output) {
+            this._output.value = ""
+        }
     }
-
+    
     // Add pyodide returned value to the output
     addToOutput(stdout: string) {
-        this._output.value += stdout;
+        if (this._output) {
+            this._output.value += stdout;
+        }
     }
 
     // Add information to the log
-    addToLog(s) {
+    addToLog(s: any) {
         // for now, put log and program output into the same area
-        this.addToOutput(s);
+        this.addToOutput(s.toString());
     }
 
     // pass the editor value to the pyodide.runPython function and show the result in the output section
     async evaluatePython() {
         let pyodide = await this.pyodideReadyPromise;
+        if (!this._editor) {
+            return;
+        }
         this.clearHistory();
         try {
             pyodide.runPython(`
@@ -96,12 +87,12 @@ class BottomEditor extends LitElement {
             sys.stdout = io.StringIO()
             `);
             let code = this._editor.state.doc.toString();
-            let result = pyodide.runPython(code);
+            pyodide.runPython(code);
             let stdout = pyodide.runPython("sys.stdout.getvalue()");
             this.addToOutput(stdout);
-        } catch (err) {
+        } catch (err: any) {
             // Drop uninteresting output from runPython
-            let error_text = err?.toString();
+            let error_text = err.toString();
             let debug_idx = error_text.indexOf('  File "<exec>"');
             if (debug_idx > 0) {
                 error_text = error_text.substring(debug_idx);
