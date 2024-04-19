@@ -9,6 +9,7 @@ import {indentUnit, bracketMatching, codeFolding} from "@codemirror/language"
 import {python, localCompletionSource} from "@codemirror/lang-python"
 import {espresso} from 'thememirror';
 
+import pyodide from 'https://cdn.jsdelivr.net/npm/pyodide@0.25.1/+esm';
 
 @customElement('bottom-editor')
 class BottomEditor extends LitElement {
@@ -110,16 +111,14 @@ class BottomEditor extends LitElement {
     }
     
     async main() {
-        let pyodide = await loadPyodide({
-            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/",
-        });
-        pyodide.runPython(`
+        const py = await loadPyodide({indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full'});
+        py.runPython(`
             import sys
             sys.version
         `);
         this.clearHistory();
         this.addToOutput("Python Ready!\n");
-        return pyodide;
+        return py;
     }
 
     render() {
