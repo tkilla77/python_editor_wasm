@@ -141,6 +141,7 @@ class BottomEditor extends LitElement {
             height: 100vh;
         }
         bottom-container {
+            font-family: system-ui;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -188,7 +189,7 @@ class BottomEditor extends LitElement {
         }
         bottom-buttons {
             height: fit-content;
-            margin-block: 0.5rem; 
+            margin-block: 0.5rem;
         }
         bottom-buttons button {
             margin-inline-end: 0.5rem;
@@ -196,9 +197,27 @@ class BottomEditor extends LitElement {
             height: 2rem;
             padding-inline: 0.75rem;
             padding-block: 0.25rem;
-            border: 1px solid transparent;
-            border-radius: 0.25rem;
-            color: slategray;
+            border: 3px solid transparent;
+            border-radius: 0.375rem;
+            color: white;
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1.5rem;
+        }
+        bottom-buttons button:hover {
+            opacity: 75%;
+        }
+        bottom-buttons button:focus {
+            outline: solid 2px Highlight;
+        }
+        bottom-buttons button#run {
+            background-color: rgb(21 128 61);
+        }
+        bottom-buttons button#clear {
+            background-color: #7f1d1d;
+        }
+        bottom-buttons button#permalink {
+            background-color: #374151;
         }
     `
 }
