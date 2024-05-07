@@ -160,10 +160,14 @@ class BottomEditor extends LitElement {
             background-color: white;
             border: 1px #d4d4d4 solid;
             border-radius: 0.5rem;
+            overflow: hidden;
         }
         bottom-output {
             display: grid;
+            border: 1px #d4d4d4 solid;
+            border-radius: 0.5rem;
             height: 33%;
+            overflow: hidden;
         }
         @media (min-width: 768px) {
             bottom-editorarea {
@@ -180,12 +184,11 @@ class BottomEditor extends LitElement {
         }
         bottom-output textarea {
             font-family: monospace;
+            border: none;
             resize: none;
             padding: 0.5rem;
             color: #404040;
             background-color: #f5f5f5;
-            border: 1px #d4d4d4 solid;
-            border-radius: 0.5rem;
         }
         bottom-buttons {
             height: fit-content;
