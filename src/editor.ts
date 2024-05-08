@@ -186,6 +186,7 @@ class BottomEditor extends LitElement {
             font-family: monospace;
             border: none;
             resize: none;
+            box-shadow: none;
             padding: 0.5rem;
             color: #404040;
             background-color: #f5f5f5;
@@ -197,13 +198,13 @@ class BottomEditor extends LitElement {
         bottom-buttons button {
             margin-inline-end: 0.5rem;
             margin-block: 0.5rem;
-            height: 2rem;
+            min-height: 1rem;
             padding-inline: 0.75rem;
             padding-block: 0.25rem;
             border: 3px solid transparent;
             border-radius: 0.375rem;
             color: white;
-            font-weight: 500;
+            font-weight: 700;
             font-size: 1rem;
             line-height: 1.5rem;
         }
