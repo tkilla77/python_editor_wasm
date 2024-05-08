@@ -140,6 +140,9 @@ class BottomEditor extends LitElement {
             flex-direction: column;
             height: 100vh;
         }
+        .cm-editor {
+            height: 100%;
+        }
         bottom-container {
             font-family: system-ui;
             display: flex;
