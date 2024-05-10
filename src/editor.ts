@@ -7,7 +7,6 @@ import { EditorView, keymap, gutter, lineNumbers } from "@codemirror/view"
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
-import { espresso } from 'thememirror';
 
 import { loadPyodide } from 'pyodide';
 
@@ -38,8 +37,7 @@ class BottomEditor extends LitElement {
                 keymap.of([indentWithTab]),
                 lineNumbers(),
                 bracketMatching(),
-                gutter({ class: "cm-mygutter" }),
-                espresso
+                gutter({ class: "cm-mygutter" })
             ]
         })
 
@@ -129,6 +127,7 @@ class BottomEditor extends LitElement {
                     <button id="run" @click="${this.evaluatePython}" type="button" title="Ctrl+Enter">Run</button>
                     <!-- Cleaning the output section -->
                     <button id="clear" @click="${this.clearHistory}" type="button">Clear Output</button>
+                    <!-- permalink to editor contents - FIXME: implement -->
                     <button id="permalink" type="button">Copy Permalink</button>
                 </bottom-buttons>
             </bottom-container>`
