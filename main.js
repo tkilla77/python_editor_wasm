@@ -180,10 +180,18 @@ async function evaluatePython() {
   }
 }
 
+function getPermaUrl() {
+  let uri = new URL(document.location.href);
+  if (uri.pathname.endsWith("embed.html")) {
+    uri.pathname = uri.pathname.replace("/embed.html", "");
+  }
+  return uri;
+}
+
 async function copyPermalink() {
   const code = editor.getValue();
   const encoded = encodeURIComponent(code);
-  let url = getUrl();
+  let url = getPermaUrl();
   url.searchParams.set('code', code);
   navigator.clipboard.writeText(url.href);
 }
