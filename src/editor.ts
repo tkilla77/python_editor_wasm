@@ -171,6 +171,9 @@ class BottomEditor extends LitElement {
             height: 33%;
             overflow: hidden;
         }
+        bottom-output:focus-within {
+            outline: 2px Highlight solid;
+        }
         @media (min-width: 768px) {
             bottom-editorarea {
                 flex-direction: row;
@@ -192,6 +195,12 @@ class BottomEditor extends LitElement {
             padding: 0.5rem;
             color: #404040;
             background-color: #f5f5f5;
+        }
+        bottom-output textarea:focus {
+            border: none;
+            resize: none;
+            box-shadow: none;
+            outline: none;
         }
         bottom-buttons {
             height: fit-content;
