@@ -26,8 +26,13 @@ class BottomEditor extends LitElement {
     _output?: HTMLTextAreaElement;
 
     firstUpdated() {
+        // Get any immediate child texts of our editor element and use them as initial text content.
+        let text = Array.from(this.childNodes)
+                .filter(child => child.nodeType == Node.TEXT_NODE)
+                .map(child => child.textContent)
+                .join() || "";
         let editorState = EditorState.create({
-            doc: "print(42)",
+            doc: text,
             extensions: [
                 basicSetup,
                 python(),
