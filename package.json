@@ -1,7 +1,8 @@
 {
   "type": "module",
-  "main": "bottom-editor.js",
-  "module": "bottom-editor.js",
+  "name": "bottom-editor",
+  "main": "dist/bottom-editor.umd.cjs",
+  "module": "dist/bottom-editor.js",
   "types": "bottom-editor.d.ts",
   "dependencies": {
     "@codemirror/lang-python": "^6.1.5",
@@ -11,5 +12,11 @@
     "pyodide": "^0.25.1",
     "thememirror": "^2.0.1",
     "vite": "^5.2.7"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/bottom-editor.js",
+      "require": "./dist/bottom-editor.umd.cjs"
+    }
   }
 }
