@@ -174,6 +174,7 @@ class BottomEditor extends LitElement {
             height: auto;
             overflow: hidden;
             flex: 1;
+            min-height: 5lh;
         }
         @media (min-width: 768px) {
             bottom-editorarea {
@@ -184,6 +185,7 @@ class BottomEditor extends LitElement {
             }
             bottom-output {
                 width: 33%;
+                min-height: 2lh;
             }
         }
 
