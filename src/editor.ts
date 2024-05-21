@@ -143,31 +143,36 @@ class BottomEditor extends LitElement {
             display: flex;
             flex-direction: column;
         }
+        .cm-editor {
+            max-height: calc(2/3*(25lh - 68px));
+        }
         bottom-container {
             font-family: system-ui;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            flex-grow: 1;
+            flex: 1;
+            max-height: 25lh;
         }
         bottom-editorarea {
             display: flex;
             flex-direction: column;
             gap: 0.5em;
-            flex-grow: 1;
+            flex: 1;
         }
         bottom-code {
+            height: auto;
             background-color: white;
             border: 1px #d4d4d4 solid;
             border-radius: 0.5em;
             overflow: hidden;
-            flex-grow: 2;
-            display: grid;
+            flex: 2;
         }
         bottom-output {
             display: grid;
+            height: auto;
             overflow: hidden;
-            flex-grow: 1;
+            flex: 1;
         }
         @media (min-width: 768px) {
             bottom-editorarea {
@@ -179,7 +184,11 @@ class BottomEditor extends LitElement {
             bottom-output {
                 width: 33%;
             }
+            .cm-editor {
+                max-height: calc(25lh - 68px);
+            }
         }
+
         bottom-output textarea {
             font-family: monospace;
             resize: none;
