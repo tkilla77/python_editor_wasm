@@ -143,9 +143,6 @@ class BottomEditor extends LitElement {
             display: flex;
             flex-direction: column;
         }
-        .cm-editor {
-            height: 100%;
-        }
         bottom-container {
             font-family: system-ui;
             display: flex;
@@ -160,19 +157,16 @@ class BottomEditor extends LitElement {
             flex-grow: 1;
         }
         bottom-code {
-            height: auto;
             background-color: white;
             border: 1px #d4d4d4 solid;
             border-radius: 0.5em;
             overflow: hidden;
-            min-height: 3lh;
-            flex-grow: 2
+            flex-grow: 2;
+            display: grid;
         }
         bottom-output {
             display: grid;
-            height: auto;
             overflow: hidden;
-            min-height: 3lh;
             flex-grow: 1;
         }
         @media (min-width: 768px) {
