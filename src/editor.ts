@@ -142,9 +142,10 @@ class BottomEditor extends LitElement {
         :host {
             display: flex;
             flex-direction: column;
+            max-height: 25lh;
         }
         .cm-editor {
-            max-height: calc(2/3*(25lh - 68px));
+            height: 100%;
         }
         bottom-container {
             font-family: system-ui;
@@ -152,16 +153,16 @@ class BottomEditor extends LitElement {
             flex-direction: column;
             overflow: hidden;
             flex: 1;
-            max-height: 25lh;
+            height: 100%;
         }
         bottom-editorarea {
             display: flex;
             flex-direction: column;
             gap: 0.5em;
             flex: 1;
+            height: 0;
         }
         bottom-code {
-            height: auto;
             background-color: white;
             border: 1px #d4d4d4 solid;
             border-radius: 0.5em;
@@ -183,9 +184,6 @@ class BottomEditor extends LitElement {
             }
             bottom-output {
                 width: 33%;
-            }
-            .cm-editor {
-                max-height: calc(25lh - 68px);
             }
         }
 
