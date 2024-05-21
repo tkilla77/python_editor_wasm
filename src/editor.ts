@@ -142,7 +142,6 @@ class BottomEditor extends LitElement {
         :host {
             display: flex;
             flex-direction: column;
-            height: 100vh;
         }
         .cm-editor {
             height: 100%;
@@ -152,83 +151,73 @@ class BottomEditor extends LitElement {
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            padding: 0 0.25rem;
-            margin-top: 0.25rem;
             flex-grow: 1;
         }
         bottom-editorarea {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            height: 83%;
+            gap: 0.5em;
+            flex-grow: 1;
         }
         bottom-code {
-            height: 66%;
+            height: auto;
             background-color: white;
             border: 1px #d4d4d4 solid;
-            border-radius: 0.5rem;
+            border-radius: 0.5em;
             overflow: hidden;
+            min-height: 3lh;
+            flex-grow: 2
         }
         bottom-output {
             display: grid;
-            border: 1px #d4d4d4 solid;
-            border-radius: 0.5rem;
-            height: 33%;
+            height: auto;
             overflow: hidden;
-        }
-        bottom-output:focus-within {
-            outline: 2px Highlight solid;
+            min-height: 3lh;
+            flex-grow: 1;
         }
         @media (min-width: 768px) {
             bottom-editorarea {
                 flex-direction: row;
             }
             bottom-code {
-                height:100%;
                 width: 66%;
             }
             bottom-output {
-                height:100%;
                 width: 33%;
             }
         }
         bottom-output textarea {
             font-family: monospace;
-            border: none;
             resize: none;
+            border: 1px #d4d4d4 solid;
+            border-radius: 0.5em;
             box-shadow: none;
-            padding: 0.5rem;
+            padding: 0.5em;
             color: #404040;
             background-color: #f5f5f5;
         }
-        bottom-output textarea:focus {
-            border: none;
-            resize: none;
-            box-shadow: none;
-            outline: none;
-        }
         bottom-buttons {
             height: fit-content;
-            margin-block: 0.5rem;
+            margin-block: 0.5em;
         }
         bottom-buttons button {
-            margin-inline-end: 0.5rem;
-            margin-block: 0.5rem;
-            min-height: 1rem;
-            padding-inline: 0.75rem;
-            padding-block: 0.25rem;
-            border: 3px solid transparent;
-            border-radius: 0.375rem;
+            margin-inline-end: 0.5em;
+            margin-block: 0.5em;
+            min-height: 1em;
+            padding-inline: 0.75em;
+            padding-block: 0.25em;
+            border: 2px solid transparent;
+            border-radius: 0.375em;
             color: white;
             font-weight: 700;
-            font-size: 1rem;
-            line-height: 1.5rem;
+            font-size: 1em;
+            line-height: 1.5em;
         }
         bottom-buttons button:hover {
             opacity: 75%;
         }
         bottom-buttons button:focus {
-            outline: solid 2px Highlight;
+            border: solid 2px rgb(1 95 204)	;
         }
         bottom-buttons button#run {
             background-color: rgb(21 128 61);
