@@ -15,8 +15,7 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/bottom-editor.js",
-      "require": "./dist/bottom-editor.umd.cjs"
+      "import": "./dist/bottom-editor.js"
     }
   }
 }

@@ -4,63 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- installing tailwindcss from cdn, don't do this for production application -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- installing pyodide -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
-    <!-- importing codemirror stylings -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css"
-        integrity="sha512-uf06llspW44/LZpHzHT6qBOIVODjWtv4MxCricRxkzvopAlSWnTf6hpZTFxuuZcuNE9CBQhqE0Seu1CoRk84nQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!-- installing codemirror.js from cdn -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"
-        integrity="sha512-8RnEqURPUc5aqFEN04aQEiPlSAdE0jlFS/9iGgUyNtwFnSKCXhmB6ZTNl7LnDtDWKabJIASzXrzD0K+LYexU9g=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!-- installing codemirror python language support -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"
-        integrity="sha512-2M0GdbU5OxkGYMhakED69bw0c1pW3Nb0PeF3+9d+SnwN1ryPx3wiDdNqK3gSM7KAU/pEV+2tFJFbMKjKAahOkQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!-- import codemirror eclipse theme styles from cdn -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/dracula.min.css"
-    integrity="sha512-gFMl3u9d0xt3WR8ZeW05MWm3yZ+ZfgsBVXLSOiFz2xeVrZ8Neg0+V1kkRIo9LikyA/T9HuS91kDfc2XWse0K0A=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!-- import codemirror dracula theme styles from cdn -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/eclipse.min.css"
-        integrity="sha512-Gv0sGKOVrQcQjUHL+xd9Bpq5AvLKbcQMb8s4J1//caCLxqvj00CLJMzJlqnTHTCQbKFRpPHqzXteq6dSMs7PEw=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <style>
-        /* set codemirror ide height to 100% of the textarea */
-        .CodeMirror {
-            height: 100%;
-        }
-    </style>
+    <script type="module" src="src/editor.ts"></script>
 </head>
 
-<body class="h-full flex flex-col overflow-hidden px-1 mt-1">
-    <div class="h-5/6 grow flex md:flex-row flex-col gap-2">
-        <div class="grid h-2/3 md:h-full md:w-2/3 bg-neutral-100 border border-1 border-neutral-300 rounded p-px">
-            <!-- our code editor, where codemirror renders it's editor -->
-            <textarea id="code" name="code" class="h-full"></textarea>
-        </div>
-        <div class="grid h-1/3 md:h-full md:w-1/3 bg-neutral-100 m-0 border border-1 border-neutral-300 rounded p-px">
-            <!-- output section where we show the stdout of the python code execution -->
-            <textarea readonly style="font-family:monospace; resize:none;" class="p-2 text-neutral-700 bg-neutral-100" id="output"
-                name="output"></textarea>
-        </div>
-    </div>
-    <div class="h-fit my-2">
-        <!-- Run button to pass the code to pyodide.runPython() -->
-        <button onclick="evaluatePython()" type="button" title="Ctrl+Enter"
-            class="me-1 my-2 h-8 px-3 py-1 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-700 hover:bg-green-900 focus:outline-none focus:ring-1 focus:ring-offset-2 focus:ring-green-700 text-slate-300">Run</button>
-        <!-- Cleaning the output section -->
-        <button onclick="clearHistory()" type="button"
-            class="me-1 my-2 h-8 px-3 py-1 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-700 hover:bg-red-900 focus:outline-none focus:ring-1   focus:ring-offset-2 focus:ring-red-700 text-slate-300">Clear
-        Output</button>
-        <button onclick="copyPermalink()" type="button"
-            class="ms-1 my-2 h-8 px-3 py-1 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-900 focus:outline-none focus:ring-1 focus:ring-offset-2 focus:ring-gray-700 text-slate-300">Copy
-            Permalink</button>
-    </div>
-    <script src="main.js"></script>
+<body>
+    <bottom-editor>def greet(name):
+    print(f'Hi, {name}!')
+greet('world')
+</bottom-editor>
 </body>
-
-</html>

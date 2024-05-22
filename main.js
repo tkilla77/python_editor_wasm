@@ -189,9 +189,9 @@ function getPermaUrl() {
 }
 
 async function copyPermalink() {
-  const code = editor.getValue();
-  const encoded = encodeURIComponent(code);
-  let url = getPermaUrl();
-  url.searchParams.set('code', code);
-  navigator.clipboard.writeText(url.href);
+    const code = editor.getValue();
+    const encoded = encodeURIComponent(code);
+    let url = getPermaUrl();
+    url.searchParams.set('code', encoded);
+    navigator.clipboard.writeText(url.href);
 }

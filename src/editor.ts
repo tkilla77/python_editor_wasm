@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit'
-import { customElement, query } from 'lit/decorators.js'
+import { customElement, property, query } from 'lit/decorators.js'
 
 import { basicSetup } from "codemirror"
 import { EditorState } from "@codemirror/state"
@@ -7,12 +7,13 @@ import { EditorView, keymap, gutter, lineNumbers } from "@codemirror/view"
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
+import { textToBase64, base64ToText } from './encoder.js'
 
 import { loadPyodide } from 'pyodide';
 
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
-    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'closed'};
+    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'open'};
 
     private _editor?: EditorView
     private pyodideReadyPromise?: Promise<any>
@@ -21,19 +22,38 @@ export class BottomEditor extends LitElement {
         super();
     }
 
+    @property({attribute: 'sourcecode'})
+    set sourceCode(code: string) {
+        this.replaceDoc(code);
+    };
+    get sourceCode() {
+        return this._editor?.state.doc.toString() || '';
+    }
+
     @query('#code')
     _code?: Element;
 
     @query('#output')
     _output?: HTMLTextAreaElement;
 
-    firstUpdated() {
+    private getSourceCode() : string {
+        // First prio: code attribute, base64 encoded
+        let code = this.getAttribute("code");
+        if (code) {
+            return base64ToText(code);
+        }
+
+        // Second prio: immediate text children, unencoded.
         // Get any immediate child texts of our editor element and use them as initial text content.
-        let text = Array.from(this.childNodes)
+        return Array.from(this.childNodes)
                 .filter(child => child.nodeType == Node.TEXT_NODE)
                 .map(child => child.textContent)
                 .join() || "";
         
+    }
+
+    firstUpdated() {
+        let text = this.getSourceCode();
         let runCode = keymap.of([{
             key: "Ctrl-Enter",
             run: () => { this.evaluatePython(); return true }
@@ -64,8 +84,8 @@ export class BottomEditor extends LitElement {
         // run the main function
         this.pyodideReadyPromise = this.main();
     }
-    
-    replaceDoc(text: string) {
+
+    public replaceDoc(text: string) {
         let state = this._editor?.state;
         let replaceDoc = state?.update({ changes: {from: 0, to:state.doc.length, insert: text}});
         if (replaceDoc) {
@@ -130,6 +150,18 @@ export class BottomEditor extends LitElement {
         return py;
     }
 
+    getPermaUrl() {
+        // FIXME make baseurl configurable
+        return new URL("https://bottom.ch/ksr/ed/");
+    }
+      
+    async copyPermalink() {
+        const code = this.sourceCode;
+        let url = this.getPermaUrl();
+        url.searchParams.set('code', code);
+        navigator.clipboard.writeText(url.href);
+    }
+
     render() {
         return html`
             <bottom-container>
@@ -148,7 +180,7 @@ export class BottomEditor extends LitElement {
                     <!-- Cleaning the output section -->
                     <button id="clear" @click="${this.clearHistory}" type="button">Clear Output</button>
                     <!-- permalink to editor contents - FIXME: implement -->
-                    <button id="permalink" type="button">Copy Permalink</button>
+                    <button id="permalink" @click="${this.copyPermalink}" type="button">Copy Permalink</button>
                 </bottom-buttons>
             </bottom-container>`
     }

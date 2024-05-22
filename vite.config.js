@@ -13,7 +13,12 @@ export default defineConfig({
     },
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'embed2.html'),
+        main: resolve(__dirname, 'index.html'),
+        nested: resolve(__dirname, 'embed.html'),
+      },
+      output: {
+        inlineDynamicImports: false,
+        format: "module",
       },
       external: ["node-fetch"],
     },
