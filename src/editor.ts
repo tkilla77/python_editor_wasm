@@ -11,7 +11,7 @@ import { python } from "@codemirror/lang-python"
 import { loadPyodide } from 'pyodide';
 
 @customElement('bottom-editor')
-class BottomEditor extends LitElement {
+export class BottomEditor extends LitElement {
     static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'closed'};
 
     private _editor?: EditorView
@@ -53,17 +53,24 @@ class BottomEditor extends LitElement {
                 gutter({ class: "cm-mygutter" })
             ]
         })
-
+        
         this._editor = new EditorView({
             state: editorState,
             parent: this._code
         })
         this.clearHistory();
         this.addToOutput("Initializing...");
-
-
+        
         // run the main function
         this.pyodideReadyPromise = this.main();
+    }
+    
+    replaceDoc(text: string) {
+        let state = this._editor?.state;
+        let replaceDoc = state?.update({ changes: {from: 0, to:state.doc.length, insert: text}});
+        if (replaceDoc) {
+            this._editor?.dispatch(replaceDoc);
+        }
     }
 
     async clearHistory() {
