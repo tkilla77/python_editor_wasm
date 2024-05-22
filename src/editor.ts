@@ -12,6 +12,8 @@ import { loadPyodide } from 'pyodide';
 
 @customElement('bottom-editor')
 class BottomEditor extends LitElement {
+    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'closed'};
+
     private _editor?: EditorView
     private pyodideReadyPromise?: Promise<any>
 
@@ -31,6 +33,11 @@ class BottomEditor extends LitElement {
                 .filter(child => child.nodeType == Node.TEXT_NODE)
                 .map(child => child.textContent)
                 .join() || "";
+        
+        let runCode = keymap.of([{
+            key: "Ctrl-Enter",
+            run: () => { this.evaluatePython(); return true }
+          }]);
         let editorState = EditorState.create({
             doc: text,
             extensions: [
@@ -38,6 +45,7 @@ class BottomEditor extends LitElement {
                 python(),
                 EditorState.tabSize.of(4),
                 indentUnit.of('    '),
+                runCode,
                 keymap.of(defaultKeymap),
                 keymap.of([indentWithTab]),
                 lineNumbers(),
