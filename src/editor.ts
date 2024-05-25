@@ -13,7 +13,7 @@ import { loadPyodide } from 'pyodide';
 
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
-    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'open'};
+    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'closed'};
 
     private _editor?: EditorView
     private pyodideReadyPromise?: Promise<any>
@@ -83,6 +83,11 @@ export class BottomEditor extends LitElement {
         
         // run the main function
         this.pyodideReadyPromise = this.main();
+
+        let autorun = this.getAttribute("autorun");
+        if (!(autorun === 'false' || autorun === '0')) {
+            this.evaluatePython();
+        }
     }
 
     public replaceDoc(text: string) {

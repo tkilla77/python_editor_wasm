@@ -5,12 +5,13 @@ import { textToBase64, base64ToText } from './encoder.js'
 
 @customElement('main-editor')
 class MainEditor extends LitElement {
-    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'open'};
+    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'closed'};
 
     @query('bottom-editor')
     _editor?: BottomEditor;
 
     private sourceCode : string = '';
+    private autoRun: boolean = false;
 
     constructor() {
         super();
@@ -24,6 +25,14 @@ class MainEditor extends LitElement {
             }
             let url = new URL(document.location.href);
             url.searchParams.delete('code');
+            window.history.replaceState({}, '', url.href);
+        }
+        if (params.has('autorun')) {
+            const autorun = params.get('autorun');
+            console.log(`Updating autorun from URL param: ${autorun}`);
+            this.autoRun = !(autorun === 'false' || autorun === '0');
+            let url = new URL(document.location.href);
+            url.searchParams.delete('autorun');
             window.history.replaceState({}, '', url.href);
         }
     }
@@ -41,26 +50,8 @@ class MainEditor extends LitElement {
         return this.getUrl().searchParams;
     }
 
-    protected firstUpdated() {
-        const params = this.getParams();
-        if (params.has('code')) {
-            // Set editor contents and clear URL params.
-            const code = params.get('code');
-            if (code && this._editor) {
-                console.log(`Updating code from URL param: ${code}`);
-                console.log(this._editor.sourceCode);
-                console.log(this._editor.replaceDoc);
-                this._editor.sourceCode = code;
-                console.log(this._editor.sourceCode);
-            }
-            let url = new URL(document.location.href);
-            url.searchParams.delete('code');
-            window.history.replaceState({}, '', url.href);
-        }
-    }
-
     render() {
-        return html`<bottom-editor code='${textToBase64(this.sourceCode)}'></bottom-editor>`;
+        return html`<bottom-editor code='${textToBase64(this.sourceCode)}' autorun='${this.autoRun}'></bottom-editor>`;
     }
 
     static styles = css`
