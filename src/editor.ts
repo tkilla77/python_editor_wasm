@@ -84,9 +84,11 @@ export class BottomEditor extends LitElement {
         // run the main function
         this.pyodideReadyPromise = this.main();
 
-        let autorun = this.getAttribute("autorun");
-        if (!(autorun === 'false' || autorun === '0')) {
-            this.evaluatePython();
+        if (this.hasAttribute("autorun")) {
+            let autorun = this.getAttribute("autorun");
+            if (!(autorun === 'false' || autorun === '0')) {
+                this.evaluatePython();
+            }
         }
     }
 
@@ -125,14 +127,8 @@ export class BottomEditor extends LitElement {
         }
         this.clearHistory();
         try {
-            pyodide.runPython(`
-            import io
-            sys.stdout = io.StringIO()
-            `);
             let code = this._editor.state.doc.toString();
-            pyodide.runPython(code);
-            let stdout = pyodide.runPython("sys.stdout.getvalue()");
-            this.addToOutput(stdout);
+            await pyodide.runPythonAsync(code);
         } catch (err: any) {
             // Drop uninteresting output from runPython
             let error_text = err.toString();
@@ -144,12 +140,16 @@ export class BottomEditor extends LitElement {
         }
     }
 
+    /* Implements the WriteHandler interface for pyodide.setStdout(). */
+    write(buffer: Uint8Array) {
+        this.addToOutput(new TextDecoder().decode(buffer));
+        return buffer.length;
+    }
+
     async main() {
         const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full' });
-        py.runPython(`
-            import sys
-            sys.version
-        `);
+        py.setStdin({ stdin: () => prompt() });
+        py.setStdout(this);
         this.clearHistory();
         this.addToOutput("Python Ready!\n");
         return py;
