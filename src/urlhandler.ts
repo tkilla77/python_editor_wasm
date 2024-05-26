@@ -1,7 +1,7 @@
 import { LitElement, css, html } from 'lit'
 import { customElement, query } from 'lit/decorators.js'
 import { BottomEditor } from './editor.js'
-import { textToBase64, base64ToText } from './encoder.js'
+import { textToBase64 } from './encoder.js'
 
 @customElement('main-editor')
 class MainEditor extends LitElement {

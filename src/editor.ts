@@ -7,7 +7,7 @@ import { EditorView, keymap, gutter, lineNumbers } from "@codemirror/view"
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
-import { textToBase64, base64ToText } from './encoder.js'
+import { base64ToText } from './encoder.js'
 
 import { loadPyodide } from 'pyodide';
 
@@ -146,7 +146,7 @@ export class BottomEditor extends LitElement {
         return buffer.length;
     }
 
-    async main() {
+    private async main() {
         const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full' });
         py.setStdin({ stdin: () => prompt() });
         py.setStdout(this);
