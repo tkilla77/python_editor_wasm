@@ -9,7 +9,7 @@ import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
 import { base64ToText } from './encoder.js'
 
-import { asyncRun } from './pyodide_api.js'
+import { asyncRun, interrupt } from './pyodide_api.js'
 
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
@@ -123,7 +123,9 @@ export class BottomEditor extends LitElement {
         this.clearHistory();
         try {
             let code = this._editor.state.doc.toString();
-            await asyncRun(code, {}, (output: string) => this.addToOutput(output));
+            console.log("Evaluating Python...")
+            await asyncRun(code, (output: string) => this.addToOutput(output));
+            console.log("Python evaluated...")
         } catch (err: any) {
             // Drop uninteresting output from runPython
             let error_text = err.toString();
@@ -168,6 +170,8 @@ export class BottomEditor extends LitElement {
                 <bottom-buttons>
                     <!-- Run button to pass the code to pyodide.runPython() -->
                     <button id="run" @click="${this.evaluatePython}" type="button" title="Ctrl+Enter">Run</button>
+                    <!-- interrupt python - FIXME: implement -->
+                    <button id="interrupt" @click="${interrupt}" type="button">Stop</button>
                     <!-- Cleaning the output section -->
                     <button id="clear" @click="${this.clearHistory}" type="button">Clear Output</button>
                     <!-- permalink to editor contents - FIXME: implement -->
@@ -262,6 +266,9 @@ export class BottomEditor extends LitElement {
         }
         bottom-buttons button#run {
             background-color: rgb(21 128 61);
+        }
+        bottom-buttons button#interrupt {
+            background-color: red;
         }
         bottom-buttons button#clear {
             background-color: #7f1d1d;

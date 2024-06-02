@@ -12,6 +12,7 @@
     "node-fetch": "^3.3.2",
     "pyodide": "^0.25.1",
     "thememirror": "^2.0.1",
+    "uuid": "^9.0.1",
     "vite": "^5.2.7"
   },
   "exports": {
