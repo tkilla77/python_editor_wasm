@@ -6,6 +6,16 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['pyodided']
   },
+  worker: {
+    format: "es",
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: false,
+        format: "module",
+      },
+      external: ["node-fetch"],
+    },
+  },
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points

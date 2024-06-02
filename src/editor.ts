@@ -9,14 +9,13 @@ import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
 import { base64ToText } from './encoder.js'
 
-import { loadPyodide } from 'pyodide';
+import { asyncRun } from './pyodide_api.js'
 
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
     static shadowRootOptions = {...LitElement.shadowRootOptions, mode: 'closed'};
 
     private _editor?: EditorView
-    private pyodideReadyPromise?: Promise<any>
 
     constructor() {
         super();
@@ -81,9 +80,6 @@ export class BottomEditor extends LitElement {
         this.clearHistory();
         this.addToOutput("Initializing...");
         
-        // run the main function
-        this.pyodideReadyPromise = this.main();
-
         if (this.hasAttribute("autorun")) {
             let autorun = this.getAttribute("autorun");
             if (!(autorun === 'false' || autorun === '0')) {
@@ -121,14 +117,13 @@ export class BottomEditor extends LitElement {
 
     // pass the editor value to the pyodide.runPython function and show the result in the output section
     async evaluatePython() {
-        let pyodide = await this.pyodideReadyPromise;
         if (!this._editor) {
             return;
         }
         this.clearHistory();
         try {
             let code = this._editor.state.doc.toString();
-            await pyodide.runPythonAsync(code);
+            await asyncRun(code, {}, (output: string) => this.addToOutput(output));
         } catch (err: any) {
             // Drop uninteresting output from runPython
             let error_text = err.toString();
@@ -144,15 +139,6 @@ export class BottomEditor extends LitElement {
     write(buffer: Uint8Array) {
         this.addToOutput(new TextDecoder().decode(buffer));
         return buffer.length;
-    }
-
-    private async main() {
-        const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full' });
-        py.setStdin({ stdin: () => prompt() });
-        py.setStdout(this);
-        this.clearHistory();
-        this.addToOutput("Python Ready!\n");
-        return py;
     }
 
     getPermaUrl() {
