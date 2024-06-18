@@ -4,7 +4,7 @@
       "experimentalDecorators": true,
       "useDefineForClassFields": false,
       "module": "ES2020",
-      "lib": ["ES2021", "DOM", "DOM.Iterable"],
+      "lib": ["ES2021", "DOM", "DOM.Iterable", "WebWorker"],
       "declaration": true,
       "declarationMap": true,
       "skipLibCheck": true,

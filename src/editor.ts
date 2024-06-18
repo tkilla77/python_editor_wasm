@@ -124,7 +124,7 @@ export class BottomEditor extends LitElement {
         try {
             let code = this._editor.state.doc.toString();
             console.log("Evaluating Python...")
-            await asyncRun(code, (output: string) => this.addToOutput(output));
+            await asyncRun(code, (output: string) => this.addToOutput(output), (input: string) => prompt(input));
             console.log("Python evaluated...")
         } catch (err: any) {
             // Drop uninteresting output from runPython

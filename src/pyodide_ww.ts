@@ -1,13 +1,14 @@
 import { loadPyodide } from 'pyodide';
-
+declare var self: DedicatedWorkerGlobalScope;
 
 // Copied from https://pyodide.org/en/stable/usage/webworker.html
 async function loadPyodideAndPackages() {
     let py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full' });
-    py.setStdin({ stdin: () => prompt() });
-    self.pyodide = py
-}
+    self.pyodide = py;
+};
+
 let pyodideReadyPromise = loadPyodideAndPackages();
+let inputPromiseResolve, inputPromiseReject: any;
 
 async function evaluate(data) {
     // make sure loading is done
@@ -18,7 +19,16 @@ async function evaluate(data) {
     for (const key of Object.keys(context)) {
         self[key] = context[key];
     }
+    
+    self.pyodide.setStdin({ stdin: async () => {
+        self.postMessage({ input: "prompt", id });
 
+        let inputPromise = new Promise<string>(function(resolve, reject){
+            inputPromiseResolve = resolve;
+            inputPromiseReject = reject;
+        });
+        return await inputPromise;
+    }});
     // Set up the write handler
     self.pyodide.setStdout({
         /* Implements the WriteHandler interface for pyodide.setStdout(). */
@@ -49,5 +59,7 @@ self.onmessage = async (event) => {
         evaluate(event.data);
     } else if (event.data.cmd == "setInterruptBuffer") {
         setInterruptBuffer(event.data);
+    } else if (event.data.cmd == "input") {
+        inputPromiseResolve(event.data.input);
     }
 };

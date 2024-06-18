@@ -10,11 +10,13 @@ class Execution {
   onSuccess?: Callback;
   onError?: Callback;
   writer: Callback;
+  input: Callback;
   id: string;
 
-  constructor(writer: Callback) {
+  constructor(writer: Callback, input: Callback) {
     this.id = uuidv4();
     this.writer = writer;
+    this.input = input;
   }
 
   start(script: string) {
@@ -35,6 +37,13 @@ pyodideWorker.onmessage = (event) => {
   const { id, ...data } = event.data;
   if (data.output) {
     executions[id].writer(data.output);
+  } else if (data.input) {
+    let text = executions[id].input(data.input);
+    pyodideWorker.postMessage({
+      cmd: "input",
+      id: id,
+      input: text
+    });
   } else if (data.error) {
     const execution = executions[id];
     delete executions[id];
@@ -57,10 +66,10 @@ export function interrupt() {
   interruptBuffer[0] = 2;
 }
 
-export function asyncRun(script: string, write: Callback) {
+export function asyncRun(script: string, writer: Callback, input: Callback) {
   // reset interrupt to "run things"
   interruptBuffer[0] = 0;
-  const execution = new Execution(write);
+  const execution = new Execution(writer, input);
   executions[execution.id] = execution;
   return execution.start(script);
 }
