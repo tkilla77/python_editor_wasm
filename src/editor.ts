@@ -196,7 +196,9 @@ export class BottomEditor extends LitElement {
                     <!-- permalink to editor contents - FIXME: implement -->
                     <button id="permalink" @click="${this.copyPermalink}" type="button">Copy Permalink</button>
                 </bottom-buttons>
-                <canvas id="canvas" width="600" height="500" style="cursor: default;"></canvas>
+                <bottom-canvas>
+                    <canvas id="canvas" width="600" height="500" style="cursor: default;"></canvas>
+                </bottom-canvas>
             </bottom-container>`
     }
 
@@ -223,6 +225,10 @@ export class BottomEditor extends LitElement {
             gap: 0.5em;
             flex: 1;
             height: 0;
+        }
+        bottom-canvas {
+            height: fit-content;
+            margin-block: 0.5em;
         }
         bottom-code {
             background-color: white;
