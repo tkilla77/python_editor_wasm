@@ -57,6 +57,10 @@ export function interrupt() {
   interruptBuffer[0] = 2;
 }
 
+export function installFiles(url: string) {
+  pyodideWorker.postMessage({ cmd: "installFiles", url });
+}
+
 export function asyncRun(script: string, write: Callback) {
   // reset interrupt to "run things"
   interruptBuffer[0] = 0;

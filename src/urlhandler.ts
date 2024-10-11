@@ -37,6 +37,15 @@ class MainEditor extends LitElement {
         }
     }
 
+    firstUpdated() {
+        const params = this.getParams();
+        if (params.has('zip')) {
+            for (let zipurl of params.getAll('zip')) {
+                this._editor?.installFilesFromZip(zipurl);
+            }
+        }
+    }
+
     getUrl() {
         let uri = new URL(document.location.href);
         if (uri.searchParams.size == 0 && window.location != window.parent.location) {

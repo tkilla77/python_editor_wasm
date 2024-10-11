@@ -9,7 +9,7 @@ import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
 import { base64ToText } from './encoder.js'
 
-import { asyncRun, interrupt } from './pyodide_api.js'
+import { asyncRun, interrupt, installFiles } from './pyodide_api.js'
 
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
@@ -135,6 +135,16 @@ export class BottomEditor extends LitElement {
             }
             this.addToOutput(error_text);
         }
+    }
+
+    /** Loads data files available from the working directory of the code. */
+    async installFilesFromZip(url: string) {
+        if (!this._editor) {
+            return;
+        }
+        this.addToLog(`Loading ${url}... `)
+        await installFiles(url);
+        this.addToLog(`Done!\n`);
     }
 
     /* Implements the WriteHandler interface for pyodide.setStdout(). */

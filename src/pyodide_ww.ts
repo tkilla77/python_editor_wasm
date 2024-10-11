@@ -45,11 +45,24 @@ async function setInterruptBuffer(data) {
     self.pyodide.setInterruptBuffer(data.interruptBuffer)
 }
 
+/** Loads data files available from the working directory of the code. */
+async function installFilesFromZip(url: string) {
+    await pyodideReadyPromise;
+    let zipResponse = await fetch(url);
+    if (zipResponse.ok) {
+        let zipBinary = await zipResponse.arrayBuffer();
+        await self.pyodide.unpackArchive(zipBinary, "zip");
+    } else {
+        // TODO log
+    }
+}
 
 self.onmessage = async (event) => {
     if (event.data.cmd == "evaluate") {
         evaluate(event.data);
     } else if (event.data.cmd == "setInterruptBuffer") {
         setInterruptBuffer(event.data);
+    } else if (event.data.cmd == "installFiles") {
+        installFilesFromZip(event.data);
     }
 };
