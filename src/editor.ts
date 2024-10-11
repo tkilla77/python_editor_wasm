@@ -36,6 +36,10 @@ export class BottomEditor extends LitElement {
     @query('#output')
     _output?: HTMLTextAreaElement;
 
+    @query('#canvas')
+    _canvas?: HTMLCanvasElement;
+
+
     private getSourceCode() : string {
         // First prio: code attribute, base64 encoded
         let code = this.getAttribute("code");
@@ -150,6 +154,11 @@ export class BottomEditor extends LitElement {
         const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full' });
         py.setStdin({ stdin: () => prompt() });
         py.setStdout(this);
+        await py.loadPackage("micropip");
+        if (this._canvas) {
+            // await py.loadPackage("pygame-ce");
+            py.canvas.setCanvas2D(this._canvas);
+        }
         this.clearHistory();
         this.addToOutput("Python Ready!\n");
         return py;
@@ -187,6 +196,7 @@ export class BottomEditor extends LitElement {
                     <!-- permalink to editor contents - FIXME: implement -->
                     <button id="permalink" @click="${this.copyPermalink}" type="button">Copy Permalink</button>
                 </bottom-buttons>
+                <canvas id="canvas" width="600" height="500" style="cursor: default;"></canvas>
             </bottom-container>`
     }
 
