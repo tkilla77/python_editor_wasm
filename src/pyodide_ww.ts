@@ -5,6 +5,8 @@ import { loadPyodide } from 'pyodide';
 async function loadPyodideAndPackages() {
     let py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full' });
     py.setStdin({ stdin: () => prompt() });
+    await py.loadPackage("micropip");
+
     self.pyodide = py
 }
 let pyodideReadyPromise = loadPyodideAndPackages();
