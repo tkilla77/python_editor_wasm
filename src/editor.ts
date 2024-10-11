@@ -147,7 +147,7 @@ export class BottomEditor extends LitElement {
     }
 
     private async main() {
-        const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full' });
+        const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full' });
         py.setStdin({ stdin: () => prompt() });
         py.setStdout(this);
         this.clearHistory();
