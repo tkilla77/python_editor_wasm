@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  base: '',
   optimizeDeps: {
     exclude: ['pyodided']
   },
@@ -11,6 +12,7 @@ export default defineConfig({
       // Could also be a dictionary or array of multiple entry points
       entry: resolve(__dirname, 'src/editor.js'),
       name: 'BottomEditor',
+      formats: ['es'],
       // the proper extensions will be added
       fileName: 'bottom-editor',
     },
