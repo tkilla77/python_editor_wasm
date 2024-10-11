@@ -3,7 +3,7 @@ import { loadPyodide } from 'pyodide';
 
 // Copied from https://pyodide.org/en/stable/usage/webworker.html
 async function loadPyodideAndPackages() {
-    let py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full' });
+    let py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full' });
     py.setStdin({ stdin: () => prompt() });
     self.pyodide = py
 }
