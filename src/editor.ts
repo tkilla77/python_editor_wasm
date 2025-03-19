@@ -256,6 +256,7 @@ export class BottomEditor extends LitElement {
             overflow: hidden;
             flex: 1;
             height: 100%;
+            margin-bottom: 0.4em;
         }
         bottom-editorarea {
             display: grid;
@@ -293,7 +294,7 @@ export class BottomEditor extends LitElement {
             bottom-buttons {
                 grid-row: 1/2;
                 grid-column: 2/3;
-                flex-direction: column;
+                /* flex-direction: column; */
             }
             button span.caption {
                 display: none;
