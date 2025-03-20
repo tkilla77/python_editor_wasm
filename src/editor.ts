@@ -339,13 +339,13 @@ export class BottomEditor extends LitElement {
             border: solid 2px rgb(1 95 204)	;
         }
         bottom-buttons button#run {
-            background-color: rgb(21 128 61);
+            background-color: #15803da3;
         }
         bottom-buttons button#clear {
-            background-color: #7f1d1d;
+            background-color: #7f1d1da3;
         }
         bottom-buttons button#permalink {
-            background-color: #374151;
+            background-color: #374151a3;
         }
     `
 }
