@@ -161,11 +161,10 @@ export class BottomEditor extends LitElement {
         if (zipResponse.ok) {
             let zipBinary = await zipResponse.arrayBuffer();
             await pyodide.unpackArchive(zipBinary, "zip");
+            this.addToLog(`Done!\n`);
         } else {
-            // TODO log
-            console.log(zipResponse)
+            this.addToLog(zipResponse);
         }
-        this.addToLog(`Done!\n`);
     }
 
     private async main() {
