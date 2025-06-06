@@ -52,7 +52,7 @@ export class BottomEditor extends LitElement {
         return Array.from(this.childNodes)
             .filter(child => child.nodeType == Node.TEXT_NODE)
             .map(child => child.textContent)
-            .join() || "";
+            .join().trim() || "";
 
     }
 
