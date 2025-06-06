@@ -13,7 +13,7 @@ import { loadPyodide } from 'pyodide';
 
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
-    static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' };
+    static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
 
     private _editor?: EditorView
     private pyodideReadyPromise?: Promise<any>

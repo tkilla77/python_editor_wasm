@@ -5,7 +5,7 @@ import { textToBase64 } from './encoder.js'
 
 @customElement('main-editor')
 class MainEditor extends LitElement {
-    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: "closed"};
+    static shadowRootOptions = {...LitElement.shadowRootOptions, mode: "closed" as const};
 
     @query('bottom-editor')
     _editor?: BottomEditor;
