@@ -12,6 +12,7 @@ class MainEditor extends LitElement {
 
     private sourceCode : string = '';
     private autoRun: boolean = false;
+    private zipUrl: string = ''
 
     constructor() {
         super();
@@ -35,6 +36,10 @@ class MainEditor extends LitElement {
             url.searchParams.delete('autorun');
             window.history.replaceState({}, '', url.href);
         }
+        if (params.has('zip')) {
+            this.zipUrl = params.get('zip') ?? '';
+        }
+
     }
 
     getUrl() {
@@ -51,7 +56,7 @@ class MainEditor extends LitElement {
     }
 
     render() {
-        return html`<bottom-editor code='${textToBase64(this.sourceCode)}' autorun='${this.autoRun}'></bottom-editor>`;
+        return html`<bottom-editor code='${textToBase64(this.sourceCode)}' autorun='${this.autoRun}' zip='${this.zipUrl}'></bottom-editor>`;
     }
 
     static styles = css`

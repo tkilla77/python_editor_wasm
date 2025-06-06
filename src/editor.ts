@@ -150,6 +150,24 @@ export class BottomEditor extends LitElement {
         return buffer.length;
     }
 
+    /** Loads data files available from the working directory of the code. */
+    async installFilesFromZip(url: string) {
+        let pyodide = await this.pyodideReadyPromise;
+        if (!this._editor) {
+            return;
+        }
+        this.addToLog(`Loading ${url}... `)
+        let zipResponse = await fetch(url);
+        if (zipResponse.ok) {
+            let zipBinary = await zipResponse.arrayBuffer();
+            await pyodide.unpackArchive(zipBinary, "zip");
+        } else {
+            // TODO log
+            console.log(zipResponse)
+        }
+        this.addToLog(`Done!\n`);
+    }
+
     private async main() {
         const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full' });
         py.setStdin({ stdin: () => prompt() });
@@ -159,6 +177,14 @@ export class BottomEditor extends LitElement {
             // await py.loadPackage("pygame-ce");
             py.canvas.setCanvas2D(this._canvas);
         }
+
+        if (this.hasAttribute("zip")) {
+            let zip_url = this.getAttribute("zip");
+            if (zip_url) {
+                this.installFilesFromZip(zip_url);
+            }
+        }
+
         this.clearHistory();
         this.addToOutput("Python Ready!\n");
         return py;
@@ -173,6 +199,12 @@ export class BottomEditor extends LitElement {
         const code = this.sourceCode;
         let url = this.getPermaUrl();
         url.searchParams.set('code', code);
+        if (this.hasAttribute("zip")) {
+            let zip_url = this.getAttribute("zip");
+            if (zip_url) {
+                url.searchParams.set('zip', zip_url)
+            }
+        }
         navigator.clipboard.writeText(url.href);
     }
 
