@@ -325,7 +325,9 @@ export class BottomEditor extends LitElement {
             bottom-buttons {
                 grid-row: 1/2;
                 grid-column: 2/3;
-                /* flex-direction: column; */
+            }
+            bottom-buttons.vertical {
+                flex-direction: column;
             }
             button span.caption {
                 display: none;
@@ -346,10 +348,9 @@ export class BottomEditor extends LitElement {
             height: fit-content;
             margin-block: 0.2em;
             display: flex;
+            gap: 0.4em;
         }
         bottom-buttons button {
-            margin-inline-end: 0.2em;
-            margin-block: 0.2em;
             min-height: 1em;
             padding-inline: 0.4em;
             padding-block: 0.25em;
@@ -361,7 +362,6 @@ export class BottomEditor extends LitElement {
             line-height: 1.5em;
             display: flex;
             align-items: center;
-            gap: 0.4em;
         }
         bottom-buttons button:hover {
             opacity: 75%;
