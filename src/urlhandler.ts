@@ -39,7 +39,6 @@ class MainEditor extends LitElement {
         if (params.has('zip')) {
             this.zipUrl = params.get('zip') ?? '';
         }
-
     }
 
     getUrl() {

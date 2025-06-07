@@ -372,6 +372,7 @@ export class BottomEditor extends LitElement {
             line-height: 1.5em;
             display: flex;
             align-items: center;
+            gap: 0.4em;
         }
         bottom-buttons button:hover {
             opacity: 75%;
