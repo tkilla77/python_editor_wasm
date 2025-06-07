@@ -163,7 +163,7 @@ export class BottomEditor extends LitElement {
             await pyodide.unpackArchive(zipBinary, "zip");
             this.addToLog(`Done!\n`);
         } else {
-            this.addToLog(zipResponse);
+            this.addToLog(`Error while downloading ${url}: ${zipResponse.status}`);
         }
     }
 
