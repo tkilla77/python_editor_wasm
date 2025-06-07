@@ -39,6 +39,8 @@ export class BottomEditor extends LitElement {
     @query('#canvas')
     _canvas?: HTMLCanvasElement;
 
+    @query('bottom-buttons')
+    _buttons?: HTMLElement;
 
     private getSourceCode(): string {
         // First prio: code attribute, base64 encoded
@@ -56,8 +58,16 @@ export class BottomEditor extends LitElement {
 
     }
 
+    /** Returns true if the source code is at least 6 lines long. */
+    private useVerticalMode(source: string) {
+        return source.split('\n', 6).length > 5;
+    }
+
     firstUpdated() {
         let text = this.getSourceCode();
+        if (this.useVerticalMode(text)) {
+            this._buttons?.classList.add('vertical');
+        }
         let runCode = keymap.of([{
             key: "Ctrl-Enter",
             run: () => { this.evaluatePython(); return true }
