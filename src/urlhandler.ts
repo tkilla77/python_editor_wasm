@@ -69,6 +69,11 @@ class MainEditor extends LitElement {
             max-height: initial;
             flex: 1;
         }
+        @media (min-width: 768px) and (min-height: 250px) {
+            bottom-editor::part(buttons) {
+                flex-direction: column;
+            }
+        }
     `
 }
 
