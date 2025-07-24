@@ -231,47 +231,12 @@ export class BottomEditor extends LitElement {
                 <bottom-buttons part="buttons">
                     <!-- Run button to pass the code to pyodide.runPython() -->
                     <button id="run" @click="${this.evaluatePython}" type="button" title="Run (Ctrl+Enter)">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21ZM12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23Z" fill="currentColor"/><path d="M16 12L10 16.3301V7.66987L16 12Z" fill="currentColor" /></svg>
                     <span class="caption">Run</span>
                     </button>
                     <!-- Cleaning the output section -->
-                    <button id="clear" @click="${this.clearHistory}" type="button" title="Clear Output"><svg
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  xmlns="http://www.w3.org/2000/svg"
->
-  <path d="M15.9644 4.63379H3.96442V6.63379H15.9644V4.63379Z" fill="currentColor" />
-  <path d="M15.9644 8.63379H3.96442V10.6338H15.9644V8.63379Z" fill="currentColor" />
-  <path d="M3.96442 12.6338H11.9644V14.6338H3.96442V12.6338Z" fill="currentColor" />
-  <path
-    d="M12.9645 13.7093L14.3787 12.295L16.5 14.4163L18.6213 12.2951L20.0355 13.7093L17.9142 15.8305L20.0356 17.9519L18.6214 19.3661L16.5 17.2447L14.3786 19.3661L12.9644 17.9519L15.0858 15.8305L12.9645 13.7093Z"
-    fill="currentColor"
-  />
-</svg>                    <span class="caption">Clear</span>
-</button>
+                    <button id="clear" @click="${this.clearHistory}" type="button" title="Clear Output"><span class="caption">Clear</span></button>
                     <!-- permalink to editor contents -->
-                    <button id="permalink" @click="${this.copyPermalink}" type="button" title="Copy Permalink"><svg
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  xmlns="http://www.w3.org/2000/svg"
->
-  <path
-    d="M14.8284 12L16.2426 13.4142L19.071 10.5858C20.6331 9.02365 20.6331 6.49099 19.071 4.9289C17.509 3.3668 14.9763 3.3668 13.4142 4.9289L10.5858 7.75732L12 9.17154L14.8284 6.34311C15.6095 5.56206 16.8758 5.56206 17.6568 6.34311C18.4379 7.12416 18.4379 8.39049 17.6568 9.17154L14.8284 12Z"
-    fill="currentColor"
-  />
-  <path
-    d="M12 14.8285L13.4142 16.2427L10.5858 19.0711C9.02372 20.6332 6.49106 20.6332 4.92896 19.0711C3.36686 17.509 3.36686 14.9764 4.92896 13.4143L7.75739 10.5858L9.1716 12L6.34317 14.8285C5.56212 15.6095 5.56212 16.8758 6.34317 17.6569C7.12422 18.4379 8.39055 18.4379 9.1716 17.6569L12 14.8285Z"
-    fill="currentColor"
-  />
-  <path
-    d="M14.8285 10.5857C15.219 10.1952 15.219 9.56199 14.8285 9.17147C14.4379 8.78094 13.8048 8.78094 13.4142 9.17147L9.1716 13.4141C8.78107 13.8046 8.78107 14.4378 9.1716 14.8283C9.56212 15.2188 10.1953 15.2188 10.5858 14.8283L14.8285 10.5857Z"
-    fill="currentColor"
-  />
-</svg><span class="caption">Link</span></button>
+                    <button id="permalink" @click="${this.copyPermalink}" type="button" title="Copy Permalink"><span class="caption">Link</span></button>
                 </bottom-buttons>
                 </bottom-editorarea>
 
@@ -361,7 +326,7 @@ export class BottomEditor extends LitElement {
             gap: 0.4em;
         }
         bottom-buttons button {
-            min-height: 1em;
+            min-height: 2.2em;
             padding-inline: 0.4em;
             padding-block: 0.25em;
             border: 2px solid transparent;
@@ -380,14 +345,29 @@ export class BottomEditor extends LitElement {
         bottom-buttons button:focus {
             border: solid 2px rgb(1 95 204)	;
         }
+        bottom-buttons button::before {
+            width:1lh;
+            height:1lh;
+            content: '';
+            background-repeat: no-repeat;
+        }
         bottom-buttons button#run {
             background-color: #15803da3;
+        }
+        bottom-buttons button#run::before {
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21ZM12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23Z" fill="white"/><path d="M16 12L10 16.3301V7.66987L16 12Z" fill="white" /></svg>');
         }
         bottom-buttons button#clear {
             background-color: #7f1d1da3;
         }
+        bottom-buttons button#clear::before {
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.9644 4.63379H3.96442V6.63379H15.9644V4.63379Z" fill="white" /><path d="M15.9644 8.63379H3.96442V10.6338H15.9644V8.63379Z" fill="white" /><path d="M3.96442 12.6338H11.9644V14.6338H3.96442V12.6338Z" fill="white" /><path d="M12.9645 13.7093L14.3787 12.295L16.5 14.4163L18.6213 12.2951L20.0355 13.7093L17.9142 15.8305L20.0356 17.9519L18.6214 19.3661L16.5 17.2447L14.3786 19.3661L12.9644 17.9519L15.0858 15.8305L12.9645 13.7093Z" fill="white" /></svg>');
+        }
         bottom-buttons button#permalink {
             background-color: #374151a3;
+        }
+        bottom-buttons button#permalink::before {
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8284 12L16.2426 13.4142L19.071 10.5858C20.6331 9.02365 20.6331 6.49099 19.071 4.9289C17.509 3.3668 14.9763 3.3668 13.4142 4.9289L10.5858 7.75732L12 9.17154L14.8284 6.34311C15.6095 5.56206 16.8758 5.56206 17.6568 6.34311C18.4379 7.12416 18.4379 8.39049 17.6568 9.17154L14.8284 12Z" fill="white" /><path d="M12 14.8285L13.4142 16.2427L10.5858 19.0711C9.02372 20.6332 6.49106 20.6332 4.92896 19.0711C3.36686 17.509 3.36686 14.9764 4.92896 13.4143L7.75739 10.5858L9.1716 12L6.34317 14.8285C5.56212 15.6095 5.56212 16.8758 6.34317 17.6569C7.12422 18.4379 8.39055 18.4379 9.1716 17.6569L12 14.8285Z" fill="white" /><path d="M14.8285 10.5857C15.219 10.1952 15.219 9.56199 14.8285 9.17147C14.4379 8.78094 13.8048 8.78094 13.4142 9.17147L9.1716 13.4141C8.78107 13.8046 8.78107 14.4378 9.1716 14.8283C9.56212 15.2188 10.1953 15.2188 10.5858 14.8283L14.8285 10.5857Z" fill="white" /></svg>');
         }
     `
 }
