@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: '',
   optimizeDeps: {
-    exclude: ['pyodided']
+    exclude: ['pyodide']
   },
   build: {
     lib: {
