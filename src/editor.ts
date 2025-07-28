@@ -228,16 +228,14 @@ export class BottomEditor extends LitElement {
                         <!-- output section where we show the stdout of the python code execution -->
                         <textarea readonly id="output" name="output"></textarea>
                     </bottom-output>
-                <bottom-buttons part="buttons">
-                    <!-- Run button to pass the code to pyodide.runPython() -->
-                    <button id="run" @click="${this.evaluatePython}" type="button" title="Run (Ctrl+Enter)">
-                    <span class="caption">Run</span>
-                    </button>
-                    <!-- Cleaning the output section -->
-                    <button id="clear" @click="${this.clearHistory}" type="button" title="Clear Output"><span class="caption">Clear</span></button>
-                    <!-- permalink to editor contents -->
-                    <button id="permalink" @click="${this.copyPermalink}" type="button" title="Copy Permalink"><span class="caption">Link</span></button>
-                </bottom-buttons>
+                    <bottom-buttons part="buttons">
+                        <!-- Run button to pass the code to pyodide.runPython() -->
+                        <button id="run" @click="${this.evaluatePython}" type="button" title="Run (Ctrl+Enter)"><span class="caption">Run</span></button>
+                        <!-- Cleaning the output section -->
+                        <button id="clear" @click="${this.clearHistory}" type="button" title="Clear Output"><span class="caption">Clear</span></button>
+                        <!-- permalink to editor contents -->
+                        <button id="permalink" @click="${this.copyPermalink}" type="button" title="Copy Permalink"><span class="caption">Link</span></button>
+                    </bottom-buttons>
                 </bottom-editorarea>
 
                 <!-- <bottom-canvas>
