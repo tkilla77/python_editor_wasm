@@ -178,7 +178,7 @@ export class BottomEditor extends LitElement {
     }
 
     private async main() {
-        const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full' });
+        const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.28.0/full' });
         py.setStdin({ stdin: () => prompt() });
         py.setStdout(this);
         await py.loadPackage("micropip");
