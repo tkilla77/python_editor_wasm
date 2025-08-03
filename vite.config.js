@@ -25,7 +25,16 @@ export default defineConfig({
         inlineDynamicImports: false,
         format: "module",
       },
-      external: ["node-fetch"],
+      external: [
+        "node-fetch",
+        "node:crypto",
+        "node:url",
+        "node:fs",
+        "node:fs/promises",
+        "node:vm",
+        "node:path",
+        "node:child_process",
+      ],
     },
   },
 })
