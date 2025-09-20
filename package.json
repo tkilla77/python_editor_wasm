@@ -14,7 +14,7 @@
     "pyodide": "^0.28.2",
     "tailwindcss": "^4.1.12",
     "thememirror": "^2.0.1",
-    "vite": "^7.1.5"
+    "vite": "^7.1.6"
   },
   "exports": {
     ".": {
