@@ -3,11 +3,17 @@
   "dir": "ltr",
   "name": "Bottom Python Editor",
   "short_name": "bottom_editor",
+  "background_color": "#fafafa",
   "icons": [{
-    "src": "icons/hires.png",
-    "sizes": "128x128",
-    "type": "image/png"
-  }],
+      "src": "icons/bp_lowres.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/bp_hires.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }],
   "scope": "/",
   "id": "bottom_editor",
   "start_url": "/index.html",
