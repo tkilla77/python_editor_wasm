@@ -8,6 +8,11 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
   ],
+  resolve: {
+        alias: {
+            "@": "/resources",
+        },
+  },
   optimizeDeps: {
     exclude: ['pyodide']
   },
