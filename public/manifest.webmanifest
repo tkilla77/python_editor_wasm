@@ -2,7 +2,7 @@
   "lang": "en",
   "dir": "ltr",
   "name": "Bottom Python Editor",
-  "short_name": "bottom_editor",
+  "short_name": "Bottom Python",
   "background_color": "#fafafa",
   "icons": [{
       "src": "icons/bp_lowres.png",
@@ -14,9 +14,9 @@
       "sizes": "1024x1024",
       "type": "image/png"
     }],
-  "scope": "/",
+  "scope": "./",
   "id": "bottom_editor",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "landscape"
 }
