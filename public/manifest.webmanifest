@@ -18,5 +18,7 @@
   "id": "bottom_editor",
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "landscape"
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "categories": ["education", "productivity"]
 }
