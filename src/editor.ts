@@ -11,6 +11,12 @@ import { base64ToText } from './encoder.js'
 
 import { loadPyodide } from 'pyodide';
 
+// Set up an input handler JS function
+declare global {
+  function input_fixed(msg: string): string | null;
+}
+globalThis.input_fixed = (msg: string) => prompt(msg);
+
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
     static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
@@ -179,7 +185,6 @@ export class BottomEditor extends LitElement {
 
     private async main() {
         const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.28.3/full' });
-        py.setStdin({ stdin: () => prompt() });
         py.setStdout(this);
         await py.loadPackage("micropip");
         if (this._canvas) {
@@ -193,6 +198,13 @@ export class BottomEditor extends LitElement {
                 this.installFilesFromZip(zip_url);
             }
         }
+
+        // Make sure to replace the input function with our prompt.
+        py.runPythonAsync(`
+            from js import input_fixed
+            input = input_fixed
+            __builtins__.input = input_fixed
+        `);
 
         this.clearHistory();
         this.addToOutput("Python Ready!\n");
