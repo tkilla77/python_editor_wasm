@@ -33,6 +33,7 @@ Properties:
    * [ ] no multi-file
    * [x] Really elaborate tutoring, step completion etc.
    * [x] features 'birds-eye' view
+* https://github.com/datacamp/datacamp-light
 
 ## Want to use this project?
 
