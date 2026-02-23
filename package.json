@@ -11,8 +11,8 @@
     "isomorphic-fetch": "^3.0.0",
     "lit": "^3.3.2",
     "node-fetch": "^3.3.2",
-    "pyodide": "^0.28.3",
-    "tailwindcss": "^4.1.12",
+    "pyodide": "^0.29.3",
+    "tailwindcss": "^4.2.1",
     "thememirror": "^2.0.1",
     "vite": "^7.3.1"
   },
