@@ -5,9 +5,28 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   base: '',
+  // Plugin to set COOP/COEP headers for SharedArrayBuffer support in dev/preview
   plugins: [
     tailwindcss(),
+    {
+      name: 'coop-coep-headers',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((req, res, next) => {
+          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+          next();
+        });
+      }
+    }
   ],
+ 
   resolve: {
         alias: {
             "@": "/resources",

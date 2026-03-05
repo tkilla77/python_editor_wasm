@@ -9,7 +9,7 @@ import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
 import { base64ToText } from './encoder.js'
 
-import { loadPyodide } from 'pyodide';
+// Pyodide is loaded inside a dedicated web worker (see src/pyodide-worker.ts)
 
 // Set up an input handler JS function
 declare global {
@@ -22,7 +22,13 @@ export class BottomEditor extends LitElement {
     static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
 
     private _editor?: EditorView
-    private pyodideReadyPromise?: Promise<any>
+    // Worker-based pyodide runtime
+    private worker?: Worker
+    private workerReady?: Promise<void>
+    private runIdCounter: number = 1
+    private pendingRuns: Map<number, {resolve: () => void, reject: (e: any) => void, timeout: number}> = new Map()
+    private RUN_TIMEOUT_MS = 5000
+    private interruptBuffer?: Uint8Array
 
     constructor() {
         super();
@@ -102,7 +108,7 @@ export class BottomEditor extends LitElement {
         this.addToOutput("Initializing...");
 
         // run the main function
-        this.pyodideReadyPromise = this.main();
+        this.workerReady = this.spawnWorker();
 
         if (this.hasAttribute("autorun")) {
             let autorun = this.getAttribute("autorun");
@@ -127,9 +133,45 @@ export class BottomEditor extends LitElement {
     }
 
     // Add pyodide returned value to the output
+    // Add pyodide returned value to the output and enforce local buffer limits
     addToOutput(stdout: string) {
-        if (this._output) {
-            this._output.value += stdout;
+        if (!this._output) return;
+        const MAX_OUTPUT_LINES = 100;
+        const MAX_OUTPUT_CHARS = 5000;
+
+        // Combine existing output and new stdout
+        let current = this._output.value + stdout;
+
+        // If a previous trim notice exists at the very start, remove it before re-calculating
+        if (current.startsWith('...[output trimmed:')) {
+            const firstNewline = current.indexOf('\n');
+            if (firstNewline > 0) current = current.slice(firstNewline + 1);
+        }
+
+        let noticeParts: string[] = [];
+
+        // Enforce line limit
+        const lines = current.split(/\r?\n/);
+        if (lines.length > MAX_OUTPUT_LINES) {
+            const removed = lines.length - MAX_OUTPUT_LINES;
+            current = lines.slice(-MAX_OUTPUT_LINES).join('\n');
+            noticeParts.push(`${removed} lines`);
+        }
+
+        // Enforce char limit
+        if (current.length > MAX_OUTPUT_CHARS) {
+            const removedChars = current.length - MAX_OUTPUT_CHARS;
+            current = current.slice(-MAX_OUTPUT_CHARS);
+            const firstNewline = current.indexOf('\n');
+            if (firstNewline > 0) current = current.slice(firstNewline + 1);
+            noticeParts.push(`~${removedChars} chars`);
+        }
+
+        if (noticeParts.length > 0) {
+            const notice = `...[output trimmed: ${noticeParts.join(', ')}]...\n`;
+            this._output.value = notice + current;
+        } else {
+            this._output.value = current;
         }
     }
 
@@ -141,22 +183,31 @@ export class BottomEditor extends LitElement {
 
     // pass the editor value to the pyodide.runPython function and show the result in the output section
     async evaluatePython() {
-        let pyodide = await this.pyodideReadyPromise;
-        if (!this._editor) {
-            return;
-        }
+        if (!this._editor) return;
         this.clearHistory();
+        await this.workerReady;
+        const code = this._editor.state.doc.toString();
+        const runId = this.runIdCounter++;
+        this.setRunning(true);
+        const promise = new Promise<void>((resolve, reject) => {
+            const timeout = window.setTimeout(() => {
+                // timed out: terminate and respawn worker
+                this.addToLog('Run timed out — interrupting worker.');
+                this.terminateAndRespawn();
+                reject(new Error('Execution timed out'));
+            }, this.RUN_TIMEOUT_MS);
+            this.pendingRuns.set(runId, { resolve, reject, timeout });
+            this.worker?.postMessage({ type: 'run', code, runId });
+        });
         try {
-            let code = this._editor.state.doc.toString();
-            await pyodide.runPythonAsync(code);
+            await promise;
         } catch (err: any) {
-            // Drop uninteresting output from runPython
-            let error_text = err.toString();
+            let error_text = err?.toString() || String(err);
             let debug_idx = error_text.indexOf('  File "<exec>"');
-            if (debug_idx > 0) {
-                error_text = error_text.substring(debug_idx);
-            }
+            if (debug_idx > 0) error_text = error_text.substring(debug_idx);
             this.addToOutput(error_text);
+        } finally {
+            this.setRunning(false);
         }
     }
 
@@ -168,47 +219,143 @@ export class BottomEditor extends LitElement {
 
     /** Loads data files available from the working directory of the code. */
     async installFilesFromZip(url: string) {
-        let pyodide = await this.pyodideReadyPromise;
-        if (!this._editor) {
-            return;
-        }
-        this.addToLog(`Loading ${url}... `)
-        let zipResponse = await fetch(url);
-        if (zipResponse.ok) {
-            let zipBinary = await zipResponse.arrayBuffer();
-            await pyodide.unpackArchive(zipBinary, "zip");
-            this.addToLog(`Done!\n`);
-        } else {
-            this.addToLog(`Error while downloading ${url}: ${zipResponse.status}`);
-        }
+        if (!this._editor) return;
+        this.addToLog(`Loading ${url}... `);
+        await this.workerReady;
+        this.worker?.postMessage({ type: 'loadZip', url });
     }
 
-    private async main() {
-        const py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full' });
-        py.setStdout(this);
-        await py.loadPackage("micropip");
-        if (this._canvas) {
-            // await py.loadPackage("pygame-ce");
-            py.canvas.setCanvas2D(this._canvas);
-        }
+    private spawnWorker(): Promise<void> {
+        if (this.worker) return Promise.resolve();
+        this.worker = new Worker(new URL('./pyodide-worker.ts', import.meta.url), { type: 'module' });
+        this.worker.onmessage = (ev: MessageEvent) => {
+            const msg = ev.data as any;
+            if (msg.type === 'stdout') {
+                this.addToOutput(msg.data);
+                return;
+            }
+            if (msg.type === 'log') {
+                this.addToLog(msg.data);
+                return;
+            }
+            if (msg.type === 'ready') {
+                this.clearHistory();
+                this.addToOutput('Python Ready!\n');
+                // create and send SharedArrayBuffer for interrupts
+                try {
+                    // SharedArrayBuffer requires proper COOP/COEP headers on the server
+                    this.interruptBuffer = new Uint8Array(new SharedArrayBuffer(1));
+                    this.interruptBuffer[0] = 0;
+                    this.worker?.postMessage({ type: 'setInterruptBuffer', interruptBuffer: this.interruptBuffer });
+                    this.addToLog('Interrupt buffer created and sent to worker');
+                } catch (e) {
+                    this.addToLog('Could not create SharedArrayBuffer for interrupts: ' + String(e));
+                }
+                return;
+            }
+            if (msg.type === 'done') {
+                const run = this.pendingRuns.get(msg.runId);
+                if (run) {
+                    window.clearTimeout(run.timeout);
+                    run.resolve();
+                    this.pendingRuns.delete(msg.runId);
+                }
+                return;
+            }
+            if (msg.type === 'error') {
+                if (msg.runId) {
+                    const run = this.pendingRuns.get(msg.runId);
+                    if (run) {
+                        window.clearTimeout(run.timeout);
+                        run.reject(new Error(msg.error || msg.data || 'Unknown error'));
+                        this.pendingRuns.delete(msg.runId);
+                        return;
+                    }
+                }
+                this.addToOutput(String(msg.error || msg.data || 'Worker error'));
+                return;
+            }
+        };
+        // initialize worker
+        this.worker.postMessage({ type: 'init', indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full' });
+        // resolve when ready message arrives - a simple promise that waits for the 'Python Ready!' output
+        return new Promise((resolve) => {
+            const onMessage = (ev: MessageEvent) => {
+                if (ev.data && ev.data.type === 'ready') {
+                    this.worker?.removeEventListener('message', onMessage as any);
+                    resolve();
+                }
+            };
+            this.worker?.addEventListener('message', onMessage as any);
+        });
+    }
 
-        if (this.hasAttribute("zip")) {
-            let zip_url = this.getAttribute("zip");
-            if (zip_url) {
-                this.installFilesFromZip(zip_url);
+    private terminateAndRespawn() {
+        // terminate current worker and reject any pending runs
+        if (this.worker) {
+            try { this.worker.terminate(); } catch (e) { }
+            this.worker = undefined;
+        }
+        for (const [id, run] of this.pendingRuns.entries()) {
+            window.clearTimeout(run.timeout);
+            run.reject(new Error('Worker terminated'));
+        }
+        this.pendingRuns.clear();
+        // spawn a fresh worker
+        this.setRunning(false);
+        this.workerReady = this.spawnWorker();
+    }
+
+    public interruptRun() {
+        this.addToLog('Interrupt requested.');
+        if (!this.worker) {
+            this.addToLog('No worker to interrupt.');
+            return;
+        }
+        // Prefer SharedArrayBuffer-based interrupt if available
+        if (this.interruptBuffer) {
+            try {
+                this.addToLog('Sending SIGINT via interrupt buffer');
+                this.interruptBuffer[0] = 2; // 2 stands for SIGINT
+                // If the interrupt doesn't take effect within a short period, fallback to terminating the worker
+                window.setTimeout(() => {
+                    if (this.pendingRuns.size > 0) {
+                        this.addToLog('Interrupt did not stop execution — terminating worker.');
+                        this.terminateAndRespawn();
+                    }
+                }, 1500);
+                return;
+            } catch (e) {
+                this.addToLog('Failed to use interrupt buffer: ' + String(e));
             }
         }
 
-        // Make sure to replace the input function with our prompt.
-        py.runPythonAsync(`
-            from js import input_fixed
-            input = input_fixed
-            __builtins__.input = input_fixed
-        `);
+        // Fallback: send interrupt message to worker (best-effort)
+        this.addToLog('Attempting fallback interrupt via worker message.');
+        const workerRef = this.worker;
+        const ackPromise = new Promise<void>((resolve) => {
+            const onMsg = (ev: MessageEvent) => {
+                const msg = (ev.data as any);
+                if (msg.type === 'interrupted' || msg.type === 'interrupt-unavailable' || msg.type === 'error') {
+                    workerRef.removeEventListener('message', onMsg as any);
+                    resolve();
+                }
+            };
+            workerRef.addEventListener('message', onMsg as any);
+            try { workerRef.postMessage({ type: 'interrupt' }); } catch (e) { resolve(); }
+            window.setTimeout(() => { workerRef.removeEventListener('message', onMsg as any); resolve(); }, 500);
+        });
+        ackPromise.then(() => {
+            this.addToLog('Fallback interrupt finished — ensuring clean state by respawning worker.');
+            this.terminateAndRespawn();
+        });
+    }
 
-        this.clearHistory();
-        this.addToOutput("Python Ready!\n");
-        return py;
+    private setRunning(running: boolean) {
+        if (this._buttons) {
+            if (running) this._buttons.classList.add('running');
+            else this._buttons.classList.remove('running');
+        }
     }
 
     getPermaUrl() {
@@ -243,6 +390,8 @@ export class BottomEditor extends LitElement {
                     <bottom-buttons part="buttons">
                         <!-- Run button to pass the code to pyodide.runPython() -->
                         <button id="run" @click="${this.evaluatePython}" type="button" title="Run (Ctrl+Enter)"><span class="caption">Run</span></button>
+                        <!-- Stop button to interrupt execution -->
+                        <button id="stop" @click="${this.interruptRun}" type="button" title="Stop"><span class="caption">Stop</span></button>
                         <!-- Cleaning the output section -->
                         <button id="clear" @click="${this.clearHistory}" type="button" title="Clear Output"><span class="caption">Clear</span></button>
                         <!-- permalink to editor contents -->
@@ -334,6 +483,7 @@ export class BottomEditor extends LitElement {
             margin-block: 0.2em;
             display: flex;
             gap: 0.4em;
+            position: relative;
         }
         bottom-buttons button {
             min-height: 2.2em;
@@ -375,6 +525,50 @@ export class BottomEditor extends LitElement {
         }
         bottom-buttons button#permalink {
             background-color: #374151a3;
+        }
+        bottom-buttons button#stop {
+            background-color: #b45309a3;
+        }
+        bottom-buttons button#stop::before {
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6H18V18H6V6Z" fill="white"/></svg>');
+        }
+        /* Smooth swap between Run and Stop buttons */
+        bottom-buttons button {
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+        /* Default: Stop is taken out of flow (absolute) so it doesn't occupy space when hidden */
+        bottom-buttons button#stop {
+            opacity: 0;
+            transform: scale(0.92);
+            pointer-events: none;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 1;
+        }
+        /* When running, place Stop back into flow and remove Run from flow */
+        bottom-buttons.running button#stop {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+            position: static;
+            z-index: 2;
+        }
+        bottom-buttons.running button#run {
+            opacity: 0;
+            transform: scale(0.92);
+            pointer-events: none;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 1;
+        }
+        bottom-buttons button#run {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+            position: static;
+            z-index: 2;
         }
         bottom-buttons button#permalink::before {
             background-image: url('data:image/svg+xml;charset=UTF-8,<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8284 12L16.2426 13.4142L19.071 10.5858C20.6331 9.02365 20.6331 6.49099 19.071 4.9289C17.509 3.3668 14.9763 3.3668 13.4142 4.9289L10.5858 7.75732L12 9.17154L14.8284 6.34311C15.6095 5.56206 16.8758 5.56206 17.6568 6.34311C18.4379 7.12416 18.4379 8.39049 17.6568 9.17154L14.8284 12Z" fill="white" /><path d="M12 14.8285L13.4142 16.2427L10.5858 19.0711C9.02372 20.6332 6.49106 20.6332 4.92896 19.0711C3.36686 17.509 3.36686 14.9764 4.92896 13.4143L7.75739 10.5858L9.1716 12L6.34317 14.8285C5.56212 15.6095 5.56212 16.8758 6.34317 17.6569C7.12422 18.4379 8.39055 18.4379 9.1716 17.6569L12 14.8285Z" fill="white" /><path d="M14.8285 10.5857C15.219 10.1952 15.219 9.56199 14.8285 9.17147C14.4379 8.78094 13.8048 8.78094 13.4142 9.17147L9.1716 13.4141C8.78107 13.8046 8.78107 14.4378 9.1716 14.8283C9.56212 15.2188 10.1953 15.2188 10.5858 14.8283L14.8285 10.5857Z" fill="white" /></svg>');
