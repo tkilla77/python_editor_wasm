@@ -27,7 +27,7 @@ export class BottomEditor extends LitElement {
     private workerReady?: Promise<void>
     private runIdCounter: number = 1
     private pendingRuns: Map<number, {resolve: () => void, reject: (e: any) => void, timeout: number}> = new Map()
-    private RUN_TIMEOUT_MS = 5000
+    private RUN_TIMEOUT_MS = 30000
     private interruptBuffer?: Uint8Array
 
     constructor() {
