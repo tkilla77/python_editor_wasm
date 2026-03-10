@@ -1,0 +1,11 @@
+# Enable SharedArrayBuffer access with proper COOP/COEP headers
+<IfModule mod_headers.c>
+    # Cross-Origin-Opener-Policy: Isolates browsing context to same-origin
+    Header set Cross-Origin-Opener-Policy "same-origin"
+    
+    # Cross-Origin-Embedder-Policy: Enables SharedArrayBuffer in cross-origin contexts
+    Header set Cross-Origin-Embedder-Policy "require-corp"
+    
+    # Optional: Allow cross-origin resource policy for resources that need to be fetched
+    Header set Cross-Origin-Resource-Policy "cross-origin"
+</IfModule>

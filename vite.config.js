@@ -5,10 +5,10 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   base: '',
-  // Plugin to set COOP/COEP headers for SharedArrayBuffer support in dev/preview
   plugins: [
     tailwindcss(),
     {
+      // Plugin to set COOP/COEP headers for SharedArrayBuffer support in dev/preview
       name: 'coop-coep-headers',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
@@ -26,7 +26,21 @@ export default defineConfig({
       }
     }
   ],
- 
+  worker: {
+    format: "es",
+    rollupOptions: {
+        external: [
+          "node-fetch",
+          "node:crypto",
+          "node:url",
+          "node:fs",
+          "node:fs/promises",
+          "node:vm",
+          "node:path",
+          "node:child_process",
+        ],
+    },
+  },
   resolve: {
         alias: {
             "@": "/resources",
@@ -48,10 +62,6 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         nested: resolve(__dirname, 'embed.html'),
-      },
-      output: {
-        inlineDynamicImports: false,
-        format: "module",
       },
       external: [
         "node-fetch",
