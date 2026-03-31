@@ -1,14 +1,10 @@
 import { LitElement, css, html } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 
-import { basicSetup } from "codemirror"
-import { EditorState } from "@codemirror/state"
-import { EditorView, keymap, gutter, lineNumbers } from "@codemirror/view"
-import { defaultKeymap, indentWithTab } from "@codemirror/commands"
-import { indentUnit, bracketMatching } from "@codemirror/language"
-import { python } from "@codemirror/lang-python"
+import { EditorView } from "@codemirror/view"
 import { base64ToText } from './encoder.js'
 import { PyodideRuntime } from './pyodide-runtime.js';
+import { createPythonEditor } from './codemirror-setup.js';
 
 // Pyodide is loaded inside a dedicated web worker (see src/pyodide-worker.ts)
 
@@ -78,30 +74,7 @@ export class BottomEditor extends LitElement {
         if (this.useVerticalMode(text)) {
             this._buttons?.classList.add('vertical');
         }
-        let runCode = keymap.of([{
-            key: "Ctrl-Enter",
-            run: () => { this.evaluatePython(); return true }
-        }]);
-        let editorState = EditorState.create({
-            doc: text,
-            extensions: [
-                basicSetup,
-                python(),
-                EditorState.tabSize.of(4),
-                indentUnit.of('    '),
-                runCode,
-                keymap.of(defaultKeymap),
-                keymap.of([indentWithTab]),
-                lineNumbers(),
-                bracketMatching(),
-                gutter({ class: "cm-mygutter" })
-            ]
-        })
-
-        this._editor = new EditorView({
-            state: editorState,
-            parent: this._code
-        })
+        this._editor = createPythonEditor(this._code!, text, () => this.evaluatePython());
         this.addToLog("Initializing...");
 
         this.runtime = new PyodideRuntime({
