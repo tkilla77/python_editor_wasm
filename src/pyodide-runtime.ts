@@ -1,5 +1,3 @@
-import PyodideWorker from './pyodide-worker.ts?worker&inline';
-
 export type RuntimeCallbacks = {
     onStdout: (data: string) => void;
     onLog: (data: string) => void;
@@ -26,6 +24,7 @@ export class PyodideRuntime {
 
     constructor(
         private readonly callbacks: RuntimeCallbacks,
+        private readonly workerFactory: () => Worker,
         private readonly indexURL = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full',
         private readonly RUN_TIMEOUT_MS = 30000,
     ) {}
@@ -113,7 +112,7 @@ export class PyodideRuntime {
 
     private async spawnWorker(): Promise<void> {
         if (this.worker) return;
-        this.worker = new PyodideWorker();
+        this.worker = this.workerFactory();
         this.worker.onmessage = (ev: MessageEvent) => this.handleMessage(ev.data);
         this.worker.postMessage({ type: 'init', baseURL: import.meta.url, indexURL: this.indexURL });
         await new Promise<void>((resolve) => {

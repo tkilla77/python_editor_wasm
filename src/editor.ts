@@ -1,6 +1,7 @@
 import { LitElement, html, unsafeCSS } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 import { EditorView } from "@codemirror/view"
+import PyodideWorker from './pyodide-worker.ts?worker&inline';
 import { PyodideRuntime } from './pyodide-runtime.js';
 import { createPythonEditor } from './codemirror-setup.js';
 // Side-effect imports: execute the modules so customElements.define() runs.
@@ -29,6 +30,9 @@ export class BottomEditor extends LitElement {
     set sourceCode(code: string) { this.replaceDoc(code); }
     get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
 
+    get outputText(): string { return this._output?.outputText ?? ''; }
+    get logText(): string { return this._output?.logText ?? ''; }
+
     @query('#code')
     private _code?: Element;
 
@@ -53,15 +57,18 @@ export class BottomEditor extends LitElement {
 
         this._output?.addLog('Initializing...');
 
-        this.runtime = new PyodideRuntime({
-            onStdout: (data) => this._output?.addOutput(data),
-            onLog:    (data) => this._output?.addLog(data),
-            onError:  (data) => this._output?.addOutput(data),
-            onReady:  () => {
-                this._output?.clearOutput();
-                this._output?.addLog('Python Ready!');
+        this.runtime = new PyodideRuntime(
+            {
+                onStdout: (data) => this._output?.addOutput(data),
+                onLog:    (data) => this._output?.addLog(data),
+                onError:  (data) => this._output?.addOutput(data),
+                onReady:  () => {
+                    this._output?.clearOutput();
+                    this._output?.addLog('Python Ready!');
+                },
             },
-        });
+            () => new PyodideWorker() as unknown as Worker,
+        );
         this.runtime.start();
 
         if (this.hasAttribute("autorun")) {
