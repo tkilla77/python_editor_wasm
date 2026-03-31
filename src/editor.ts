@@ -23,6 +23,7 @@ export class BottomEditor extends LitElement {
     static styles = unsafeCSS(styles);
 
     private _editor?: EditorView;
+    private _pendingCode?: string;
     private runtime!: PyodideRuntime;
 
     @property({ attribute: 'sourcecode' })
@@ -49,7 +50,7 @@ export class BottomEditor extends LitElement {
     }
 
     firstUpdated() {
-        const text = this.getSourceCode();
+        const text = this._pendingCode ?? this.getSourceCode();
         this._editor = createPythonEditor(this._code!, text, () => this.evaluatePython());
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length > 5;
 
@@ -73,9 +74,12 @@ export class BottomEditor extends LitElement {
     }
 
     public replaceDoc(text: string) {
-        const state = this._editor?.state;
-        if (!state) return;
-        this._editor!.dispatch(state.update({ changes: { from: 0, to: state.doc.length, insert: text } }));
+        if (!this._editor) {
+            this._pendingCode = text;
+            return;
+        }
+        const state = this._editor.state;
+        this._editor.dispatch(state.update({ changes: { from: 0, to: state.doc.length, insert: text } }));
     }
 
     async evaluatePython() {

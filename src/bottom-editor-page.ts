@@ -1,15 +1,10 @@
 import { LitElement, css, html } from 'lit'
-import { customElement, query } from 'lit/decorators.js'
-import type { BottomEditor } from './editor.js'
+import { customElement } from 'lit/decorators.js'
 import './editor.js'
-import { textToBase64 } from './encoder.js'
 
 @customElement('bottom-editor-page')
 class BottomEditorPage extends LitElement {
     static shadowRootOptions = {...LitElement.shadowRootOptions, mode: "closed" as const};
-
-    @query('bottom-editor')
-    _editor?: BottomEditor;
 
     private sourceCode : string = '';
     private autoRun: boolean = false;
@@ -50,7 +45,7 @@ class BottomEditorPage extends LitElement {
     }
 
     render() {
-        return html`<bottom-editor code='${textToBase64(this.sourceCode)}' autorun='${this.autoRun}' zip='${this.zipUrl}'></bottom-editor>`;
+        return html`<bottom-editor .sourceCode=${this.sourceCode} ?autorun=${this.autoRun} zip='${this.zipUrl}'></bottom-editor>`;
     }
 
     static styles = css`
