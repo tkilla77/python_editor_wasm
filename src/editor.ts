@@ -62,19 +62,18 @@ export class BottomEditor extends LitElement {
                 onStdout: (data) => this._output?.addOutput(data),
                 onLog:    (data) => this._output?.addLog(data),
                 onError:  (data) => this._output?.addOutput(data),
-                onReady:  () => {
+                onReady:  async () => {
                     this._output?.clearOutput();
                     this._output?.addLog('Python Ready!');
+                    const zip = this.getAttribute('zip');
+                    if (zip) await this.installFilesFromZip(zip);
+                    const autorun = this.getAttribute('autorun');
+                    if (autorun !== null && autorun !== 'false' && autorun !== '0') this.evaluatePython();
                 },
             },
             () => new PyodideWorker() as unknown as Worker,
         );
         this.runtime.start();
-
-        if (this.hasAttribute("autorun")) {
-            const v = this.getAttribute("autorun");
-            if (v !== 'false' && v !== '0') this.evaluatePython();
-        }
     }
 
     public replaceDoc(text: string) {
