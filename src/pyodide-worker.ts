@@ -81,7 +81,7 @@ async function init(baseURL?: string, indexURL?: string) {
                 return buf.length;
             }
         });
-        await py.loadPackage('micropip');
+        await py.loadPackage('micropip', { messageCallback: (msg: string) => post('log', { data: msg }) });
         // replace input with a stub that posts back — main thread can implement if desired
         await py.runPythonAsync(`\nfrom js import console\n`);
         post('ready');

@@ -52,6 +52,9 @@ export class BottomEditor extends LitElement {
     @query('#canvas')
     _canvas?: HTMLCanvasElement;
 
+    @query('#log')
+    _log?: HTMLElement;
+
     @query('bottom-buttons')
     _buttons?: HTMLElement;
 
@@ -106,7 +109,7 @@ export class BottomEditor extends LitElement {
             parent: this._code
         })
         this.clearHistory();
-        this.addToOutput("Initializing...");
+        this.addToLog("Initializing...");
 
         // run the main function
         this.workerReady = this.spawnWorker();
@@ -176,10 +179,11 @@ export class BottomEditor extends LitElement {
         }
     }
 
-    // Add information to the log
+    // Add information to the system log panel
     addToLog(s: any) {
-        // for now, put log and program output into the same area
-        this.addToOutput(s.toString());
+        if (!this._log) return;
+        this._log.textContent += s.toString() + '\n';
+        this._log.scrollTop = this._log.scrollHeight;
     }
 
     // pass the editor value to the pyodide.runPython function and show the result in the output section
@@ -243,7 +247,7 @@ export class BottomEditor extends LitElement {
             }
             if (msg.type === 'ready') {
                 this.clearHistory();
-                this.addToOutput('Python Ready!\n');
+                this.addToLog('Python Ready!');
                 // create and send SharedArrayBuffer for interrupts
                 try {
                     // SharedArrayBuffer requires proper COOP/COEP headers on the server
@@ -389,6 +393,15 @@ export class BottomEditor extends LitElement {
                     <bottom-output>
                         <!-- output section where we show the stdout of the python code execution -->
                         <textarea readonly id="output" name="output"></textarea>
+                        <details id="log-details">
+                            <summary title="System log">
+                                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M1 2.5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M6 8.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </summary>
+                            <div id="log"></div>
+                        </details>
                     </bottom-output>
                     <bottom-buttons part="buttons">
                         <!-- Run button to pass the code to pyodide.runPython() -->
@@ -450,6 +463,48 @@ export class BottomEditor extends LitElement {
             overflow: hidden;
             flex: 1;
             min-height: 5lh;
+            position: relative;
+        }
+        #log-details {
+            position: absolute;
+            bottom: 0.35em;
+            right: 0.35em;
+            z-index: 5;
+        }
+        #log-details summary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.4em;
+            height: 1.4em;
+            cursor: pointer;
+            list-style: none;
+            color: #888;
+            background: rgba(200,200,200,0.5);
+            border-radius: 0.25em;
+            transition: color 120ms, background 120ms;
+        }
+        #log-details summary::-webkit-details-marker { display: none; }
+        #log-details summary:hover,
+        #log-details[open] summary {
+            color: #333;
+            background: rgba(180,180,180,0.8);
+        }
+        #log-details #log {
+            position: absolute;
+            bottom: 1.7em;
+            right: 0;
+            width: 22em;
+            max-height: 10em;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #ccc;
+            font-family: monospace;
+            font-size: 0.75em;
+            white-space: pre-wrap;
+            padding: 0.4em 0.5em;
+            border-radius: 0.3em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         @media (min-width: 768px) {
             bottom-editorarea {
