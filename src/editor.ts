@@ -110,7 +110,7 @@ export class BottomEditor extends LitElement {
 
     async copyPermalink() {
         // FIXME allow permalink base to be configured
-        const url = new URL("https://bottom.ch/ksr/ed/");
+        const url = new URL("https://bottom.ch/editor/stable/");
         url.searchParams.set('code', this.sourceCode);
         const zip = this.getAttribute("zip");
         if (zip) url.searchParams.set('zip', zip);
