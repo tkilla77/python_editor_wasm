@@ -1,8 +1,6 @@
 // vite.config.js
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
-import tailwindcss from '@tailwindcss/vite'
-
 export default defineConfig({
   base: '',
   worker: {
@@ -21,7 +19,6 @@ export default defineConfig({
     }
   },
   plugins: [
-    tailwindcss(),
     {
       // Plugin to set COOP/COEP headers for SharedArrayBuffer support in dev/preview
       name: 'coop-coep-headers',
