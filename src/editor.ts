@@ -119,19 +119,17 @@ export class BottomEditor extends LitElement {
 
     render() {
         return html`
-            <bottom-container>
-                <bottom-editorarea>
-                    <bottom-code id="code"></bottom-code>
-                    <bottom-editor-output></bottom-editor-output>
-                    <bottom-editor-buttons
-                        part="buttons"
-                        @bottom-run="${this.evaluatePython}"
-                        @bottom-stop="${() => this.runtime.interrupt()}"
-                        @bottom-clear="${() => this._output?.clearOutput()}"
-                        @bottom-permalink="${this.copyPermalink}"
-                    ></bottom-editor-buttons>
-                </bottom-editorarea>
-            </bottom-container>`;
+            <bottom-editorarea>
+                <bottom-code id="code"></bottom-code>
+                <bottom-editor-output></bottom-editor-output>
+                <bottom-editor-buttons
+                    part="buttons"
+                    @bottom-run="${this.evaluatePython}"
+                    @bottom-stop="${() => this.runtime.interrupt()}"
+                    @bottom-clear="${() => this._output?.clearOutput()}"
+                    @bottom-permalink="${this.copyPermalink}"
+                ></bottom-editor-buttons>
+            </bottom-editorarea>`;
     }
 }
 

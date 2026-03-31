@@ -1,39 +1,29 @@
 :host {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     max-height: 25lh;
+    font-family: system-ui;
+    container-type: inline-size;
 }
 .cm-editor {
     height: 100%;
-}
-bottom-container {
-    font-family: system-ui;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex: 1;
-    height: 100%;
-    margin-bottom: 0.4em;
 }
 bottom-editorarea {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.5em;
     flex: 1;
-    height: 0;
-}
-bottom-canvas {
-    height: fit-content;
-    margin-block: 0.5em;
+    min-height: 0;
+    margin-bottom: 0.4em;
 }
 bottom-code {
     background-color: white;
     border: 1px #d4d4d4 solid;
     border-radius: 0.5em;
     overflow: hidden;
-    flex: 2;
 }
-@media (min-width: 768px) {
+@container (min-width: 768px) {
     bottom-editorarea {
         grid-template-columns: 2fr auto 1fr;
     }

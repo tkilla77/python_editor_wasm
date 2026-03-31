@@ -45,24 +45,23 @@ class BottomEditorPage extends LitElement {
     }
 
     render() {
-        return html`<bottom-editor .sourceCode=${this.sourceCode} ?autorun=${this.autoRun} zip='${this.zipUrl}'></bottom-editor>`;
+        return html`<bottom-editor exportparts="buttons" .sourceCode=${this.sourceCode} ?autorun=${this.autoRun} zip='${this.zipUrl}'></bottom-editor>`;
     }
 
     static styles = css`
         :host {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
             flex: 1;
-            height: 0;
+            min-height: 0;
         }
         bottom-editor {
             max-height: initial;
             flex: 1;
+            min-height: 0;
         }
-        @media (min-width: 768px) and (min-height: 250px) {
-            bottom-editor::part(buttons) {
-                flex-direction: column;
-            }
+        bottom-editor::part(buttons) {
+            flex-direction: column;
         }
     `
 }

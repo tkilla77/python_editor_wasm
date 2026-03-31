@@ -1,17 +1,17 @@
 :host {
-    display: grid;
-    height: auto;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    flex: 1;
     min-height: 5lh;
     position: relative;
 }
-@media (min-width: 768px) {
+@container (min-width: 768px) {
     :host {
         min-height: 2lh;
     }
 }
 textarea {
+    flex: 1;
     font-family: monospace;
     resize: none;
     border: 1px #d4d4d4 solid;
