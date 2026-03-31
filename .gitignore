@@ -88,5 +88,5 @@ ENV/
 # Rope project settings
 .ropeproject
 .DS_Store
-.claude/settings.json
+.claude/
 test-results/.last-run.json
