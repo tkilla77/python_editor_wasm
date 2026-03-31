@@ -1,10 +1,11 @@
 import { LitElement, css, html } from 'lit'
 import { customElement, query } from 'lit/decorators.js'
-import { BottomEditor } from './editor.js'
+import type { BottomEditor } from './editor.js'
+import './editor.js'
 import { textToBase64 } from './encoder.js'
 
-@customElement('main-editor')
-class MainEditor extends LitElement {
+@customElement('bottom-editor-page')
+class BottomEditorPage extends LitElement {
     static shadowRootOptions = {...LitElement.shadowRootOptions, mode: "closed" as const};
 
     @query('bottom-editor')
@@ -18,21 +19,16 @@ class MainEditor extends LitElement {
         super();
         const params = this.getParams();
         if (params.has('code')) {
-            // Set editor contents and clear URL params.
             const code = params.get('code');
-            if (code) {
-                console.log(`Updating code from URL param: ${code}`);
-                this.sourceCode = code;
-            }
-            let url = new URL(document.location.href);
+            if (code) this.sourceCode = code;
+            const url = new URL(document.location.href);
             url.searchParams.delete('code');
             window.history.replaceState({}, '', url.href);
         }
         if (params.has('autorun')) {
             const autorun = params.get('autorun');
-            console.log(`Updating autorun from URL param: ${autorun}`);
             this.autoRun = !(autorun === 'false' || autorun === '0');
-            let url = new URL(document.location.href);
+            const url = new URL(document.location.href);
             url.searchParams.delete('autorun');
             window.history.replaceState({}, '', url.href);
         }
@@ -41,16 +37,15 @@ class MainEditor extends LitElement {
         }
     }
 
-    getUrl() {
-        let uri = new URL(document.location.href);
-        if (uri.searchParams.size == 0 && window.location != window.parent.location) {
-          // Attempt to read URL params from containing page.
-          uri = new URL(document.referrer);
+    private getUrl() {
+        const uri = new URL(document.location.href);
+        if (uri.searchParams.size === 0 && window.location !== window.parent.location) {
+            return new URL(document.referrer);
         }
         return uri;
     }
-    
-    getParams() {
+
+    private getParams() {
         return this.getUrl().searchParams;
     }
 
@@ -77,9 +72,8 @@ class MainEditor extends LitElement {
     `
 }
 
-
 declare global {
     interface HTMLElementTagNameMap {
-        'main-editor': MainEditor
+        'bottom-editor-page': BottomEditorPage
     }
 }
