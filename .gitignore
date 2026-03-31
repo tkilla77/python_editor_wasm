@@ -78,6 +78,9 @@ celerybeat-schedule
 # dotenv
 .env
 
+# local deploy config (copy from deploy.config.example.json)
+deploy.config.json
+
 # virtualenv
 venv/
 ENV/
