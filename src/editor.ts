@@ -1,7 +1,6 @@
 import { LitElement, html, unsafeCSS } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 import { EditorView } from "@codemirror/view"
-import { base64ToText } from './encoder.js'
 import { PyodideRuntime } from './pyodide-runtime.js';
 import { createPythonEditor } from './codemirror-setup.js';
 // Side-effect imports: execute the modules so customElements.define() runs.
@@ -40,8 +39,6 @@ export class BottomEditor extends LitElement {
     private _buttons?: BottomEditorButtons;
 
     private getSourceCode(): string {
-        const encoded = this.getAttribute("code");
-        if (encoded) return base64ToText(encoded);
         return Array.from(this.childNodes)
             .filter(n => n.nodeType === Node.TEXT_NODE)
             .map(n => n.textContent)
