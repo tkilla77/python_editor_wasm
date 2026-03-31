@@ -8,7 +8,7 @@ import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
 import { base64ToText } from './encoder.js'
-import PyodideWorker from './pyodide-worker.ts?worker&inline';
+import { PyodideRuntime } from './pyodide-runtime.js';
 
 // Pyodide is loaded inside a dedicated web worker (see src/pyodide-worker.ts)
 
@@ -23,13 +23,7 @@ export class BottomEditor extends LitElement {
     static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
 
     private _editor?: EditorView
-    // Worker-based pyodide runtime
-    private worker?: Worker
-    private workerReady?: Promise<void>
-    private runIdCounter: number = 1
-    private pendingRuns: Map<number, {resolve: () => void, reject: (e: any) => void, timeout: number}> = new Map()
-    private RUN_TIMEOUT_MS = 30000
-    private interruptBuffer?: Uint8Array
+    private runtime!: PyodideRuntime
 
     constructor() {
         super();
@@ -108,11 +102,18 @@ export class BottomEditor extends LitElement {
             state: editorState,
             parent: this._code
         })
-        this.clearHistory();
         this.addToLog("Initializing...");
 
-        // run the main function
-        this.workerReady = this.spawnWorker();
+        this.runtime = new PyodideRuntime({
+            onStdout: (data) => this.addToOutput(data),
+            onLog: (data) => this.addToLog(data),
+            onError: (data) => this.addToOutput(data),
+            onReady: () => {
+                this.clearHistory();
+                this.addToLog('Python Ready!');
+            },
+        });
+        this.runtime.start();
 
         if (this.hasAttribute("autorun")) {
             let autorun = this.getAttribute("autorun");
@@ -186,29 +187,16 @@ export class BottomEditor extends LitElement {
         this._log.scrollTop = this._log.scrollHeight;
     }
 
-    // pass the editor value to the pyodide.runPython function and show the result in the output section
     async evaluatePython() {
         if (!this._editor) return;
         this.clearHistory();
-        await this.workerReady;
         const code = this._editor.state.doc.toString();
-        const runId = this.runIdCounter++;
         this.setRunning(true);
-        const promise = new Promise<void>((resolve, reject) => {
-            const timeout = window.setTimeout(() => {
-                // timed out: terminate and respawn worker
-                this.addToLog('Run timed out — interrupting worker.');
-                this.terminateAndRespawn();
-                reject(new Error('Execution timed out'));
-            }, this.RUN_TIMEOUT_MS);
-            this.pendingRuns.set(runId, { resolve, reject, timeout });
-            this.worker?.postMessage({ type: 'run', code, runId });
-        });
         try {
-            await promise;
+            await this.runtime.run(code);
         } catch (err: any) {
             let error_text = err?.toString() || String(err);
-            let debug_idx = error_text.indexOf('  File "<exec>"');
+            const debug_idx = error_text.indexOf('  File "<exec>"');
             if (debug_idx > 0) error_text = error_text.substring(debug_idx);
             this.addToOutput(error_text);
         } finally {
@@ -216,146 +204,13 @@ export class BottomEditor extends LitElement {
         }
     }
 
-    /* Implements the WriteHandler interface for pyodide.setStdout(). */
-    write(buffer: Uint8Array) {
-        this.addToOutput(new TextDecoder().decode(buffer));
-        return buffer.length;
-    }
-
-    /** Loads data files available from the working directory of the code. */
     async installFilesFromZip(url: string) {
-        if (!this._editor) return;
         this.addToLog(`Loading ${url}... `);
-        await this.workerReady;
-        this.worker?.postMessage({ type: 'loadZip', url });
-    }
-
-    private async spawnWorker(): Promise<void> {
-        if (this.worker) return Promise.resolve();
-
-        this.worker = new PyodideWorker();
-
-        this.worker.onmessage = (ev: MessageEvent) => {
-            const msg = ev.data as any;
-            if (msg.type === 'stdout') {
-                this.addToOutput(msg.data);
-                return;
-            }
-            if (msg.type === 'log') {
-                this.addToLog(msg.data);
-                return;
-            }
-            if (msg.type === 'ready') {
-                this.clearHistory();
-                this.addToLog('Python Ready!');
-                // create and send SharedArrayBuffer for interrupts
-                try {
-                    // SharedArrayBuffer requires proper COOP/COEP headers on the server
-                    this.interruptBuffer = new Uint8Array(new SharedArrayBuffer(1));
-                    this.interruptBuffer[0] = 0;
-                    this.worker?.postMessage({ type: 'setInterruptBuffer', interruptBuffer: this.interruptBuffer });
-                    this.addToLog('Interrupt buffer created and sent to worker');
-                } catch (e) {
-                    this.addToLog('Could not create SharedArrayBuffer for interrupts: ' + String(e));
-                }
-                return;
-            }
-            if (msg.type === 'done') {
-                const run = this.pendingRuns.get(msg.runId);
-                if (run) {
-                    window.clearTimeout(run.timeout);
-                    run.resolve();
-                    this.pendingRuns.delete(msg.runId);
-                }
-                return;
-            }
-            if (msg.type === 'error') {
-                if (msg.runId) {
-                    const run = this.pendingRuns.get(msg.runId);
-                    if (run) {
-                        window.clearTimeout(run.timeout);
-                        run.reject(new Error(msg.error || msg.data || 'Unknown error'));
-                        this.pendingRuns.delete(msg.runId);
-                        return;
-                    }
-                }
-                this.addToOutput(String(msg.error || msg.data || 'Worker error'));
-                return;
-            }
-        };
-        // initialize worker
-        this.worker.postMessage({ type: 'init', baseURL: import.meta.url, indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full' });
-        // resolve when ready message arrives - a simple promise that waits for the 'Python Ready!' output
-        await new Promise<void>((resolve) => {
-            const onMessage = (ev: MessageEvent) => {
-                if (ev.data && ev.data.type === 'ready') {
-                    this.worker?.removeEventListener('message', onMessage as any);
-                    resolve();
-                }
-            };
-            this.worker?.addEventListener('message', onMessage as any);
-        });
-    }
-
-    private terminateAndRespawn() {
-        // terminate current worker and reject any pending runs
-        if (this.worker) {
-            try { this.worker.terminate(); } catch (e) { }
-            this.worker = undefined;
-        }
-        for (const [id, run] of this.pendingRuns.entries()) {
-            window.clearTimeout(run.timeout);
-            run.reject(new Error('Worker terminated'));
-        }
-        this.pendingRuns.clear();
-        // spawn a fresh worker
-        this.setRunning(false);
-        this.workerReady = this.spawnWorker();
+        await this.runtime.loadZip(url);
     }
 
     public interruptRun() {
-        this.addToLog('Interrupt requested.');
-        if (!this.worker) {
-            this.addToLog('No worker to interrupt.');
-            return;
-        }
-        // Prefer SharedArrayBuffer-based interrupt if available
-        if (this.interruptBuffer) {
-            try {
-                this.addToLog('Sending SIGINT via interrupt buffer');
-                this.interruptBuffer[0] = 2; // 2 stands for SIGINT
-                // If the interrupt doesn't take effect within a short period, fallback to terminating the worker
-                window.setTimeout(() => {
-                    if (this.pendingRuns.size > 0) {
-                        this.addToLog('Interrupt did not stop execution — terminating worker.');
-                        this.terminateAndRespawn();
-                    }
-                }, 1500);
-                return;
-            } catch (e) {
-                this.addToLog('Failed to use interrupt buffer: ' + String(e));
-            }
-        }
-
-        // Fallback: send interrupt message to worker (best-effort)
-        this.addToLog('Attempting fallback interrupt via worker message.');
-        const workerRef = this.worker;
-        const ackPromise = new Promise<void>((resolve) => {
-            const onMsg = (ev: MessageEvent) => {
-                const msg = (ev.data as any);
-                if (msg.type === 'interrupted' || msg.type === 'interrupt-unavailable' || msg.type === 'error') {
-                    workerRef.removeEventListener('message', onMsg as any);
-                    resolve();
-                }
-            };
-            workerRef.addEventListener('message', onMsg as any);
-            try { workerRef.postMessage({ type: 'interrupt' }); } catch (e) { resolve(); }
-            window.setTimeout(() => { workerRef.removeEventListener('message', onMsg as any); resolve(); }, 500);
-        });
-        ackPromise.then(() => {
-            this.addToLog('Fallback interrupt finished — ensuring clean state by respawning worker.');
-            this.terminateAndRespawn();
-        });
+        this.runtime.interrupt();
     }
 
     private setRunning(running: boolean) {
