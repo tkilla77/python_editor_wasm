@@ -4,13 +4,12 @@ import { EditorView } from "@codemirror/view"
 import { base64ToText } from './encoder.js'
 import { PyodideRuntime } from './pyodide-runtime.js';
 import { createPythonEditor } from './codemirror-setup.js';
-import { BottomEditorOutput } from './bottom-editor-output.js';
-import { BottomEditorButtons } from './bottom-editor-buttons.js';
+// Side-effect imports: execute the modules so customElements.define() runs.
+import './bottom-editor-output.js';
+import './bottom-editor-buttons.js';
+import type { BottomEditorOutput } from './bottom-editor-output.js';
+import type { BottomEditorButtons } from './bottom-editor-buttons.js';
 import styles from './bottom-editor.css?inline';
-
-// Side-effect imports — registers the sub-components as custom elements.
-// (TypeScript would tree-shake them without the explicit reference above.)
-export type { BottomEditorOutput, BottomEditorButtons };
 
 // Allow Python code to call input() via a browser prompt.
 declare global {
