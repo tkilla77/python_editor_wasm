@@ -101,6 +101,7 @@ export class BottomEditor extends LitElement {
     }
 
     async copyPermalink() {
+        // FIXME allow permalink base to be configured
         const url = new URL("https://bottom.ch/ksr/ed/");
         url.searchParams.set('code', this.sourceCode);
         const zip = this.getAttribute("zip");
