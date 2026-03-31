@@ -5,6 +5,21 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   base: '',
+  worker: {
+    format: 'es',
+    rollupOptions: {
+      external: [
+        "node-fetch",
+        "node:crypto",
+        "node:url",
+        "node:fs",
+        "node:fs/promises",
+        "node:vm",
+        "node:path",
+        "node:child_process",
+      ],
+    }
+  },
   plugins: [
     tailwindcss(),
     {
@@ -26,29 +41,6 @@ export default defineConfig({
       }
     }
   ],
-  worker: {
-    format: "es",
-    rollupOptions: {
-        external: [
-          "node-fetch",
-          "node:crypto",
-          "node:url",
-          "node:fs",
-          "node:fs/promises",
-          "node:vm",
-          "node:path",
-          "node:child_process",
-        ],
-    },
-  },
-  resolve: {
-        alias: {
-            "@": "/resources",
-        },
-  },
-  optimizeDeps: {
-    exclude: ['pyodide']
-  },
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points
@@ -63,16 +55,6 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         nested: resolve(__dirname, 'embed.html'),
       },
-      external: [
-        "node-fetch",
-        "node:crypto",
-        "node:url",
-        "node:fs",
-        "node:fs/promises",
-        "node:vm",
-        "node:path",
-        "node:child_process",
-      ],
     },
   },
 })

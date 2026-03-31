@@ -8,6 +8,7 @@ import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
 import { base64ToText } from './encoder.js'
+import PyodideWorker from './pyodide-worker.ts?worker&inline';
 
 // Pyodide is loaded inside a dedicated web worker (see src/pyodide-worker.ts)
 
@@ -225,9 +226,11 @@ export class BottomEditor extends LitElement {
         this.worker?.postMessage({ type: 'loadZip', url });
     }
 
-    private spawnWorker(): Promise<void> {
+    private async spawnWorker(): Promise<void> {
         if (this.worker) return Promise.resolve();
-        this.worker = new Worker(new URL('./pyodide-worker.ts', import.meta.url), { type: 'module' });
+
+        this.worker = new PyodideWorker();
+
         this.worker.onmessage = (ev: MessageEvent) => {
             const msg = ev.data as any;
             if (msg.type === 'stdout') {
@@ -277,9 +280,9 @@ export class BottomEditor extends LitElement {
             }
         };
         // initialize worker
-        this.worker.postMessage({ type: 'init', indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full' });
+        this.worker.postMessage({ type: 'init', baseURL: import.meta.url, indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full' });
         // resolve when ready message arrives - a simple promise that waits for the 'Python Ready!' output
-        return new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
             const onMessage = (ev: MessageEvent) => {
                 if (ev.data && ev.data.type === 'ready') {
                     this.worker?.removeEventListener('message', onMessage as any);

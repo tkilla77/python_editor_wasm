@@ -1,7 +1,9 @@
-import { loadPyodide } from 'pyodide';
+
+console.log("worker loaded!")
 
 type Msg = {
     type: string,
+    baseURL?: string,
     indexURL?: string,
     code?: string,
     runId?: number,
@@ -63,8 +65,12 @@ function post(type: string, payload: any = {}) {
     (self as any).postMessage({ type, ...payload });
 }
 
-async function init(indexURL?: string) {
+import { loadPyodide } from 'pyodide';
+async function init(baseURL?: string, indexURL?: string) {
+    (self as any).baseURL = baseURL
+
     try {
+
         py = await loadPyodide({ indexURL: indexURL || 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full' });
         py.setStdout({
             write: (buf: Uint8Array) => {
@@ -136,7 +142,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
         }
 
         if (msg.type === 'init') {
-            await init(msg.indexURL);
+            await init(msg.baseURL, msg.indexURL);
             return;
         }
 
@@ -213,4 +219,4 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
     }
 };
 
-export {};
+//export {};
