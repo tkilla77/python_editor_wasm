@@ -1,5 +1,12 @@
 # Enable SharedArrayBuffer access with proper COOP/COEP headers
 <IfModule mod_headers.c>
+    # Allow access from everywhere (we are a static site):
+    Header set Access-Control-Allow-Origin "*"
+
+    # Required to let component or workers use 'fetch' or custom headers
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+
     # Cross-Origin-Opener-Policy: Isolates browsing context to same-origin
     Header set Cross-Origin-Opener-Policy "same-origin"
     
@@ -8,4 +15,7 @@
     
     # Optional: Allow cross-origin resource policy for resources that need to be fetched
     Header set Cross-Origin-Resource-Policy "cross-origin"
+
+    # Prevent MIME type sniffing for JavaScript files
+    Header set X-Content-Type-Options "nosniff"
 </IfModule>
