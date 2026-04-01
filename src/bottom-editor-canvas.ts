@@ -11,12 +11,27 @@ export class BottomEditorCanvas extends LitElement {
     private _zoom = 1;
     private _panX = 0;
     private _panY = 0;
+    private _lastWidth = 0;   // tracked by ResizeObserver for proportional pan adjustment
     private _dragging = false;
     private _dragLastX = 0;
     private _dragLastY = 0;
 
+    private _resizeObserver = new ResizeObserver(entries => {
+        const w = entries[0]?.contentRect.width ?? 0;
+        if (w > 0 && this._lastWidth > 0 && w !== this._lastWidth) {
+            // Scale pan proportionally so the world point at the container centre
+            // stays centred after the resize.
+            const ratio = w / this._lastWidth;
+            this._panX *= ratio;
+            this._panY *= ratio;
+            this._applyTransform();
+        }
+        if (w > 0) this._lastWidth = w;
+    });
+
     connectedCallback() {
         super.connectedCallback();
+        this._resizeObserver.observe(this);
         this.addEventListener('wheel', this._onWheel, { passive: false });
         this.addEventListener('mousedown', this._onMouseDown);
         this.addEventListener('dblclick', this._onDblClick);
@@ -24,6 +39,7 @@ export class BottomEditorCanvas extends LitElement {
 
     disconnectedCallback() {
         super.disconnectedCallback();
+        this._resizeObserver.disconnect();
         this.removeEventListener('wheel', this._onWheel);
         this.removeEventListener('mousedown', this._onMouseDown);
         this.removeEventListener('dblclick', this._onDblClick);
@@ -40,11 +56,12 @@ export class BottomEditorCanvas extends LitElement {
         if (c) c.style.transform = `translate(${this._panX}px, ${this._panY}px) scale(${this._zoom})`;
     }
 
-    // Set zoom so 1 turtle unit = 1 CSS pixel, centered on the canvas centre (0,0 world).
+    // Set zoom so 1 turtle unit = 1 CSS pixel, centred on the canvas origin (0,0 world).
     private _resetView(): void {
         const w = Math.max(this.clientWidth, 1);
+        this._lastWidth = w;
         this._zoom = CANVAS_SIZE / w;
-        // With transform-origin 0 0, shift canvas so its centre aligns with the host centre.
+        // transform-origin is 0 0; shift so the canvas centre aligns with the host centre.
         this._panX = (w / 2) * (1 - this._zoom);
         this._panY = (w / 2) * (1 - this._zoom);
         this._applyTransform();
@@ -108,7 +125,10 @@ export class BottomEditorCanvas extends LitElement {
     }
 
     render() {
-        return html`<canvas width="${CANVAS_SIZE}" height="${CANVAS_SIZE}"></canvas>`;
+        return html`
+            <canvas width="${CANVAS_SIZE}" height="${CANVAS_SIZE}"></canvas>
+            <button @click=${this._resetView} title="Reset view">⊕</button>
+        `;
     }
 }
 

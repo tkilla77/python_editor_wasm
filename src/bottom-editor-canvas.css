@@ -5,6 +5,7 @@
     border: 1px #d4d4d4 solid;
     border-radius: 0.5em;
     cursor: grab;
+    position: relative;
 }
 canvas {
     display: block;
@@ -12,4 +13,23 @@ canvas {
     height: auto;
     aspect-ratio: 1;
     transform-origin: 0 0;
+}
+button {
+    position: absolute;
+    top: 0.35em;
+    right: 0.35em;
+    width: 1.6em;
+    height: 1.6em;
+    padding: 0;
+    border: 1px solid #d4d4d4;
+    border-radius: 0.25em;
+    background: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    font-size: 0.9em;
+    line-height: 1;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+}
+button:hover {
+    opacity: 1;
 }
