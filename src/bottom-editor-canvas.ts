@@ -22,13 +22,13 @@ export class BottomEditorCanvas extends LitElement {
         const w = rect?.width ?? 0;
         const h = rect?.height ?? 0;
         if (w > 0 && this._lastWidth > 0) {
-            const ratio = w / this._lastWidth;
-            // panX scales proportionally with width (derived: panX_new = panX × ratio).
-            this._panX *= ratio;
-            // panY: keep the same canvas Y coordinate at the new host centre.
-            // Derivation: cy = (lastH/2 − panY) / (lastW/CS × Z)
-            //             panY_new = h/2 − cy × (w/CS × Z) = h/2 − (lastH/2 − panY) × ratio
-            this._panY = h / 2 - (this._lastHeight / 2 - this._panY) * ratio;
+            // Compensate for CSS width change so the visual scale stays constant:
+            //   zoom_new = zoom × lastW/w  →  (w/CS)×zoom_new = (lastW/CS)×zoom  ✓
+            // With zoom corrected, keeping the centre-point fixed reduces to:
+            //   panX += (w − lastW)/2,  panY += (h − lastH)/2
+            this._zoom *= this._lastWidth / w;
+            this._panX += (w - this._lastWidth) / 2;
+            this._panY += (h - this._lastHeight) / 2;
             this._applyTransform();
         }
         if (w > 0) this._lastWidth = w;
