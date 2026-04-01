@@ -13,6 +13,7 @@ type Msg = {
 }
 
 let py: any = null;
+let canvasCtx: OffscreenCanvasRenderingContext2D | null = null;
 let stdoutBuffer = '';
 let flushTimer: number | null = null;
 const FLUSH_INTERVAL_MS = 100;
@@ -148,11 +149,20 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
 
         if (msg.type === 'setCanvas' && py && msg.canvas) {
             try {
-                // py.canvas is provided by pyodide; set a 2D canvas if available
+                // Grab the 2D context before pyodide does so we can clear it later.
+                // getContext('2d') always returns the same object, so no conflict.
+                canvasCtx = msg.canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
                 py.canvas.setCanvas2D(msg.canvas);
                 post('log', { data: 'Canvas attached' });
             } catch (e) {
                 post('log', { data: 'Canvas attach failed: ' + String(e) });
+            }
+            return;
+        }
+
+        if (msg.type === 'clearCanvas') {
+            if (canvasCtx) {
+                canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
             }
             return;
         }

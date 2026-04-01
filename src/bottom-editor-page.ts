@@ -8,7 +8,8 @@ class BottomEditorPage extends LitElement {
 
     private sourceCode : string = '';
     private autoRun: boolean = false;
-    private zipUrl: string = ''
+    private zipUrl: string = '';
+    private layout: string = 'console';
 
     constructor() {
         super();
@@ -30,6 +31,9 @@ class BottomEditorPage extends LitElement {
         if (params.has('zip')) {
             this.zipUrl = params.get('zip') ?? '';
         }
+        if (params.has('layout')) {
+            this.layout = params.get('layout') ?? 'console';
+        }
     }
 
     private getUrl() {
@@ -45,7 +49,7 @@ class BottomEditorPage extends LitElement {
     }
 
     render() {
-        return html`<bottom-editor exportparts="buttons" .sourceCode=${this.sourceCode} ?autorun=${this.autoRun} zip='${this.zipUrl}'></bottom-editor>`;
+        return html`<bottom-editor exportparts="buttons" .sourceCode=${this.sourceCode} ?autorun=${this.autoRun} zip='${this.zipUrl}' layout='${this.layout}'></bottom-editor>`;
     }
 
     static styles = css`
@@ -59,6 +63,12 @@ class BottomEditorPage extends LitElement {
             max-height: initial;
             flex: 1;
             min-height: 0;
+            container-type: inline-size;
+        }
+        @container (min-width: 768px) {
+            bottom-editor::part(buttons) {
+                flex-direction: column;
+            }
         }
     `
 }

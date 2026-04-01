@@ -55,6 +55,17 @@ export class PyodideRuntime {
         this.worker?.postMessage({ type: 'loadZip', url });
     }
 
+    /** Transfer an OffscreenCanvas to the worker for use with pyodide.canvas. */
+    async setCanvas(canvas: OffscreenCanvas): Promise<void> {
+        await this.ready;
+        this.worker?.postMessage({ type: 'setCanvas', canvas }, [canvas]);
+    }
+
+    /** Clear the canvas (must be called after setCanvas). */
+    clearCanvas(): void {
+        this.worker?.postMessage({ type: 'clearCanvas' });
+    }
+
     /** Interrupt a running execution. Falls back to worker termination. */
     interrupt(): void {
         this.callbacks.onLog('Interrupt requested.');

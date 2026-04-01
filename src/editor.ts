@@ -7,8 +7,10 @@ import { createPythonEditor } from './codemirror-setup.js';
 // Side-effect imports: execute the modules so customElements.define() runs.
 import './bottom-editor-output.js';
 import './bottom-editor-buttons.js';
+import './bottom-editor-canvas.js';
 import type { BottomEditorOutput } from './bottom-editor-output.js';
 import type { BottomEditorButtons } from './bottom-editor-buttons.js';
+import type { BottomEditorCanvas } from './bottom-editor-canvas.js';
 import styles from './bottom-editor.css?inline';
 
 // Allow Python code to call input() via a browser prompt.
@@ -24,7 +26,11 @@ export class BottomEditor extends LitElement {
 
     private _editor?: EditorView;
     private _pendingCode?: string;
+    private _offscreenCanvas?: OffscreenCanvas;
     private runtime!: PyodideRuntime;
+
+    @property({ reflect: true })
+    layout: string = 'console';
 
     @property({ attribute: 'sourcecode' })
     set sourceCode(code: string) { this.replaceDoc(code); }
@@ -50,10 +56,16 @@ export class BottomEditor extends LitElement {
             .replace(/^\s*\n/, '') || '';
     }
 
-    firstUpdated() {
+    async firstUpdated() {
         const text = this._pendingCode ?? this.getSourceCode();
         this._editor = createPythonEditor(this._code!, text, () => this.evaluatePython());
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length > 5;
+
+        const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
+        if (canvasEl) {
+            await canvasEl.updateComplete;
+            this._offscreenCanvas = canvasEl.transferToOffscreen();
+        }
 
         this._output?.addLog('Initializing...');
 
@@ -65,6 +77,9 @@ export class BottomEditor extends LitElement {
                 onReady:  async () => {
                     this._output?.clearOutput();
                     this._output?.addLog('Python Ready!');
+                    if (this._offscreenCanvas) {
+                        await this.runtime.setCanvas(this._offscreenCanvas);
+                    }
                     const zip = this.getAttribute('zip');
                     if (zip) await this.installFilesFromZip(zip);
                     const autorun = this.getAttribute('autorun');
@@ -88,6 +103,7 @@ export class BottomEditor extends LitElement {
     async evaluatePython() {
         if (!this._editor) return;
         this._output?.clearOutput();
+        if (this._offscreenCanvas) this.runtime.clearCanvas();
         const code = this._editor.state.doc.toString();
         if (this._buttons) this._buttons.running = true;
         try {
@@ -116,16 +132,24 @@ export class BottomEditor extends LitElement {
         navigator.clipboard.writeText(url.href);
     }
 
+    private clearAll() {
+        this._output?.clearOutput();
+        if (this._offscreenCanvas) this.runtime.clearCanvas();
+    }
+
     render() {
+        const hasCanvas = this.layout === 'canvas' || this.layout === 'split';
+        const hasOutput = this.layout !== 'canvas';
         return html`
             <bottom-editorarea>
                 <bottom-code id="code"></bottom-code>
-                <bottom-editor-output></bottom-editor-output>
+                ${hasCanvas ? html`<bottom-editor-canvas></bottom-editor-canvas>` : ''}
+                ${hasOutput ? html`<bottom-editor-output></bottom-editor-output>` : ''}
                 <bottom-editor-buttons
                     part="buttons"
                     @bottom-run="${this.evaluatePython}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
-                    @bottom-clear="${() => this._output?.clearOutput()}"
+                    @bottom-clear="${this.clearAll}"
                     @bottom-permalink="${this.copyPermalink}"
                 ></bottom-editor-buttons>
             </bottom-editorarea>`;
