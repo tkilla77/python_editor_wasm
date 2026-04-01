@@ -34,12 +34,11 @@ class MockWorker {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeCallbacks(): { cb: RuntimeCallbacks; onStdout: ReturnType<typeof vi.fn>; onLog: ReturnType<typeof vi.fn>; onError: ReturnType<typeof vi.fn>; onReady: ReturnType<typeof vi.fn> } {
-    const onStdout = vi.fn();
+function makeCallbacks(): { cb: RuntimeCallbacks; onLog: ReturnType<typeof vi.fn>; onError: ReturnType<typeof vi.fn>; onReady: ReturnType<typeof vi.fn> } {
     const onLog    = vi.fn();
     const onError  = vi.fn();
     const onReady  = vi.fn();
-    return { cb: { onStdout, onLog, onError, onReady }, onStdout, onLog, onError, onReady };
+    return { cb: { onLog, onError, onReady }, onLog, onError, onReady };
 }
 
 function makeRuntime(mock: MockWorker, overrides?: Partial<RuntimeCallbacks>, timeoutMs = 30_000) {
@@ -47,6 +46,13 @@ function makeRuntime(mock: MockWorker, overrides?: Partial<RuntimeCallbacks>, ti
     const callbacks = { ...cb, ...overrides };
     const rt = new PyodideRuntime(callbacks, () => mock as unknown as Worker, 'https://example.com/pyodide', timeoutMs);
     return { rt, mock, ...spies };
+}
+
+function makeOnStdout() { return vi.fn(); }
+
+/** Drain the microtask queue enough for run() → queue → execute → postMessage to settle. */
+async function flush() {
+    for (let i = 0; i < 4; i++) await Promise.resolve();
 }
 
 /** Start the runtime and resolve the ready handshake. */
@@ -88,8 +94,8 @@ describe('PyodideRuntime', () => {
         const { rt } = makeRuntime(mock);
         await startAndReady(mock, rt);
 
-        const runPromise = rt.run('print("hi")');
-        await Promise.resolve();
+        const runPromise = rt.run('print("hi")', makeOnStdout());
+        await flush();
         const runMsg = mock.sent.find(m => m.type === 'run');
         expect(runMsg).toMatchObject({ type: 'run', code: 'print("hi")' });
 
@@ -101,8 +107,8 @@ describe('PyodideRuntime', () => {
         const { rt } = makeRuntime(mock);
         await startAndReady(mock, rt);
 
-        const runPromise = rt.run('bad code');
-        await Promise.resolve();
+        const runPromise = rt.run('bad code', makeOnStdout());
+        await flush();
         const runMsg = mock.sent.find(m => m.type === 'run');
 
         mock.receive({ type: 'error', runId: runMsg.runId, error: 'NameError: bad' });
@@ -114,8 +120,8 @@ describe('PyodideRuntime', () => {
         const { rt, onLog } = makeRuntime(mock, {}, 500);
         await startAndReady(mock, rt);
 
-        const runPromise = rt.run('while True: pass');
-        await Promise.resolve();
+        const runPromise = rt.run('while True: pass', makeOnStdout());
+        await flush();
 
         vi.advanceTimersByTime(500);
         // terminateAndRespawn() rejects pending runs with 'Worker terminated'
@@ -126,10 +132,18 @@ describe('PyodideRuntime', () => {
     });
 
     it('onStdout callback fires for stdout messages', async () => {
-        const { rt, onStdout } = makeRuntime(mock);
+        const { rt } = makeRuntime(mock);
         await startAndReady(mock, rt);
-        mock.receive({ type: 'stdout', data: 'hello\n' });
+
+        const onStdout = vi.fn();
+        rt.run('print("hi")', onStdout);
+        await flush();
+        const runMsg = mock.sent.find(m => m.type === 'run');
+
+        mock.receive({ type: 'stdout', runId: runMsg.runId, data: 'hello\n' });
         expect(onStdout).toHaveBeenCalledWith('hello\n');
+
+        mock.receive({ type: 'done', runId: runMsg.runId });
     });
 
     it('onError callback fires for unattributed error messages', async () => {
@@ -143,8 +157,8 @@ describe('PyodideRuntime', () => {
         const { rt } = makeRuntime(mock);
         await startAndReady(mock, rt);
 
-        const p = rt.run('sleep(9999)');
-        await Promise.resolve();
+        const p = rt.run('sleep(9999)', makeOnStdout());
+        await flush();
         rt.terminate();
         await expect(p).rejects.toThrow('Worker terminated');
     });
@@ -157,8 +171,8 @@ describe('PyodideRuntime', () => {
         const bufMsg = mock.sent.find(m => m.type === 'setInterruptBuffer');
         const buf = bufMsg?.interruptBuffer as Uint8Array | undefined;
 
-        rt.run('while True: pass');
-        await Promise.resolve();
+        rt.run('while True: pass', makeOnStdout());
+        await flush();
         rt.interrupt();
 
         if (buf) {

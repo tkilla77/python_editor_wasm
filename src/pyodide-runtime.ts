@@ -1,5 +1,4 @@
 export type RuntimeCallbacks = {
-    onStdout: (data: string) => void;
     onLog: (data: string) => void;
     /** Called for worker-level errors not tied to a specific run. */
     onError: (data: string) => void;
@@ -19,8 +18,10 @@ export class PyodideRuntime {
         resolve: () => void;
         reject: (e: Error) => void;
         timeout: ReturnType<typeof setTimeout>;
+        onStdout: (data: string) => void;
     }>();
     private interruptBuffer?: Uint8Array;
+    private _queue: Promise<void> = Promise.resolve();
 
     constructor(
         private readonly callbacks: RuntimeCallbacks,
@@ -35,18 +36,21 @@ export class PyodideRuntime {
     }
 
     /** Run Python code. Resolves on success, rejects on error or timeout. */
-    async run(code: string): Promise<void> {
+    async run(code: string, onStdout: (data: string) => void): Promise<void> {
         await this.ready;
         const runId = this.runIdCounter++;
-        return new Promise<void>((resolve, reject) => {
+        const execute = () => new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.callbacks.onLog('Run timed out — interrupting worker.');
                 this.terminateAndRespawn();
                 reject(new Error('Execution timed out'));
             }, this.RUN_TIMEOUT_MS);
-            this.pendingRuns.set(runId, { resolve, reject, timeout });
+            this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
             this.worker?.postMessage({ type: 'run', code, runId });
         });
+        const result = this._queue.then(execute);
+        this._queue = result.catch(() => {});
+        return result;
     }
 
     /** Send a zip URL to be unpacked into the virtual filesystem. */
@@ -119,6 +123,7 @@ export class PyodideRuntime {
             run.reject(new Error('Worker terminated'));
         }
         this.pendingRuns.clear();
+        this._queue = Promise.resolve();
     }
 
     private async spawnWorker(): Promise<void> {
@@ -144,7 +149,8 @@ export class PyodideRuntime {
 
     private handleMessage(msg: any): void {
         if (msg.type === 'stdout') {
-            this.callbacks.onStdout(msg.data);
+            const run = msg.runId !== undefined ? this.pendingRuns.get(msg.runId) : undefined;
+            run?.onStdout(msg.data);
             return;
         }
         if (msg.type === 'log') {

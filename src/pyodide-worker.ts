@@ -16,6 +16,7 @@ let py: any = null;
 let canvasCtx: OffscreenCanvasRenderingContext2D | null = null;
 let stdoutBuffer = '';
 let flushTimer: number | null = null;
+let currentRunId: number | undefined = undefined;
 const FLUSH_INTERVAL_MS = 100;
 // Buffer limits (configurable): keep at most these many lines/chars (last N)
 const MAX_OUTPUT_LINES = 100;
@@ -33,7 +34,7 @@ function scheduleFlush() {
 function flushStdout() {
     if (!stdoutBuffer && !trimmedNotice) return;
     const data = (trimmedNotice ? (trimmedNotice + stdoutBuffer) : stdoutBuffer);
-    post('stdout', { data });
+    post('stdout', { runId: currentRunId, data });
     stdoutBuffer = '';
     trimmedNotice = null;
 }
@@ -175,6 +176,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 return;
             }
             const runId = msg.runId;
+            currentRunId = runId;
             // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
             // Line-by-line substitution preserves line numbers in tracebacks.
             const code = (msg.code || '')
@@ -193,6 +195,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                         flushTimer = null;
                     }
                     flushStdout();
+                    currentRunId = undefined;
                     post('done', { runId });
                 } catch (err: any) {
                     if (flushTimer !== null) {
@@ -200,6 +203,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                         flushTimer = null;
                     }
                     flushStdout();
+                    currentRunId = undefined;
                     post('error', { runId, error: String(err) });
                 }
             } catch (err: any) {
@@ -208,6 +212,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     flushTimer = null;
                 }
                 flushStdout();
+                currentRunId = undefined;
                 post('error', { runId, error: String(err) });
             }
             return;
