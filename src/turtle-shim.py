@@ -36,12 +36,16 @@ _COLORS = {
     'lavender':'#e6e6fa','beige':'#f5f5dc','crimson':'#dc143c',
 }
 
-# speed() value → sleep seconds per step
-_SPEED_DELAY = {
-    0: 0, 1: 0.1, 2: 0.07, 3: 0.05, 4: 0.03,
-    5: 0.02, 6: 0.015, 7: 0.01, 8: 0.007, 9: 0.003, 10: 0,
+# speed() value → pixels per second (0 = instant)
+# Default speed 6: 200 px/s → 100px in ~500ms
+_SPEED_PX_PER_SEC = {
+    0: 0, 1: 20, 2: 40, 3: 60, 4: 100,
+    5: 150, 6: 200, 7: 400, 8: 600, 9: 800, 10: 0,
 }
 _SPEED_NAMES = {'fastest': 0, 'fast': 10, 'normal': 6, 'slow': 3, 'slowest': 1}
+
+# Pixels drawn per render tick when animating
+_STEP_PX = 3
 
 def _parse_color(c):
     if isinstance(c, str):
@@ -67,7 +71,7 @@ class Turtle:
         self._pencolor = 'black'
         self._fillcolor = 'black'
         self._penwidth = 1
-        self._delay = _SPEED_DELAY[6]
+        self._speed = _SPEED_PX_PER_SEC[6]   # px/s; 0 = instant
         self._visible = True
         self._filling = False
         self._fill_pts = []
@@ -86,13 +90,34 @@ class Turtle:
         ctx.stroke()
 
     def _step(self, x, y):
-        if self._down:
-            self._draw_line(self._x, self._y, x, y)
-        if self._filling:
-            self._fill_pts.append((x, y))
+        x0, y0 = self._x, self._y
+        dist = math.hypot(x - x0, y - y0)
+
+        if self._speed == 0 or dist < 0.001:
+            # Instant: single draw, no sleep
+            if self._down:
+                self._draw_line(x0, y0, x, y)
+            if self._filling:
+                self._fill_pts.append((x, y))
+            self._x, self._y = x, y
+            return
+
+        sleep_per_step = _STEP_PX / self._speed
+        n = max(1, round(dist / _STEP_PX))
+        prev_x, prev_y = x0, y0
+
+        for i in range(1, n + 1):
+            t = i / n
+            nx = x0 + (x - x0) * t
+            ny = y0 + (y - y0) * t
+            if self._down:
+                self._draw_line(prev_x, prev_y, nx, ny)
+            if self._filling:
+                self._fill_pts.append((nx, ny))
+            prev_x, prev_y = nx, ny
+            time.sleep(sleep_per_step)
+
         self._x, self._y = x, y
-        if self._delay:
-            time.sleep(self._delay)
 
     # ---- movement ---------------------------------------------------------
 
@@ -131,6 +156,14 @@ class Turtle:
     def home(self):
         self._step(0.0, 0.0)
         self._heading = 0.0
+
+    def teleport(self, x, y=None, *, fill_gap=False):
+        """Move to position instantly without drawing, regardless of pen state."""
+        if y is None:
+            x, y = x
+        if fill_gap and self._filling:
+            self._fill_pts.append((float(x), float(y)))
+        self._x, self._y = float(x), float(y)
 
     def setheading(self, angle):
         self._heading = float(angle) % 360
@@ -186,14 +219,13 @@ class Turtle:
 
     def speed(self, s=None):
         if s is None:
-            # reverse-lookup current delay to speed value
-            for k, v in _SPEED_DELAY.items():
-                if v == self._delay:
+            for k, v in _SPEED_PX_PER_SEC.items():
+                if v == self._speed:
                     return k
             return 6
         if isinstance(s, str):
             s = _SPEED_NAMES.get(s, 6)
-        self._delay = _SPEED_DELAY[max(0, min(10, int(s)))]
+        self._speed = _SPEED_PX_PER_SEC[max(0, min(10, int(s)))]
 
     # ---- colour -----------------------------------------------------------
 
@@ -388,7 +420,7 @@ def _wrap(name):
 for _n in [
     'forward','fd','backward','bk','back',
     'left','lt','right','rt',
-    'goto','setpos','setposition','setx','sety','home',
+    'goto','setpos','setposition','setx','sety','home','teleport',
     'setheading','seth','circle','dot',
     'penup','pu','up','pendown','pd','down','isdown',
     'pensize','width','penwidth','speed',
