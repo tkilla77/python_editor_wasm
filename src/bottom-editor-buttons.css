@@ -5,10 +5,10 @@
     gap: 0.4em;
     position: relative;
 }
-:host([vertical]) {
-    flex-direction: column;
-}
 @container (min-width: 768px) {
+    :host([vertical]) {
+        flex-direction: column;
+    }
     button span.caption {
         display: none;
     }

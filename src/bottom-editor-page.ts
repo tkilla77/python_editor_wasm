@@ -60,9 +60,6 @@ class BottomEditorPage extends LitElement {
             flex: 1;
             min-height: 0;
         }
-        bottom-editor::part(buttons) {
-            flex-direction: column;
-        }
     `
 }
 
