@@ -178,7 +178,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
             // Line-by-line substitution preserves line numbers in tracebacks.
             const code = (msg.code || '').replace(
-                /^(\s*)repeat(\s+)(.+?)(\s*(?:#.*)?)$/gm,
+                /^(\s*)repeat(\s+)(.+?)\s*:(\s*(?:#.*)?)$/gm,
                 '$1for _ in range($3):$4'
             );
             try {
