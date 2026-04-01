@@ -3,8 +3,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script type="module" src="src/editor.ts"></script>
 
-<bottom-editor layout="split">
+<bottom-editor session="one">
 def greet(name):
     print(f'Hi, {name}!')
-greet('world')
 </bottom-editor>
+
+<bottom-editor session="one">
+greet('Harry')
+</bottom-editor>
+
