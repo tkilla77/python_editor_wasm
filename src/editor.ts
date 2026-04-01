@@ -62,10 +62,7 @@ export class BottomEditor extends LitElement {
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length > 5;
 
         const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
-        if (canvasEl) {
-            await canvasEl.updateComplete;
-            this._offscreenCanvas = canvasEl.transferToOffscreen();
-        }
+        if (canvasEl) await canvasEl.updateComplete;
 
         this._output?.addLog('Initializing...');
 
@@ -77,7 +74,8 @@ export class BottomEditor extends LitElement {
                 onReady:  async () => {
                     this._output?.clearOutput();
                     this._output?.addLog('Python Ready!');
-                    if (this._offscreenCanvas) {
+                    if (canvasEl) {
+                        this._offscreenCanvas = canvasEl.transferToOffscreen();
                         await this.runtime.setCanvas(this._offscreenCanvas);
                     }
                     const zip = this.getAttribute('zip');

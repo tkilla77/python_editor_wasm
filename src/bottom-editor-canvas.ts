@@ -1,17 +1,21 @@
 import { LitElement, html, unsafeCSS } from 'lit'
-import { customElement, query } from 'lit/decorators.js'
+import { customElement } from 'lit/decorators.js'
 import styles from './bottom-editor-canvas.css?inline';
 
 @customElement('bottom-editor-canvas')
 export class BottomEditorCanvas extends LitElement {
     static styles = unsafeCSS(styles);
 
-    @query('canvas')
-    private _canvas?: HTMLCanvasElement;
-
     transferToOffscreen(): OffscreenCanvas {
-        if (!this._canvas) throw new Error('Canvas not ready');
-        return this._canvas.transferControlToOffscreen();
+        // Always replace the existing canvas with a fresh element so this method
+        // can be called again after a worker restart (transferControlToOffscreen
+        // is a one-shot operation — the transferred canvas can't be reused).
+        const fresh = document.createElement('canvas');
+        fresh.width = 400;
+        fresh.height = 400;
+        const existing = this.shadowRoot!.querySelector('canvas');
+        if (existing) existing.replaceWith(fresh);
+        return fresh.transferControlToOffscreen();
     }
 
     render() {
