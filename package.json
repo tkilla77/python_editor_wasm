@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "bottom-editor",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "main": "dist/bottom-editor.umd.cjs",
   "module": "dist/bottom-editor.js",
   "types": "bottom-editor.d.ts",
