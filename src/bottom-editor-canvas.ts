@@ -15,7 +15,7 @@ export class BottomEditorCanvas extends LitElement {
     }
 
     render() {
-        return html`<canvas width="600" height="400"></canvas>`;
+        return html`<canvas width="400" height="400"></canvas>`;
     }
 }
 
