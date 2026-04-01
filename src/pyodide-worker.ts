@@ -175,9 +175,15 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 return;
             }
             const runId = msg.runId;
+            // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
+            // Line-by-line substitution preserves line numbers in tracebacks.
+            const code = (msg.code || '').replace(
+                /^(\s*)repeat(\s+)(.+?)(\s*(?:#.*)?)$/gm,
+                '$1for _ in range($3):$4'
+            );
             try {
                 try {
-                    await py.runPythonAsync(msg.code || '');
+                    await py.runPythonAsync(code);
                     // ensure all buffered stdout is flushed before signaling done
                     if (flushTimer !== null) {
                         (self as any).clearTimeout(flushTimer);
