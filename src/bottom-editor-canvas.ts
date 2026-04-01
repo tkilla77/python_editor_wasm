@@ -11,22 +11,28 @@ export class BottomEditorCanvas extends LitElement {
     private _zoom = 1;
     private _panX = 0;
     private _panY = 0;
-    private _lastWidth = 0;   // tracked by ResizeObserver for proportional pan adjustment
+    private _lastWidth = 0;    // tracked by ResizeObserver
+    private _lastHeight = 0;
     private _dragging = false;
     private _dragLastX = 0;
     private _dragLastY = 0;
 
     private _resizeObserver = new ResizeObserver(entries => {
-        const w = entries[0]?.contentRect.width ?? 0;
-        if (w > 0 && this._lastWidth > 0 && w !== this._lastWidth) {
-            // Scale pan proportionally so the world point at the container centre
-            // stays centred after the resize.
+        const rect = entries[0]?.contentRect;
+        const w = rect?.width ?? 0;
+        const h = rect?.height ?? 0;
+        if (w > 0 && this._lastWidth > 0) {
             const ratio = w / this._lastWidth;
+            // panX scales proportionally with width (derived: panX_new = panX × ratio).
             this._panX *= ratio;
-            this._panY *= ratio;
+            // panY: keep the same canvas Y coordinate at the new host centre.
+            // Derivation: cy = (lastH/2 − panY) / (lastW/CS × Z)
+            //             panY_new = h/2 − cy × (w/CS × Z) = h/2 − (lastH/2 − panY) × ratio
+            this._panY = h / 2 - (this._lastHeight / 2 - this._panY) * ratio;
             this._applyTransform();
         }
         if (w > 0) this._lastWidth = w;
+        if (h > 0) this._lastHeight = h;
     });
 
     connectedCallback() {
@@ -56,14 +62,17 @@ export class BottomEditorCanvas extends LitElement {
         if (c) c.style.transform = `translate(${this._panX}px, ${this._panY}px) scale(${this._zoom})`;
     }
 
-    // Set zoom so 1 turtle unit = 1 CSS pixel, centred on the canvas origin (0,0 world).
+    // Set zoom so 1 turtle unit = 1 CSS pixel, centred on the origin (0,0 world) in the host.
     private _resetView(): void {
         const w = Math.max(this.clientWidth, 1);
+        const h = Math.max(this.clientHeight, 1);
         this._lastWidth = w;
+        this._lastHeight = h;
         this._zoom = CANVAS_SIZE / w;
-        // transform-origin is 0 0; shift so the canvas centre aligns with the host centre.
+        // transform-origin is 0 0; the canvas CSS width equals w, so w/2 × zoom lands at
+        // canvas centre. Pan so that point aligns with the host centre (w/2, h/2).
         this._panX = (w / 2) * (1 - this._zoom);
-        this._panY = (w / 2) * (1 - this._zoom);
+        this._panY = h / 2 - (w / 2) * this._zoom;
         this._applyTransform();
     }
 
