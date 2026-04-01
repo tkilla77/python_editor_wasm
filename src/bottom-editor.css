@@ -12,6 +12,7 @@
 bottom-editorarea {
     display: grid;
     grid-template-columns: 1fr;
+    grid-template-rows: 2fr 1fr auto;
     gap: 0.5em;
     flex: 1;
     min-height: 0;
@@ -26,6 +27,7 @@ bottom-code {
 @container (min-width: 768px) {
     bottom-editorarea {
         grid-template-columns: 2fr auto 1fr;
+        grid-template-rows: 1fr;
     }
     bottom-editor-output {
         grid-column: 3/4;
