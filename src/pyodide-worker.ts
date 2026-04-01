@@ -177,10 +177,13 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             const runId = msg.runId;
             // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
             // Line-by-line substitution preserves line numbers in tracebacks.
-            const code = (msg.code || '').replace(
-                /^(\s*)repeat(\s+)(.+?)\s*:(\s*(?:#.*)?)$/gm,
-                '$1for _ in range($3):$4'
-            );
+            const code = (msg.code || '')
+                // One-liners: `repeat 3: body`
+                .replace(/^(\s*)repeat(\s+)(.+?)\s*:([ \t]+[^#\s].*)$/gm,
+                         '$1for _ in range($3):$4')
+                // Block headers: `repeat 3:` (optional trailing comment)
+                .replace(/^(\s*)repeat(\s+)(.+?)\s*:(\s*(?:#.*)?)$/gm,
+                         '$1for _ in range($3):$4');
             try {
                 try {
                     await py.runPythonAsync(code);
