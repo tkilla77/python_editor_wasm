@@ -37,10 +37,10 @@ _COLORS = {
 }
 
 # speed() value → pixels per second (0 = instant)
-# Default speed 6: 200 px/s → 100px in ~500ms
+# Default speed 6: 150 px/s → 100px in ~667ms
 _SPEED_PX_PER_SEC = {
-    0: 0, 1: 20, 2: 40, 3: 60, 4: 100,
-    5: 150, 6: 200, 7: 400, 8: 600, 9: 800, 10: 0,
+    0: 0, 1: 15, 2: 30, 3: 45, 4: 75,
+    5: 110, 6: 150, 7: 300, 8: 450, 9: 600, 10: 0,
 }
 _SPEED_NAMES = {'fastest': 0, 'fast': 10, 'normal': 6, 'slow': 3, 'slowest': 1}
 
