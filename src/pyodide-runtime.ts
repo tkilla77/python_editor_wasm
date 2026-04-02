@@ -1,3 +1,5 @@
+import { PYODIDE_CDN_URL } from './pyodide-version.js';
+
 export type RuntimeCallbacks = {
     onLog: (data: string) => void;
     /** Called for worker-level errors not tied to a specific run. */
@@ -27,7 +29,7 @@ export class PyodideRuntime {
     constructor(
         private readonly callbacks: RuntimeCallbacks,
         private readonly workerFactory: () => Worker,
-        private readonly indexURL = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full',
+        private readonly indexURL = PYODIDE_CDN_URL,
         private readonly RUN_TIMEOUT_MS = 30000,
     ) {}
 

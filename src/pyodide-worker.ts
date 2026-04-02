@@ -70,12 +70,13 @@ function post(type: string, payload: any = {}) {
 import { loadPyodide } from 'pyodide';
 import turtleShim from './turtle-shim.py?raw';
 import canvasShim from './canvas-shim.py?raw';
+import { PYODIDE_CDN_URL } from './pyodide-version.js';
 async function init(baseURL?: string, indexURL?: string) {
     (self as any).baseURL = baseURL
 
     try {
 
-        py = await loadPyodide({ indexURL: indexURL || 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full' });
+        py = await loadPyodide({ indexURL: indexURL || PYODIDE_CDN_URL });
         py.setStdout({
             write: (buf: Uint8Array) => {
                 const text = new TextDecoder().decode(buf);
