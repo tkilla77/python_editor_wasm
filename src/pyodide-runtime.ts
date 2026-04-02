@@ -22,6 +22,7 @@ export class PyodideRuntime {
     }>();
     private interruptBuffer?: Uint8Array;
     private _queue: Promise<void> = Promise.resolve();
+    private _fitCallback?: (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null) => void;
 
     constructor(
         private readonly callbacks: RuntimeCallbacks,
@@ -68,6 +69,12 @@ export class PyodideRuntime {
     /** Clear the canvas (must be called after setCanvas). */
     clearCanvas(): void {
         this.worker?.postMessage({ type: 'clearCanvas' });
+    }
+
+    /** Scan the canvas for non-blank pixels and return the bounding box, or null if blank. */
+    requestFit(callback: (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null) => void): void {
+        this._fitCallback = callback;
+        this.worker?.postMessage({ type: 'requestFit' });
     }
 
     /** Interrupt a running execution. Falls back to worker termination. */
@@ -176,6 +183,12 @@ export class PyodideRuntime {
                 run.resolve();
                 this.pendingRuns.delete(msg.runId);
             }
+            return;
+        }
+        if (msg.type === 'fitBounds') {
+            const cb = this._fitCallback;
+            this._fitCallback = undefined;
+            cb?.(msg.found ? { minX: msg.minX, minY: msg.minY, maxX: msg.maxX, maxY: msg.maxY } : null);
             return;
         }
         if (msg.type === 'error') {

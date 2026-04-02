@@ -173,6 +173,29 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             return;
         }
 
+        if (msg.type === 'requestFit') {
+            if (!canvasCtx) { post('fitBounds', { found: false }); return; }
+            const { width, height } = canvasCtx.canvas;
+            const data = canvasCtx.getImageData(0, 0, width, height).data;
+            let minX = width, minY = height, maxX = -1, maxY = -1;
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    if (data[(y * width + x) * 4 + 3] > 0) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            if (maxX < 0) {
+                post('fitBounds', { found: false });
+            } else {
+                post('fitBounds', { found: true, minX, minY, maxX: maxX + 1, maxY: maxY + 1 });
+            }
+            return;
+        }
+
         if (msg.type === 'run') {
             if (!py) {
                 post('error', { runId: msg.runId, error: 'Pyodide not initialized' });

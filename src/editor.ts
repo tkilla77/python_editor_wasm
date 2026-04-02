@@ -159,13 +159,19 @@ export class BottomEditor extends LitElement {
         if (this._offscreenCanvas) this.runtime.clearCanvas();
     }
 
+    private _handleFitRequest() {
+        const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
+        if (!canvasEl) return;
+        this.runtime.requestFit(bounds => canvasEl.applyFit(bounds));
+    }
+
     render() {
         const hasCanvas = this.layout === 'canvas' || this.layout === 'split';
         const hasOutput = this.layout !== 'canvas';
         return html`
             <bottom-editorarea>
                 <bottom-code id="code"></bottom-code>
-                ${hasCanvas ? html`<bottom-editor-canvas></bottom-editor-canvas>` : ''}
+                ${hasCanvas ? html`<bottom-editor-canvas @bottom-fit="${this._handleFitRequest}"></bottom-editor-canvas>` : ''}
                 ${hasOutput ? html`<bottom-editor-output></bottom-editor-output>` : ''}
                 <bottom-editor-buttons
                     part="buttons"

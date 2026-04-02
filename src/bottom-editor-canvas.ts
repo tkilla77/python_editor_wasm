@@ -40,7 +40,6 @@ export class BottomEditorCanvas extends LitElement {
         this._resizeObserver.observe(this);
         this.addEventListener('wheel', this._onWheel, { passive: false });
         this.addEventListener('mousedown', this._onMouseDown);
-        this.addEventListener('dblclick', this._onDblClick);
     }
 
     disconnectedCallback() {
@@ -48,7 +47,6 @@ export class BottomEditorCanvas extends LitElement {
         this._resizeObserver.disconnect();
         this.removeEventListener('wheel', this._onWheel);
         this.removeEventListener('mousedown', this._onMouseDown);
-        this.removeEventListener('dblclick', this._onDblClick);
         window.removeEventListener('mousemove', this._onMouseMove);
         window.removeEventListener('mouseup', this._onMouseUp);
     }
@@ -117,10 +115,27 @@ export class BottomEditorCanvas extends LitElement {
         window.removeEventListener('mouseup', this._onMouseUp);
     };
 
-    private _onDblClick = (e: MouseEvent) => {
-        e.preventDefault();
-        this._resetView();
-    };
+    /** Called by editor.ts with the result of a worker canvas scan. */
+    applyFit(bounds: { minX: number; minY: number; maxX: number; maxY: number } | null): void {
+        if (!bounds) { this._resetView(); return; }
+        const PADDING = 24;
+        const w = Math.max(this.clientWidth, 1);
+        const h = Math.max(this.clientHeight, 1);
+        const cssScale = w / CANVAS_SIZE;
+        const bw = bounds.maxX - bounds.minX;
+        const bh = bounds.maxY - bounds.minY;
+        this._zoom = Math.min(
+            (w - 2 * PADDING) / (bw * cssScale),
+            (h - 2 * PADDING) / (bh * cssScale),
+        );
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+        this._panX = w / 2 - cx * cssScale * this._zoom;
+        this._panY = h / 2 - cy * cssScale * this._zoom;
+        this._lastWidth = w;
+        this._lastHeight = h;
+        this._applyTransform();
+    }
 
     transferToOffscreen(): OffscreenCanvas {
         // Replace with a fresh canvas on every call (transferControlToOffscreen is one-shot).
@@ -136,8 +151,13 @@ export class BottomEditorCanvas extends LitElement {
     render() {
         return html`
             <canvas width="${CANVAS_SIZE}" height="${CANVAS_SIZE}"></canvas>
-            <button @click=${this._resetView} title="Reset view">⊕</button>
+            <button @click=${this._onFitClick} title="Fit to content">⊕</button>
         `;
+    }
+
+    private _onFitClick(e: MouseEvent) {
+        e.stopPropagation();
+        this.dispatchEvent(new CustomEvent('bottom-fit', { bubbles: true, composed: true }));
     }
 }
 
