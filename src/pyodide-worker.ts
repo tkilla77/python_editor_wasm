@@ -3,8 +3,8 @@ console.log("worker loaded!")
 
 type Msg = {
     type: string,
-    baseURL?: string,
-    indexURL?: string,
+    baseURL: string,
+    indexURL: string,
     code?: string,
     runId?: number,
     url?: string,
@@ -70,7 +70,7 @@ function post(type: string, payload: any = {}) {
 import { loadPyodide } from 'pyodide';
 import turtleShim from './turtle-shim.py?raw';
 import canvasShim from './canvas-shim.py?raw';
-async function init(baseURL?: string, indexURL?: string) {
+async function init(baseURL: string, indexURL: string) {
     (self as any).baseURL = baseURL
 
     try {
