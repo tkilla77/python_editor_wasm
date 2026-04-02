@@ -192,6 +192,8 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             try {
                 try {
                     await py.runPythonAsync(code);
+                    // Patch any libraries installed via micropip during this run.
+                    await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
                     // ensure all buffered stdout is flushed before signaling done
                     if (flushTimer !== null) {
                         (self as any).clearTimeout(flushTimer);
