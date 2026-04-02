@@ -14,11 +14,21 @@ import sys as _sys
 # ---------------------------------------------------------------------------
 
 def _draw_rgba(rgba_bytes, img_w, img_h):
-    """Blit RGBA bytes onto the OffscreenCanvas, scaled to fit."""
+    """Blit RGBA bytes onto the OffscreenCanvas, scaled to fit.
+
+    Images are drawn into the central VIRT_SIZE × VIRT_SIZE region of the
+    canvas.  This constant matches the default view (turtle zoom), so images
+    appear at 1:1 CSS pixel scale without any pan/zoom adjustment.
+    """
     import pyodide_js as _pjs
     from js import OffscreenCanvas as _JsOC, ImageData, Uint8ClampedArray
     from pyodide.ffi import to_js
     import numpy as _np
+
+    # Virtual viewport: the area visible at default turtle zoom.
+    # Must match CANVAS_SIZE / default_zoom_factor in bottom-editor-canvas.ts.
+    # Default zoom = CANVAS_SIZE / containerWidth ≈ 2000/400 = 5 → VIRT = 400.
+    VIRT = 400
 
     canvas = _pjs.canvas.getCanvas2D()
     if canvas is None:
@@ -27,9 +37,11 @@ def _draw_rgba(rgba_bytes, img_w, img_h):
     ctx = canvas.getContext('2d')
     cw, ch = int(canvas.width), int(canvas.height)
 
-    scale = min(cw / img_w, ch / img_h)
+    # Scale image to fit the virtual viewport, then centre it in the full canvas.
+    scale = min(VIRT / img_w, VIRT / img_h)
     dw, dh = int(img_w * scale), int(img_h * scale)
-    dx, dy = (cw - dw) // 2, (ch - dh) // 2
+    dx = (cw - dw) // 2
+    dy = (ch - dh) // 2
 
     ctx.clearRect(0, 0, cw, ch)
 
