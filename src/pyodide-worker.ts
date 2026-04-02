@@ -69,6 +69,7 @@ function post(type: string, payload: any = {}) {
 
 import { loadPyodide } from 'pyodide';
 import turtleShim from './turtle-shim.py?raw';
+import canvasShim from './canvas-shim.py?raw';
 async function init(baseURL?: string, indexURL?: string) {
     (self as any).baseURL = baseURL
 
@@ -86,6 +87,8 @@ async function init(baseURL?: string, indexURL?: string) {
         });
         await py.loadPackage('micropip', { messageCallback: (msg: string) => post('log', { data: msg }) });
         py.FS.writeFile('/home/pyodide/turtle.py', turtleShim);
+        py.FS.writeFile('/home/pyodide/canvas_shim.py', canvasShim);
+        await py.runPythonAsync(`import canvas_shim`);
         // replace input with a stub that posts back — main thread can implement if desired
         await py.runPythonAsync(`\nfrom js import console\n`);
         post('ready');
