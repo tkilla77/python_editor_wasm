@@ -56,7 +56,7 @@ def _patch_matplotlib():
         w, h = fig.canvas.get_width_height()
         _draw_rgba(bytes(fig.canvas.buffer_rgba()), w, h)
 
-    _plt.show = _show
+    _plt.__dict__['show'] = _show
 
 
 def _patch_pil():
@@ -75,6 +75,8 @@ def _patch_cv2():
     import cv2 as _cv2
     import numpy as _np
 
+    _orig_imshow = _cv2.__dict__.get('imshow')
+
     def _imshow(winname, mat):
         if mat.ndim == 2:                              # grayscale
             rgba = _np.stack([mat, mat, mat, _np.full_like(mat, 255)], axis=-1)
@@ -87,10 +89,23 @@ def _patch_cv2():
         h, w = rgba.shape[:2]
         _draw_rgba(rgba.astype(_np.uint8).tobytes(), w, h)
 
-    _cv2.imshow = _imshow
-    _cv2.waitKey = lambda delay=0: 0
-    _cv2.destroyAllWindows = lambda: None
-    _cv2.destroyWindow = lambda name: None
+    def _imshow_safe(winname, mat):
+        # Try the canvas path first; fall back to the original if something
+        # unexpected goes wrong (e.g. no canvas attached).
+        try:
+            _imshow(winname, mat)
+        except Exception:
+            if _orig_imshow is not None:
+                try:
+                    _orig_imshow(winname, mat)
+                except Exception:
+                    pass
+
+    # Write directly to __dict__ to bypass any C-extension __setattr__ guard.
+    _cv2.__dict__['imshow'] = _imshow_safe
+    _cv2.__dict__['waitKey'] = lambda delay=0: 0
+    _cv2.__dict__['destroyAllWindows'] = lambda: None
+    _cv2.__dict__['destroyWindow'] = lambda name: None
 
 
 # ---------------------------------------------------------------------------
