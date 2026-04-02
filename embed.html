@@ -11,25 +11,25 @@
 <h2>Shared session</h2>
 <p>Functions defined in the first editor are available in the second.</p>
 
-<bottom-editor session="demo">
+<bottom-editor session="demo" autorun>
 def greet(name):
     print(f'Hi, {name}!')
 </bottom-editor>
 
-<bottom-editor session="demo">
+<bottom-editor session="demo" autorun>
 greet('Harry')
 </bottom-editor>
 
 <h2>Turtle</h2>
 <p>Standard Python turtle — draws on the canvas.</p>
 
-<bottom-editor layout="canvas">
+<bottom-editor layout="canvas" autorun>
 import turtle
 
 t = turtle.Turtle()
-t.speed(6)
+t.speed(9)
 colors = ['red', 'orange', 'gold', 'green', 'blue', 'purple']
-for i in range(180):
+for i in range(90):
     t.pencolor(colors[i % len(colors)])
     t.forward(i * 0.5)
     t.left(59)
@@ -38,7 +38,7 @@ for i in range(180):
 <h2>Matplotlib</h2>
 <p>plt.show() renders to the canvas.</p>
 
-<bottom-editor layout="canvas">
+<bottom-editor layout="canvas" autorun>
 import micropip
 await micropip.install('matplotlib')
 
@@ -58,7 +58,7 @@ plt.show()
 <h2>OpenCV</h2>
 <p>cv2.imshow() renders to the canvas.</p>
 
-<bottom-editor layout="canvas">
+<bottom-editor layout="canvas" autorun>
 import micropip
 await micropip.install('numpy')
 await micropip.install('opencv-python')
