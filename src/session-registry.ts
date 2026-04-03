@@ -15,8 +15,33 @@ type SessionEntry = {
 const sessions = new Map<string, SessionEntry>();
 
 /**
+ * Thin per-editor view of the shared runtime. Wraps PyodideRuntime and
+ * overrides editorId so canvas operations are routed to the right canvas.
+ */
+export class EditorHandle {
+    readonly editorId: string;
+    constructor(private readonly _runtime: PyodideRuntime, editorId?: string) {
+        this.editorId = editorId ?? crypto.randomUUID();
+    }
+
+    get ready(): Promise<void> { return this._runtime['ready'] as Promise<void>; }
+    start() { /* managed by session */ }
+
+    run(code: string, onStdout: (data: string) => void) {
+        return this._runtime.runAs(code, onStdout, this.editorId);
+    }
+    loadZip(url: string) { return this._runtime.loadZip(url); }
+    setCanvas(canvas: OffscreenCanvas) { return this._runtime.setCanvasFor(canvas, this.editorId); }
+    clearCanvas() { this._runtime.clearCanvasFor(this.editorId); }
+    requestFit(cb: Parameters<PyodideRuntime['requestFit']>[0]) { return this._runtime.requestFitFor(cb, this.editorId); }
+    samplePixel(x: number, y: number) { return this._runtime.samplePixelFor(x, y, this.editorId); }
+    interrupt() { this._runtime.interrupt(); }
+    terminate() { /* managed by session */ }
+}
+
+/**
  * Join (or create) a named shared session.
- * Returns the shared PyodideRuntime.
+ * Returns a per-editor EditorHandle backed by the shared runtime.
  * If the session is already ready, member.onReady() is called asynchronously.
  */
 export function joinSession(
@@ -24,7 +49,7 @@ export function joinSession(
     member: MemberCallbacks,
     workerFactory: () => Worker,
     indexURL?: string,
-): PyodideRuntime {
+): EditorHandle {
     let entry = sessions.get(id);
     if (!entry) {
         const callbacks: RuntimeCallbacks = {
@@ -44,11 +69,9 @@ export function joinSession(
     }
     entry.members.add(member);
     if (entry.ready) {
-        // Worker already ready — notify the late joiner on the next microtask so
-        // the caller's firstUpdated() has a chance to finish first.
         queueMicrotask(() => member.onReady());
     }
-    return entry.runtime;
+    return new EditorHandle(entry.runtime);
 }
 
 /**

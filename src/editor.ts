@@ -2,8 +2,7 @@ import { LitElement, html, unsafeCSS } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 import { EditorView } from "@codemirror/view"
 import PyodideWorker from './pyodide-worker.ts?worker&inline';
-import { PyodideRuntime } from './pyodide-runtime.js';
-import { joinSession, leaveSession, type MemberCallbacks } from './session-registry.js';
+import { joinSession, leaveSession, type MemberCallbacks, EditorHandle } from './session-registry.js';
 import { createPythonEditor } from './codemirror-setup.js';
 // Side-effect imports: execute the modules so customElements.define() runs.
 import './bottom-editor-output.js';
@@ -28,7 +27,7 @@ export class BottomEditor extends LitElement {
     private _editor?: EditorView;
     private _pendingCode?: string;
     private _offscreenCanvas?: OffscreenCanvas;
-    private runtime!: PyodideRuntime;
+    private runtime!: EditorHandle;
     private _memberCallbacks?: MemberCallbacks;
     private _readyResolve!: () => void;
     /** Resolves when Pyodide is ready. Useful for testing. */
@@ -92,27 +91,19 @@ export class BottomEditor extends LitElement {
             },
         };
 
-        if (this.session) {
-            this.runtime = joinSession(
-                this.session,
-                this._memberCallbacks,
-                () => new PyodideWorker() as unknown as Worker,
-            );
-        } else {
-            this.runtime = new PyodideRuntime(
-                this._memberCallbacks,
-                () => new PyodideWorker() as unknown as Worker,
-            );
-            this.runtime.start();
-        }
+        // All editors share a session. No session attr → implicit '__default__'
+        // (one shared worker per page). Use a unique id for true isolation.
+        this.runtime = joinSession(
+            this.session || '__default__',
+            this._memberCallbacks,
+            () => new PyodideWorker() as unknown as Worker,
+        );
     }
 
     override disconnectedCallback() {
         super.disconnectedCallback();
-        if (this.session && this._memberCallbacks) {
-            leaveSession(this.session, this._memberCallbacks);
-        } else {
-            this.runtime?.terminate();
+        if (this._memberCallbacks) {
+            leaveSession(this.session || '__default__', this._memberCallbacks);
         }
     }
 
@@ -137,7 +128,7 @@ export class BottomEditor extends LitElement {
         const code = this._editor.state.doc.toString();
         if (this._buttons) this._buttons.running = true;
         try {
-            await this.runtime.run(code, (data) => this._output?.addOutput(data));
+            await this.runtime.run(code, (data: string) => this._output?.addOutput(data));
         } catch (err: any) {
             let msg = err?.toString() ?? String(err);
             const idx = msg.indexOf('  File "<exec>"');
@@ -171,7 +162,7 @@ export class BottomEditor extends LitElement {
     private _handleFitRequest() {
         const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
         if (!canvasEl) return;
-        this.runtime.requestFit(bounds => canvasEl.applyFit(bounds));
+        this.runtime.requestFit((bounds: Parameters<typeof canvasEl.applyFit>[0]) => canvasEl.applyFit(bounds));
     }
 
     render() {

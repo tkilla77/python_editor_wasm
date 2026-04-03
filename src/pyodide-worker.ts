@@ -12,9 +12,13 @@ type Msg = {
     interruptBuffer?: any,
     x?: number,
     y?: number,
+    editorId?: string,
 }
 
 let py: any = null;
+// Per-editor canvas contexts, keyed by editorId.
+const canvasCtxMap = new Map<string, OffscreenCanvasRenderingContext2D>();
+// The context currently active (set before each run).
 let canvasCtx: OffscreenCanvasRenderingContext2D | null = null;
 let stdoutBuffer = '';
 let flushTimer: number | null = null;
@@ -155,12 +159,10 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             return;
         }
 
-        if (msg.type === 'setCanvas' && py && msg.canvas) {
+        if (msg.type === 'setCanvas' && py && msg.canvas && msg.editorId) {
             try {
-                // Grab the 2D context before pyodide does so we can clear it later.
-                // getContext('2d') always returns the same object, so no conflict.
-                canvasCtx = msg.canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
-                py.canvas.setCanvas2D(msg.canvas);
+                const ctx = msg.canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
+                canvasCtxMap.set(msg.editorId, ctx);
                 post('log', { data: 'Canvas attached' });
             } catch (e) {
                 post('log', { data: 'Canvas attach failed: ' + String(e) });
@@ -168,27 +170,28 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             return;
         }
 
-        if (msg.type === 'clearCanvas') {
-            if (canvasCtx) {
-                canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
-            }
+        if (msg.type === 'clearCanvas' && msg.editorId) {
+            const ctx = canvasCtxMap.get(msg.editorId);
+            if (ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             return;
         }
 
         if (msg.type === 'samplePixel') {
-            if (!canvasCtx || msg.x === undefined || msg.y === undefined) {
+            const ctx = msg.editorId ? canvasCtxMap.get(msg.editorId) : canvasCtx;
+            if (!ctx || msg.x === undefined || msg.y === undefined) {
                 post('pixelSample', { r: 0, g: 0, b: 0, a: 0 });
                 return;
             }
-            const [r, g, b, a] = canvasCtx.getImageData(msg.x, msg.y, 1, 1).data;
+            const [r, g, b, a] = ctx.getImageData(msg.x, msg.y, 1, 1).data;
             post('pixelSample', { r, g, b, a });
             return;
         }
 
         if (msg.type === 'requestFit') {
-            if (!canvasCtx) { post('fitBounds', { found: false }); return; }
-            const { width, height } = canvasCtx.canvas;
-            const data = canvasCtx.getImageData(0, 0, width, height).data;
+            const ctx = msg.editorId ? canvasCtxMap.get(msg.editorId) : canvasCtx;
+            if (!ctx) { post('fitBounds', { found: false }); return; }
+            const { width, height } = ctx.canvas;
+            const data = ctx.getImageData(0, 0, width, height).data;
             let minX = width, minY = height, maxX = -1, maxY = -1;
             for (let y = 0; y < height; y++) {
                 for (let x = 0; x < width; x++) {
@@ -215,6 +218,9 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             }
             const runId = msg.runId;
             currentRunId = runId;
+            // Switch the active canvas to this editor's canvas (if any).
+            canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
+            if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
             // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
             // Line-by-line substitution preserves line numbers in tracebacks.
             const code = (msg.code || '')

@@ -31,6 +31,7 @@ export class PyodideRuntime {
         private readonly workerFactory: () => Worker,
         private readonly indexURL = PYODIDE_CDN_URL,
         private readonly RUN_TIMEOUT_MS = 30000,
+        readonly editorId: string = crypto.randomUUID(),
     ) {}
 
     /** Spawn the worker. Call once after construction. */
@@ -40,18 +41,24 @@ export class PyodideRuntime {
 
     /** Run Python code. Resolves on success, rejects on error or timeout. */
     async run(code: string, onStdout: (data: string) => void): Promise<void> {
-        await this.ready;
-        const runId = this.runIdCounter++;
-        const execute = () => new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                this.callbacks.onLog('Run timed out — interrupting worker.');
-                this.terminateAndRespawn();
-                reject(new Error('Execution timed out'));
-            }, this.RUN_TIMEOUT_MS);
-            this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
-            this.worker?.postMessage({ type: 'run', code, runId });
-        });
-        const result = this._queue.then(execute);
+        return this.runAs(code, onStdout, this.editorId);
+    }
+
+    runAs(code: string, onStdout: (data: string) => void, editorId: string): Promise<void> {
+        const doRun = async () => {
+            await this.ready;
+            const runId = this.runIdCounter++;
+            return new Promise<void>((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    this.callbacks.onLog('Run timed out — interrupting worker.');
+                    this.terminateAndRespawn();
+                    reject(new Error('Execution timed out'));
+                }, this.RUN_TIMEOUT_MS);
+                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
+                this.worker?.postMessage({ type: 'run', code, runId, editorId });
+            });
+        };
+        const result = this._queue.then(doRun);
         this._queue = result.catch(() => {});
         return result;
     }
@@ -64,23 +71,36 @@ export class PyodideRuntime {
 
     /** Transfer an OffscreenCanvas to the worker for use with pyodide.canvas. */
     async setCanvas(canvas: OffscreenCanvas): Promise<void> {
-        await this.ready;
-        this.worker?.postMessage({ type: 'setCanvas', canvas }, [canvas]);
+        return this.setCanvasFor(canvas, this.editorId);
     }
 
-    /** Clear the canvas (must be called after setCanvas). */
-    clearCanvas(): void {
-        this.worker?.postMessage({ type: 'clearCanvas' });
+    async setCanvasFor(canvas: OffscreenCanvas, editorId: string): Promise<void> {
+        await this.ready;
+        this.worker?.postMessage({ type: 'setCanvas', canvas, editorId }, [canvas]);
+    }
+
+    /** Clear the canvas. */
+    clearCanvas(): void { this.clearCanvasFor(this.editorId); }
+    clearCanvasFor(editorId: string): void {
+        this.worker?.postMessage({ type: 'clearCanvas', editorId });
     }
 
     /** Scan the canvas for non-blank pixels and return the bounding box, or null if blank. */
     requestFit(callback: (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null) => void): void {
+        this.requestFitFor(callback, this.editorId);
+    }
+
+    requestFitFor(callback: (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null) => void, editorId: string): void {
         this._fitCallback = callback;
-        this.worker?.postMessage({ type: 'requestFit' });
+        this.worker?.postMessage({ type: 'requestFit', editorId });
     }
 
     /** Sample a single canvas pixel. Resolves with {r,g,b,a}. */
     samplePixel(x: number, y: number): Promise<{ r: number; g: number; b: number; a: number }> {
+        return this.samplePixelFor(x, y, this.editorId);
+    }
+
+    samplePixelFor(x: number, y: number, editorId: string): Promise<{ r: number; g: number; b: number; a: number }> {
         return new Promise(resolve => {
             const onMsg = (ev: MessageEvent) => {
                 if (ev.data?.type === 'pixelSample') {
@@ -89,7 +109,7 @@ export class PyodideRuntime {
                 }
             };
             this.worker?.addEventListener('message', onMsg as any);
-            this.worker?.postMessage({ type: 'samplePixel', x, y });
+            this.worker?.postMessage({ type: 'samplePixel', x, y, editorId });
         });
     }
 
