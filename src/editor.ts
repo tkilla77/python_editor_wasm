@@ -171,7 +171,8 @@ export class BottomEditor extends LitElement {
         // FIXME allow permalink base to be configured
         const url = new URL("https://bottom.ch/editor/stable/");
         url.searchParams.set('code', this.sourceCode);
-        if (this.layout !== 'console') url.searchParams.set('layout', this.layout);
+        const defaultLayout = this.showswitcher ? 'split' : 'console';
+        if (this.layout !== defaultLayout) url.searchParams.set('layout', this.layout);
         const zip = this.getAttribute("zip");
         if (zip) url.searchParams.set('zip', zip);
         navigator.clipboard.writeText(url.href);
