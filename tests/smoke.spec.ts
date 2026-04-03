@@ -13,8 +13,8 @@ const PYODIDE_TIMEOUT = 75_000;
 
 /** Wait for Pyodide to finish booting on the first <bottom-editor>. */
 async function waitForReady(page: any) {
-    await page.waitForFunction(
-        () => (document.querySelector('bottom-editor') as any)?.logText?.includes('Python Ready!'),
+    await page.evaluate(
+        () => (document.querySelector('bottom-editor') as any)?.ready,
         { timeout: PYODIDE_TIMEOUT },
     );
 }
@@ -39,7 +39,7 @@ test.describe('<bottom-editor> smoke test', () => {
             customElements.get('bottom-editor') !== undefined
         );
         expect(defined).toBe(true);
-        await expect(page.locator('bottom-editor')).toBeAttached();
+        await expect(page.locator('bottom-editor').first()).toBeAttached();
     });
 
     test('initialises Python and reflects initial source code', async ({ page }) => {

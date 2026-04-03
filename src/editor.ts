@@ -30,6 +30,9 @@ export class BottomEditor extends LitElement {
     private _offscreenCanvas?: OffscreenCanvas;
     private runtime!: PyodideRuntime;
     private _memberCallbacks?: MemberCallbacks;
+    private _readyResolve!: () => void;
+    /** Resolves when Pyodide is ready. Useful for testing. */
+    readonly ready: Promise<void> = new Promise(r => { this._readyResolve = r; });
 
     @property({ reflect: true })
     layout: string = 'console';
@@ -77,6 +80,7 @@ export class BottomEditor extends LitElement {
             onReady: async () => {
                 this._output?.clearOutput();
                 this._output?.addLog('Python Ready!');
+                this._readyResolve();
                 if (canvasEl) {
                     this._offscreenCanvas = canvasEl.transferToOffscreen();
                     await this.runtime.setCanvas(this._offscreenCanvas);
