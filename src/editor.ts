@@ -50,6 +50,8 @@ export class BottomEditor extends LitElement {
     orientation: string = 'auto';
 
     // Internal switcher state — only meaningful when showswitcher=true.
+    // Initialised from the `layout` attribute in firstUpdated(); kept in sync
+    // back to `layout` via updated() so CSS grid rules and copyPermalink work.
     @state() private _swCanvas  = true;
     @state() private _swConsole = true;
 
@@ -78,6 +80,13 @@ export class BottomEditor extends LitElement {
     }
 
     async firstUpdated() {
+        // Seed switcher state from the initial layout attribute.
+        if (this.showswitcher) {
+            this._swCanvas  = this.layout !== 'console';
+            this._swConsole = this.layout !== 'canvas';
+            this.layout = 'split';
+        }
+
         const text = this._pendingCode ?? this.getSourceCode();
         this._editor = createPythonEditor(this._code!, text, () => this.evaluatePython());
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length > 5;
@@ -179,6 +188,16 @@ export class BottomEditor extends LitElement {
         this.runtime.requestFit((bounds: Parameters<typeof canvasEl.applyFit>[0]) => canvasEl.applyFit(bounds));
     }
 
+    override updated(changed: Map<string, unknown>) {
+        // Keep layout attribute in sync with switcher toggles so CSS grid
+        // rules and copyPermalink both see the correct effective layout.
+        if (this.showswitcher && (changed.has('_swCanvas') || changed.has('_swConsole'))) {
+            if (this._swCanvas && this._swConsole) this.layout = 'split';
+            else if (this._swCanvas)               this.layout = 'canvas';
+            else                                   this.layout = 'console';
+        }
+    }
+
     private _toggleSwCanvas() {
         if (this._swCanvas && !this._swConsole) { this._swConsole = true; return; }
         this._swCanvas = !this._swCanvas;
@@ -204,9 +223,9 @@ export class BottomEditor extends LitElement {
                     </bottom-editor-canvas>
                     <div class="sw-rail">
                         <button class="sw-tab ${this._swCanvas ? 'open' : 'closed'}"
-                                @click="${this._toggleSwCanvas}">Canvas</button>
+                                @click="${this._toggleSwCanvas}">▲ Canvas</button>
                         <button class="sw-tab ${this._swConsole ? 'open' : 'closed'}"
-                                @click="${this._toggleSwConsole}">Console</button>
+                                @click="${this._toggleSwConsole}">Console ▼</button>
                     </div>
                     <bottom-editor-output
                         class="${this._swConsole ? '' : 'sw-hidden'}">
