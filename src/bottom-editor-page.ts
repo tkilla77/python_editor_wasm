@@ -64,7 +64,7 @@ class BottomEditorPage extends LitElement {
                         ${l}
                     </button>`)}
             </nav>
-            <bottom-editor exportparts="buttons" .sourceCode=${this.sourceCode} ?autorun=${this.autoRun} zip='${this.zipUrl}' layout='${this.layout}'></bottom-editor>`;
+            <bottom-editor exportparts="buttons" .sourceCode=${this.sourceCode} ?autorun=${this.autoRun} zip='${this.zipUrl}' layout='${this.layout}' showclear></bottom-editor>`;
     }
 
     static styles = css`

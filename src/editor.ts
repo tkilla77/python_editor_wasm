@@ -39,6 +39,9 @@ export class BottomEditor extends LitElement {
     @property()
     session: string = '';
 
+    @property({ type: Boolean, reflect: true })
+    showclear = false;
+
     @property({ attribute: 'sourcecode' })
     set sourceCode(code: string) { this.replaceDoc(code); }
     get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
@@ -175,6 +178,7 @@ export class BottomEditor extends LitElement {
                 ${hasOutput ? html`<bottom-editor-output></bottom-editor-output>` : ''}
                 <bottom-editor-buttons
                     part="buttons"
+                    ?showclear="${this.showclear}"
                     @bottom-run="${this.evaluatePython}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"
