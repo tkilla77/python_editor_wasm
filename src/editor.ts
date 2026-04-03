@@ -42,6 +42,10 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     showclear = false;
 
+    /** 'auto' (default) | 'horizontal' | 'vertical' */
+    @property({ reflect: true })
+    orientation: string = 'auto';
+
     @property({ attribute: 'sourcecode' })
     set sourceCode(code: string) { this.replaceDoc(code); }
     get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
