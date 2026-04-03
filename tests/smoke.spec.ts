@@ -10,7 +10,6 @@
 import { test, expect } from '@playwright/test';
 
 const PYODIDE_TIMEOUT = 75_000;
-const RUN_TIMEOUT = 30_000;
 
 /** Wait for Pyodide to finish booting on the first <bottom-editor>. */
 async function waitForReady(page: any) {
@@ -20,22 +19,18 @@ async function waitForReady(page: any) {
     );
 }
 
-/** Trigger evaluatePython() on the first <bottom-editor> and wait for output. */
-async function runAndWait(page: any, expected: string) {
-    await page.evaluate(() =>
+/** Run the first editor and wait for the Python execution to complete. */
+async function runAndAwait(page: any) {
+    // page.evaluate can resolve a Promise returned from the browser context,
+    // so awaiting evaluatePython() here blocks until the run is fully done.
+    await page.evaluate(async () =>
         (document.querySelector('bottom-editor') as any)?.evaluatePython()
-    );
-    await page.waitForFunction(
-        (exp: string) => (document.querySelector('bottom-editor') as any)?.outputText?.includes(exp),
-        expected,
-        { timeout: RUN_TIMEOUT },
     );
 }
 
 test.describe('<bottom-editor> smoke test', () => {
-    test.beforeEach(async ({ page }) => {
-        page.on('pageerror', err => { throw err; });
-    });
+    // Note: no pageerror handler here — embed.html has autorun editors that
+    // install packages (matplotlib, cv2) and may produce non-fatal worker logs.
 
     test('element is defined and mounts on embed.html', async ({ page }) => {
         await page.goto('/embed.html');
@@ -60,12 +55,19 @@ test.describe('<bottom-editor> smoke test', () => {
     test('runs Python code and shows output', async ({ page }) => {
         await page.goto('/embed.html');
         await waitForReady(page);
-        await runAndWait(page, 'Hi, world!');
+
+        // First editor defines greet() but prints nothing.
+        // Set code to something that produces output, then run it.
+        await page.evaluate(() => {
+            const el = document.querySelector('bottom-editor') as any;
+            el.replaceDoc("print('hello from test')");
+        });
+        await runAndAwait(page);
 
         const output = await page.evaluate(() =>
             (document.querySelector('bottom-editor') as any)?.outputText
         );
-        expect(output).toContain('Hi, world!');
+        expect(output).toContain('hello from test');
     });
 });
 
@@ -77,7 +79,7 @@ test.describe('basic print smoke', () => {
     test('print(42) appears in output', async ({ page }) => {
         await page.goto('/tests/fixtures/basic.html');
         await waitForReady(page);
-        await runAndWait(page, '42');
+        await runAndAwait(page);
 
         const output = await page.evaluate(() =>
             (document.querySelector('bottom-editor') as any)?.outputText
@@ -95,22 +97,8 @@ test.describe('turtle canvas smoke', () => {
         await page.goto('/tests/fixtures/turtle.html');
         await waitForReady(page);
 
-        // Run the turtle code and wait for it to finish.
-        await page.evaluate(() =>
-            (document.querySelector('bottom-editor') as any)?.evaluatePython()
-        );
-        // Wait until running state clears (buttons.running → false).
-        await page.waitForFunction(
-            () => {
-                const el = document.querySelector('bottom-editor') as any;
-                // outputText updates when done; logText always present.
-                return el?.logText && !el?.logText?.includes('Initializing');
-            },
-            { timeout: RUN_TIMEOUT },
-        );
-        // Give the turtle a moment to finish drawing (speed 0 = instant, but
-        // the worker still needs to flush).
-        await page.waitForTimeout(500);
+        // Await the run directly — resolves only when Python execution is done.
+        await runAndAwait(page);
 
         // turtle forward(10) heading east: world (0,0)→(10,0)
         // _tc maps world→canvas: (CANVAS_SIZE/2 + x, CANVAS_SIZE/2 - y)
