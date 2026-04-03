@@ -22,12 +22,58 @@ bottom-editorarea {
 :host([layout="split"]) bottom-editorarea {
     grid-template-rows: 2fr 1fr 0.5fr auto;
 }
+/* Narrow split with switcher: 3 rows — code, split-col, buttons */
+:host([showswitcher][layout="split"]) bottom-editorarea {
+    grid-template-rows: 2fr 1fr auto;
+}
 bottom-code {
     background-color: white;
     border: 1px #d4d4d4 solid;
     border-radius: 0.5em;
     overflow: hidden;
 }
+/* ---- switcher: flex-column wrapper for canvas + rail + output ---- */
+.split-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+.split-col bottom-editor-canvas { flex: 2; min-height: 0; }
+.split-col bottom-editor-output { flex: 1; min-height: 0; }
+.split-col bottom-editor-canvas.sw-hidden,
+.split-col bottom-editor-output.sw-hidden {
+    flex: 0 0 0;
+    overflow: hidden;
+}
+.sw-rail {
+    display: flex;
+    flex-shrink: 0;
+    height: 1.4em;
+    background: #f1f5f9;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 2px;
+    padding-inline: 2px;
+}
+.sw-tab {
+    flex: 1;
+    border: none;
+    cursor: pointer;
+    border-radius: 0.3em;
+    font-size: 0.65em;
+    font-family: system-ui;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0;
+    transition: background 0.15s;
+}
+.sw-tab.open   { background: #e2e8f0; }
+.sw-tab.closed { background: #cbd5e1; }
+.sw-tab:hover  { background: #94a3b8; }
+/* ---- /switcher ---- */
 @container (min-width: 768px) {
     :host(:not([orientation="vertical"])) bottom-editorarea {
         grid-template-columns: 2fr auto 1fr;
@@ -42,6 +88,12 @@ bottom-code {
     :host([layout="split"]:not([orientation="vertical"])) bottom-editor-buttons { grid-row: 1/3; }
     :host([layout="split"]:not([orientation="vertical"])) bottom-editor-canvas  { grid-row: 1/2; }
     :host([layout="split"]:not([orientation="vertical"])) bottom-editor-output  { grid-row: 2/3; }
+
+    /* switcher wide: split-col takes column 3; code+buttons collapse to single row */
+    :host([showswitcher]:not([orientation="vertical"])) .split-col { grid-column: 3/4; }
+    :host([showswitcher][layout="split"]:not([orientation="vertical"])) bottom-editorarea    { grid-template-rows: 1fr; }
+    :host([showswitcher][layout="split"]:not([orientation="vertical"])) bottom-code          { grid-row: 1/2; }
+    :host([showswitcher][layout="split"]:not([orientation="vertical"])) bottom-editor-buttons { grid-row: 1/2; }
 }
 
 /* Force horizontal regardless of container width */
@@ -58,3 +110,9 @@ bottom-code {
 :host([layout="split"][orientation="horizontal"]) bottom-editor-buttons { grid-row: 1/3; }
 :host([layout="split"][orientation="horizontal"]) bottom-editor-canvas  { grid-row: 1/2; }
 :host([layout="split"][orientation="horizontal"]) bottom-editor-output  { grid-row: 2/3; }
+
+/* switcher force-horizontal */
+:host([showswitcher][orientation="horizontal"]) .split-col { grid-column: 3/4; }
+:host([showswitcher][layout="split"][orientation="horizontal"]) bottom-editorarea    { grid-template-rows: 1fr; }
+:host([showswitcher][layout="split"][orientation="horizontal"]) bottom-code          { grid-row: 1/2; }
+:host([showswitcher][layout="split"][orientation="horizontal"]) bottom-editor-buttons { grid-row: 1/2; }

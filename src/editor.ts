@@ -1,5 +1,5 @@
 import { LitElement, html, unsafeCSS } from 'lit'
-import { customElement, property, query } from 'lit/decorators.js'
+import { customElement, property, state, query } from 'lit/decorators.js'
 import { EditorView } from "@codemirror/view"
 import PyodideWorker from './pyodide-worker.ts?worker&inline';
 import { joinSession, leaveSession, type MemberCallbacks, EditorHandle } from './session-registry.js';
@@ -42,9 +42,16 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     showclear = false;
 
+    @property({ type: Boolean, reflect: true })
+    showswitcher = false;
+
     /** 'auto' (default) | 'horizontal' | 'vertical' */
     @property({ reflect: true })
     orientation: string = 'auto';
+
+    // Internal switcher state — only meaningful when showswitcher=true.
+    @state() private _swCanvas  = true;
+    @state() private _swConsole = true;
 
     @property({ attribute: 'sourcecode' })
     set sourceCode(code: string) { this.replaceDoc(code); }
@@ -172,14 +179,47 @@ export class BottomEditor extends LitElement {
         this.runtime.requestFit((bounds: Parameters<typeof canvasEl.applyFit>[0]) => canvasEl.applyFit(bounds));
     }
 
+    private _toggleSwCanvas() {
+        if (this._swCanvas && !this._swConsole) { this._swConsole = true; return; }
+        this._swCanvas = !this._swCanvas;
+    }
+
+    private _toggleSwConsole() {
+        if (this._swConsole && !this._swCanvas) { this._swCanvas = true; return; }
+        this._swConsole = !this._swConsole;
+    }
+
     render() {
         const hasCanvas = this.layout === 'canvas' || this.layout === 'split';
         const hasOutput = this.layout !== 'canvas';
+
+        // When showswitcher is on, always render both canvas+output inside a
+        // flex-column wrapper with a clickable rail between them.
+        const outputArea = this.showswitcher
+            ? html`
+                <div class="split-col">
+                    <bottom-editor-canvas
+                        class="${this._swCanvas ? '' : 'sw-hidden'}"
+                        @bottom-fit="${this._handleFitRequest}">
+                    </bottom-editor-canvas>
+                    <div class="sw-rail">
+                        <button class="sw-tab ${this._swCanvas ? 'open' : 'closed'}"
+                                @click="${this._toggleSwCanvas}">Canvas</button>
+                        <button class="sw-tab ${this._swConsole ? 'open' : 'closed'}"
+                                @click="${this._toggleSwConsole}">Console</button>
+                    </div>
+                    <bottom-editor-output
+                        class="${this._swConsole ? '' : 'sw-hidden'}">
+                    </bottom-editor-output>
+                </div>`
+            : html`
+                ${hasCanvas ? html`<bottom-editor-canvas @bottom-fit="${this._handleFitRequest}"></bottom-editor-canvas>` : ''}
+                ${hasOutput ? html`<bottom-editor-output></bottom-editor-output>` : ''}`;
+
         return html`
             <bottom-editorarea>
                 <bottom-code id="code"></bottom-code>
-                ${hasCanvas ? html`<bottom-editor-canvas @bottom-fit="${this._handleFitRequest}"></bottom-editor-canvas>` : ''}
-                ${hasOutput ? html`<bottom-editor-output></bottom-editor-output>` : ''}
+                ${outputArea}
                 <bottom-editor-buttons
                     part="buttons"
                     ?showclear="${this.showclear}"
