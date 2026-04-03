@@ -10,6 +10,8 @@ type Msg = {
     url?: string,
     canvas?: OffscreenCanvas,
     interruptBuffer?: any,
+    x?: number,
+    y?: number,
 }
 
 let py: any = null;
@@ -170,6 +172,16 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             if (canvasCtx) {
                 canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
             }
+            return;
+        }
+
+        if (msg.type === 'samplePixel') {
+            if (!canvasCtx || msg.x === undefined || msg.y === undefined) {
+                post('pixelSample', { r: 0, g: 0, b: 0, a: 0 });
+                return;
+            }
+            const [r, g, b, a] = canvasCtx.getImageData(msg.x, msg.y, 1, 1).data;
+            post('pixelSample', { r, g, b, a });
             return;
         }
 

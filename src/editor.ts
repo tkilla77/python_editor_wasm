@@ -121,6 +121,11 @@ export class BottomEditor extends LitElement {
         this._editor.dispatch(state.update({ changes: { from: 0, to: state.doc.length, insert: text } }));
     }
 
+    /** Sample a canvas pixel in OffscreenCanvas coordinates. For testing. */
+    samplePixel(x: number, y: number) {
+        return this.runtime.samplePixel(x, y);
+    }
+
     async evaluatePython() {
         if (!this._editor) return;
         this._output?.clearOutput();

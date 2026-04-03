@@ -79,6 +79,20 @@ export class PyodideRuntime {
         this.worker?.postMessage({ type: 'requestFit' });
     }
 
+    /** Sample a single canvas pixel. Resolves with {r,g,b,a}. */
+    samplePixel(x: number, y: number): Promise<{ r: number; g: number; b: number; a: number }> {
+        return new Promise(resolve => {
+            const onMsg = (ev: MessageEvent) => {
+                if (ev.data?.type === 'pixelSample') {
+                    this.worker?.removeEventListener('message', onMsg as any);
+                    resolve(ev.data);
+                }
+            };
+            this.worker?.addEventListener('message', onMsg as any);
+            this.worker?.postMessage({ type: 'samplePixel', x, y });
+        });
+    }
+
     /** Interrupt a running execution. Falls back to worker termination. */
     interrupt(): void {
         this.callbacks.onLog('Interrupt requested.');
