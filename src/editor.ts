@@ -217,6 +217,7 @@ export class BottomEditor extends LitElement {
         if (this.layout !== defaultLayout) url.searchParams.set('layout', this.layout);
         const zip = this.getAttribute("zip");
         if (zip) url.searchParams.set('zip', zip);
+        if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
         navigator.clipboard.writeText(url.href);
     }
 
