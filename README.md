@@ -37,5 +37,5 @@ Properties:
 
 ## Want to use this project?
 
-See [doc.md](doc.md) for the full embedding guide, including attributes,
+See [doc.md](https://bottom.ch/editor/stable/doc.html) for the full embedding guide, including attributes,
 sessions, CSS theming, and live examples.
