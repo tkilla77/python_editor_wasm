@@ -1,9 +1,9 @@
 :host {
     display: block;
     overflow: hidden;
-    background: white;
-    border: 1px #d4d4d4 solid;
-    border-radius: 0.5em;
+    background: var(--be-editor-bg, white);
+    border: var(--be-border, 1px solid #d4d4d4);
+    border-radius: var(--be-border-radius, 0.5em);
     cursor: grab;
     position: relative;
 }

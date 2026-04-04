@@ -5,6 +5,11 @@
     max-height: 25lh;
     font-family: system-ui;
     container-type: inline-size;
+    /* Theming tokens — override on the element or any ancestor */
+    --be-border:        1px solid #d4d4d4;
+    --be-border-radius: 0.5em;
+    --be-editor-bg:     white;
+    --be-output-bg:     #f5f5f5;
 }
 .cm-editor {
     height: 100%;
@@ -27,9 +32,9 @@ bottom-editorarea {
     grid-template-rows: 2fr 1fr auto;
 }
 bottom-code {
-    background-color: white;
-    border: 1px #d4d4d4 solid;
-    border-radius: 0.5em;
+    background-color: var(--be-editor-bg);
+    border: var(--be-border);
+    border-radius: var(--be-border-radius);
     overflow: hidden;
 }
 /* ---- switcher: flex-column wrapper for canvas + rail + output ---- */
