@@ -13,7 +13,7 @@ Properties:
 2. Support for turtle graphics, possibly a grid-based environment similar to Kara.
 3. Usable in kiosk-mode browsers (e.g. locked down test environments such as isTest2 or safe exam browser).
    * Ability to disable any in-app sharing with other users.
-5. Ability to preload source code and file content via deep linking schmeme.
+5. Ability to preload source code and file content via deep linking scheme.
 6. Multi-file support (hidden in the initial setup).
 7. Simple debugging support.
 
