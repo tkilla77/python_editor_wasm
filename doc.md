@@ -61,7 +61,7 @@ Set `layout="canvas"` to show only the canvas, or `layout="split"` for
 canvas and console side by side.
 
 ```html
-<bottom-editor layout="canvas" autorun>
+<bottom-editor layout="canvas">
 import turtle
 
 t = turtle.Turtle()
@@ -74,7 +74,7 @@ for i in range(90):
 </bottom-editor>
 ```
 
-<bottom-editor layout="canvas" autorun>
+<bottom-editor layout="canvas">
 import turtle
 
 t = turtle.Turtle()
@@ -93,7 +93,7 @@ for i in range(90):
 `plt.show()` renders the figure to the canvas.
 
 ```html
-<bottom-editor layout="canvas" autorun>
+<bottom-editor layout="canvas">
 import micropip
 await micropip.install('matplotlib')
 
@@ -111,7 +111,7 @@ plt.show()
 </bottom-editor>
 ```
 
-<bottom-editor layout="canvas" autorun>
+<bottom-editor layout="canvas">
 import micropip
 await micropip.install('matplotlib')
 
@@ -165,12 +165,12 @@ horizontal (code left, output right) when the container is wider than 768 px.
 Use `orientation="horizontal"` or `orientation="vertical"` to lock it.
 
 ```html
-<bottom-editor orientation="horizontal" autorun>
+<bottom-editor orientation="horizontal">
 print("Always side by side")
 </bottom-editor>
 ```
 
-<bottom-editor orientation="horizontal" autorun>
+<bottom-editor orientation="horizontal">
 print("Always side by side")
 </bottom-editor>
 
@@ -182,14 +182,14 @@ The default run timeout is 30 s. Set `timeout="inf"` for long-running code,
 or a lower value for stricter sandboxing.
 
 ```html
-<bottom-editor timeout="5" autorun>
+<bottom-editor timeout="5">
 # will be interrupted after 5 s
 while True:
     pass
 </bottom-editor>
 ```
 
-<bottom-editor timeout="5" autorun>
+<bottom-editor timeout="5">
 # will be interrupted after 5 s
 while True:
     pass
@@ -219,7 +219,7 @@ Four custom properties can be set on the element or any ancestor:
   }
 </style>
 
-<bottom-editor class="dark-editor" autorun>
+<bottom-editor class="dark-editor">
 print("Dark theme")
 </bottom-editor>
 ```
@@ -233,7 +233,7 @@ print("Dark theme")
   }
 </style>
 
-<bottom-editor class="dark-editor" autorun>
+<bottom-editor class="dark-editor">
 print("Dark theme")
 </bottom-editor>
 
