@@ -10,7 +10,7 @@ class BottomEditorPage extends LitElement {
     private autoRun: boolean = false;
     private zipUrl: string = '';
     private initLayout: string = 'split';
-    private initTimeout: string = '30s';
+    private initTimeout: string = '30';
 
     constructor() {
         super();

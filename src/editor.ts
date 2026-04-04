@@ -49,9 +49,9 @@ export class BottomEditor extends LitElement {
     @property({ reflect: true })
     orientation: string = 'auto';
 
-    /** Run timeout: number (ms), "Ns" (seconds), or "inf". Default: "30s". */
+    /** Run timeout in seconds, or "inf" for no timeout. Default: 30. */
     @property()
-    timeout: string = '30s';
+    timeout: string = '30';
 
     // Internal switcher state — only meaningful when showswitcher=true.
     // Initialised from the `layout` attribute in firstUpdated(); kept in sync
@@ -86,8 +86,7 @@ export class BottomEditor extends LitElement {
     private _parseTimeout(): number {
         const v = this.timeout.trim().toLowerCase();
         if (v === 'inf' || v === 'infinity') return Infinity;
-        if (v.endsWith('s')) return parseFloat(v) * 1000;
-        return parseFloat(v);
+        return parseFloat(v) * 1000;
     }
 
     async firstUpdated() {
