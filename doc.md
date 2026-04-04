@@ -1,8 +1,9 @@
 # bottom-editor — Embedding Guide
 
 A self-contained Python editor web component powered by
-[Pyodide](https://pyodide.org). Runs entirely in the browser — no server
-required.
+[Pyodide](https://pyodide.org) and [Codemirror](https://codemirror.net/). Runs entirely in the browser — no server
+required. No code is ever passed to the server, there is no login or account feature, so the component is safe to use from exam systems such
+as [SafeExamBrowser](https://safeexambrowser.org/) or [isTest2](https://istest2.ch/).
 
 **Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm)
 
@@ -10,16 +11,23 @@ required.
 
 ## Quick start
 
-Load the component script, then drop `<bottom-editor>` anywhere on the page.
-The initial Python code goes as text content of the element.
+Load the component script, then drop `<bottom-editor>` anywhere on the page. The initial Python code goes as text content of the element.
+
 
 ```html
 <script type="module" src="https://bottom.ch/editor/stable/bottom-editor.js"></script>
 
-<bottom-editor>
-print("Hello, world!")
+<bottom-editor autorun>
+for i in range(5):
+    print(i ** 2)
 </bottom-editor>
 ```
+
+<bottom-editor autorun>
+for i in range(5):
+    print(i ** 2, )
+</bottom-editor>
+
 
 ---
 
@@ -39,29 +47,13 @@ print("Hello, world!")
 
 ---
 
-## Basic example
-
-```html
-<bottom-editor autorun showclear>
-for i in range(5):
-    print(i ** 2)
-</bottom-editor>
-```
-
-<bottom-editor autorun showclear>
-for i in range(5):
-    print(i ** 2)
-</bottom-editor>
-
----
-
 ## Turtle graphics
 
 Set `layout="canvas"` to show only the canvas, or `layout="split"` for
 canvas and console side by side.
 
 ```html
-<bottom-editor layout="canvas">
+<bottom-editor layout="canvas" showclear>
 import turtle
 
 t = turtle.Turtle()
@@ -78,7 +70,7 @@ for i in range(90):
 import turtle
 
 t = turtle.Turtle()
-t.speed(6)
+t.speed(9)
 colors = ['red', 'orange', 'gold', 'green', 'blue', 'purple']
 for i in range(90):
     t.pencolor(colors[i % len(colors)])
@@ -165,13 +157,13 @@ horizontal (code left, output right) when the container is wider than 768 px.
 Use `orientation="horizontal"` or `orientation="vertical"` to lock it.
 
 ```html
-<bottom-editor orientation="horizontal">
-print("Always side by side")
+<bottom-editor orientation="vertical">
+print("lways fills horizontally.")
 </bottom-editor>
 ```
 
-<bottom-editor orientation="horizontal">
-print("Always side by side")
+<bottom-editor orientation="vertical">
+print("Always fills horizontally.")
 </bottom-editor>
 
 ---
@@ -182,7 +174,7 @@ The default run timeout is 30 s. Set `timeout="inf"` for long-running code,
 or a lower value for stricter sandboxing.
 
 ```html
-<bottom-editor timeout="5">
+<bottom-editor timeout="5" session="timeout-demo">
 # will be interrupted after 5 s
 while True:
     pass
