@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "marked": "^17.0.5",
     "vitest": "^4.1.2"
   }
 }
