@@ -189,7 +189,7 @@ while True:
 </bottom-editor>
 ```
 
-<bottom-editor timeout="5">
+<bottom-editor timeout="5" session="timeout-demo">
 # will be interrupted after 5 s
 while True:
     pass

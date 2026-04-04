@@ -55,7 +55,8 @@ export class PyodideRuntime {
             return new Promise<void>((resolve, reject) => {
                 const timeout = this.RUN_TIMEOUT_MS === Infinity ? undefined : setTimeout(() => {
                     const secs = (this.RUN_TIMEOUT_MS / 1000).toFixed(0);
-                    this.callbacks.onError(`Execution timed out after ${secs}s.`);
+                    // Remove from map first so terminate() doesn't double-reject.
+                    this.pendingRuns.delete(runId);
                     this.terminateAndRespawn();
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, this.RUN_TIMEOUT_MS);
