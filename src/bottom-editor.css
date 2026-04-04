@@ -45,14 +45,13 @@ bottom-code {
 .split-col bottom-editor-output.sw-hidden {
     flex: 0 0 0;
     overflow: hidden;
+    border: none;
 }
 .sw-rail {
     display: flex;
     flex-shrink: 0;
     height: 1.4em;
-    background: #f1f5f9;
-    border-top: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
+    margin-block: 0.25em;
     gap: 2px;
     padding-inline: 2px;
 }
@@ -72,7 +71,7 @@ bottom-code {
 }
 .sw-tab.open   { background: #e2e8f0; }
 .sw-tab.closed { background: #cbd5e1; }
-.sw-tab:hover  { background: #94a3b8; }
+.sw-tab:hover  { background: #f8fafc; }
 /* ---- /switcher ---- */
 @container (min-width: 768px) {
     :host(:not([orientation="vertical"])) bottom-editorarea {
