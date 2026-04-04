@@ -230,9 +230,16 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 // Block headers: `repeat 3:` (optional trailing comment)
                 .replace(/^(\s*)repeat(\s+)(.+?)\s*:(\s*(?:#.*)?)$/gm,
                          '$1for _ in range($3):$4');
+            // Use the faster synchronous runPython when the code has no top-level
+            // awaits (turtle/kara steps, micropip installs). Fall back to
+            // runPythonAsync when await is present.
+            const needsAsync = /\bawait\b/.test(code);
+            const runCode = needsAsync
+                ? (c: string) => py.runPythonAsync(c)
+                : (c: string) => Promise.resolve(py.runPython(c));
             try {
                 try {
-                    await py.runPythonAsync(code);
+                    await runCode(code);
                     // Patch any libraries installed via micropip during this run.
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
                     // ensure all buffered stdout is flushed before signaling done
