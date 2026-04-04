@@ -61,13 +61,20 @@ export class KaraEditor extends LitElement {
         return prefix + userCode;
     };
 
+    private get _readyCode(): string {
+        const world = this._worldStr.replace(/"""/g, "'''");
+        return karaShimSrc + `\n_kara_setup("""${world}""", ${this.step})\n`;
+    }
+
     render() {
         return html`
             <bottom-editor
                 layout="split"
                 .sourceCode=${this._userCode}
                 .transformCode=${this._transform}
+                .readyCode=${this._readyCode}
                 ?autorun=${this.autorun}
+                ?autofit=${true}
                 session=${this._sessionId}
                 timeout=${this.timeout}
                 showclear

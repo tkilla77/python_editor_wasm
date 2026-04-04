@@ -53,6 +53,17 @@ export class BottomEditor extends LitElement {
     @property()
     timeout: string = '30';
 
+    /**
+     * Code that runs silently when Pyodide is ready (output discarded).
+     * Useful for initialising state before the first user run.
+     */
+    @property({ attribute: false })
+    readyCode: string = '';
+
+    /** Trigger fit-to-content on the canvas after every run and after readyCode. */
+    @property({ type: Boolean })
+    autofit = false;
+
     // Internal switcher state — only meaningful when showswitcher=true.
     // Initialised from the `layout` attribute in firstUpdated(); kept in sync
     // back to `layout` via updated() so CSS grid rules and copyPermalink work.
@@ -130,6 +141,10 @@ export class BottomEditor extends LitElement {
                 }
                 const zip = this.getAttribute('zip');
                 if (zip) await this.installFilesFromZip(zip);
+                if (this.readyCode) {
+                    await this.runtime.run(this.readyCode, () => {});
+                    if (this.autofit) this._handleFitRequest();
+                }
                 const autorun = this.getAttribute('autorun');
                 if (autorun !== null && autorun !== 'false' && autorun !== '0') this.evaluatePython();
             },
@@ -176,6 +191,7 @@ export class BottomEditor extends LitElement {
         if (this._buttons) this._buttons.running = true;
         try {
             await this.runtime.run(code, (data: string) => this._output?.addOutput(data));
+            if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
             let msg = err?.toString() ?? String(err);
             // Strip traceback — keep only the last exception line.

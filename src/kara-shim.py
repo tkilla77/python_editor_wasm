@@ -147,6 +147,10 @@ def _kara_setup(world_str, step_ms):
 
 _CS = 2000  # OffscreenCanvas size (must match CANVAS_SIZE in bottom-editor-canvas.ts)
 
+# Beetle emoji faces up (north) by default.
+# Rotation (radians) to point in each direction: right, down, left, up.
+_DIR_ANGLE = [math.pi / 2, math.pi, 3 * math.pi / 2, 0]
+
 def _kara_draw():
     canvas = _pjs.canvas.getCanvas2D()
     if not canvas:
@@ -154,12 +158,18 @@ def _kara_draw():
     ctx = canvas.getContext('2d')
     g = _kara_grid
 
-    # Fit grid into canvas, capped so cells stay readable
-    cell = min(_CS // g.width, _CS // g.height)
-    cell = max(10, min(cell, 300))
-    tw, th = g.width * cell, g.height * cell
+    # Scale cells to fill the canvas, capped for readability.
+    cell = min(_CS // max(g.width, 1), _CS // max(g.height, 1))
+    cell = max(16, min(cell, 300))
+    tw = g.width  * cell
+    th = g.height * cell
     ox = (_CS - tw) // 2
     oy = (_CS - th) // 2
+
+    font_size = int(cell * 0.72)
+    ctx.font = f'{font_size}px serif'
+    ctx.textAlign    = 'center'
+    ctx.textBaseline = 'middle'
 
     ctx.clearRect(0, 0, _CS, _CS)
 
@@ -167,82 +177,28 @@ def _kara_draw():
         for x in range(g.width):
             px = ox + x * cell
             py = oy + y * cell
+            cx = px + cell / 2
+            cy = py + cell / 2
             v  = g.cells[y][x]
 
-            # Cell background
-            ctx.fillStyle = '#2d6a2d' if v == _TREE else '#c8e6c9'
+            # Background: dark green for trees, light green otherwise.
+            ctx.fillStyle = '#3a5c2e' if v == _TREE else '#c8e6c9'
             ctx.fillRect(px, py, cell, cell)
 
-            # Grid line
-            ctx.strokeStyle = '#80a080'
-            ctx.lineWidth   = 1
+            # Grid lines
+            ctx.strokeStyle = '#8fbc8f'
+            ctx.lineWidth   = max(1, cell * 0.025)
             ctx.strokeRect(px + 0.5, py + 0.5, cell - 1, cell - 1)
 
-            if v == _LEAF:
-                _draw_leaf(ctx, px, py, cell)
-            elif v == _MUSH:
-                _draw_mushroom(ctx, px, py, cell)
+            if   v == _TREE: ctx.fillText('🌳', cx, cy)
+            elif v == _LEAF: ctx.fillText('🍀', cx, cy)
+            elif v == _MUSH: ctx.fillText('🍄', cx, cy)
 
-    # Kara on top
-    _draw_kara(ctx, ox + g.kara_x * cell, oy + g.kara_y * cell, cell, g.kara_dir)
-
-
-def _draw_leaf(ctx, px, py, s):
-    cx, cy = px + s / 2, py + s / 2
-    r = s * 0.28
-    ctx.fillStyle = '#1b5e20'
-    ctx.beginPath()
-    ctx.arc(cx, cy, r, 0, 2 * math.pi)
-    ctx.fill()
-    # highlight
-    ctx.fillStyle = '#4caf50'
-    ctx.beginPath()
-    ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.35, 0, 2 * math.pi)
-    ctx.fill()
-
-
-def _draw_mushroom(ctx, px, py, s):
-    cx, cy = px + s / 2, py + s / 2
-    r = s * 0.28
-    # stem
-    ctx.fillStyle = '#ffe0b2'
-    ctx.fillRect(cx - r * 0.4, cy - r * 0.1, r * 0.8, r * 1.1)
-    # cap
-    ctx.fillStyle = '#bf360c'
-    ctx.beginPath()
-    ctx.arc(cx, cy - r * 0.1, r, math.pi, 0)
-    ctx.fill()
-    # cap spots
-    ctx.fillStyle = 'white'
-    ctx.beginPath()
-    ctx.arc(cx - r * 0.3, cy - r * 0.4, r * 0.15, 0, 2 * math.pi)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(cx + r * 0.25, cy - r * 0.55, r * 0.12, 0, 2 * math.pi)
-    ctx.fill()
-
-
-def _draw_kara(ctx, px, py, s, direction):
-    cx, cy = px + s / 2, py + s / 2
-    r = s * 0.38
-    # body
-    ctx.fillStyle = '#b71c1c'
-    ctx.beginPath()
-    ctx.arc(cx, cy, r, 0, 2 * math.pi)
-    ctx.fill()
-    # outline
-    ctx.strokeStyle = '#7f0000'
-    ctx.lineWidth   = max(1, s * 0.03)
-    ctx.beginPath()
-    ctx.arc(cx, cy, r, 0, 2 * math.pi)
-    ctx.stroke()
-    # direction eye
-    dx, dy = _DIRS[direction]
-    ctx.fillStyle = 'white'
-    ctx.beginPath()
-    ctx.arc(cx + dx * r * 0.5, cy + dy * r * 0.5, r * 0.25, 0, 2 * math.pi)
-    ctx.fill()
-    ctx.fillStyle = '#212121'
-    ctx.beginPath()
-    ctx.arc(cx + dx * r * 0.55, cy + dy * r * 0.55, r * 0.12, 0, 2 * math.pi)
-    ctx.fill()
+    # Draw Kara rotated to face her current direction.
+    kx = ox + g.kara_x * cell + cell / 2
+    ky = oy + g.kara_y * cell + cell / 2
+    ctx.save()
+    ctx.translate(kx, ky)
+    ctx.rotate(_DIR_ANGLE[g.kara_dir])
+    ctx.fillText('🐞', 0, 0)
+    ctx.restore()
