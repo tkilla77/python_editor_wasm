@@ -4,7 +4,7 @@ A self-contained Python editor web component powered by
 [Pyodide](https://pyodide.org). Runs entirely in the browser — no server
 required.
 
-**Source:** [github.com/bh2smith/bottom-editor](https://github.com/bh2smith/bottom-editor)
+**Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm)
 
 ---
 
