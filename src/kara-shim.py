@@ -148,9 +148,10 @@ def _kara_setup(world_str, step_ms):
 _CS = 2000  # OffscreenCanvas size (must match CANVAS_SIZE in bottom-editor-canvas.ts)
 
 def _kara_draw():
-    ctx = _pjs.canvas.getCanvas2D()
-    if not ctx:
+    canvas = _pjs.canvas.getCanvas2D()
+    if not canvas:
         return
+    ctx = canvas.getContext('2d')
     g = _kara_grid
 
     # Fit grid into canvas, capped so cells stay readable
