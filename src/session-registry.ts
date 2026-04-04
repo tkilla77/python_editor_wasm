@@ -49,6 +49,7 @@ export function joinSession(
     member: MemberCallbacks,
     workerFactory: () => Worker,
     indexURL?: string,
+    timeoutMs?: number,
 ): EditorHandle {
     let entry = sessions.get(id);
     if (!entry) {
@@ -60,9 +61,7 @@ export function joinSession(
                 entry!.members.forEach(m => m.onReady());
             },
         };
-        const runtime = indexURL
-            ? new PyodideRuntime(callbacks, workerFactory, indexURL)
-            : new PyodideRuntime(callbacks, workerFactory);
+        const runtime = new PyodideRuntime(callbacks, workerFactory, indexURL, timeoutMs);
         entry = { runtime, members: new Set(), ready: false };
         sessions.set(id, entry);
         entry.runtime.start();

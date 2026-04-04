@@ -10,6 +10,7 @@ class BottomEditorPage extends LitElement {
     private autoRun: boolean = false;
     private zipUrl: string = '';
     private initLayout: string = 'split';
+    private initTimeout: string = '30s';
 
     constructor() {
         super();
@@ -34,6 +35,9 @@ class BottomEditorPage extends LitElement {
         if (params.has('layout')) {
             this.initLayout = params.get('layout') ?? 'split';
         }
+        if (params.has('timeout')) {
+            this.initTimeout = params.get('timeout') ?? '30s';
+        }
     }
 
     private getUrl() {
@@ -56,6 +60,7 @@ class BottomEditorPage extends LitElement {
                 ?autorun=${this.autoRun}
                 zip='${this.zipUrl}'
                 layout='${this.initLayout}'
+                timeout='${this.initTimeout}'
                 showswitcher
                 showclear
             ></bottom-editor>`;

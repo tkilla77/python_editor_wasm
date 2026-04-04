@@ -49,6 +49,10 @@ export class BottomEditor extends LitElement {
     @property({ reflect: true })
     orientation: string = 'auto';
 
+    /** Run timeout: number (ms), "Ns" (seconds), or "inf". Default: "30s". */
+    @property()
+    timeout: string = '30s';
+
     // Internal switcher state — only meaningful when showswitcher=true.
     // Initialised from the `layout` attribute in firstUpdated(); kept in sync
     // back to `layout` via updated() so CSS grid rules and copyPermalink work.
@@ -77,6 +81,13 @@ export class BottomEditor extends LitElement {
             .map(n => n.textContent)
             .join('')
             .replace(/^\s*\n/, '') || '';
+    }
+
+    private _parseTimeout(): number {
+        const v = this.timeout.trim().toLowerCase();
+        if (v === 'inf' || v === 'infinity') return Infinity;
+        if (v.endsWith('s')) return parseFloat(v) * 1000;
+        return parseFloat(v);
     }
 
     async firstUpdated() {
@@ -120,6 +131,8 @@ export class BottomEditor extends LitElement {
             this.session || '__default__',
             this._memberCallbacks,
             () => new PyodideWorker() as unknown as Worker,
+            undefined,
+            this._parseTimeout(),
         );
     }
 

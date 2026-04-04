@@ -19,7 +19,7 @@ export class PyodideRuntime {
     private pendingRuns = new Map<number, {
         resolve: () => void;
         reject: (e: Error) => void;
-        timeout: ReturnType<typeof setTimeout>;
+        timeout: ReturnType<typeof setTimeout> | undefined;
         onStdout: (data: string) => void;
     }>();
     private interruptBuffer?: Uint8Array;
@@ -30,9 +30,13 @@ export class PyodideRuntime {
         private readonly callbacks: RuntimeCallbacks,
         private readonly workerFactory: () => Worker,
         private readonly indexURL = PYODIDE_CDN_URL,
-        private readonly RUN_TIMEOUT_MS = 30000,
+        timeoutMs?: number,
         readonly editorId: string = crypto.randomUUID(),
-    ) {}
+    ) {
+        this.RUN_TIMEOUT_MS = timeoutMs ?? 30_000;
+    }
+
+    private readonly RUN_TIMEOUT_MS: number;
 
     /** Spawn the worker. Call once after construction. */
     start(): void {
@@ -49,10 +53,11 @@ export class PyodideRuntime {
             await this.ready;
             const runId = this.runIdCounter++;
             return new Promise<void>((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                    this.callbacks.onLog('Run timed out — interrupting worker.');
+                const timeout = this.RUN_TIMEOUT_MS === Infinity ? undefined : setTimeout(() => {
+                    const secs = (this.RUN_TIMEOUT_MS / 1000).toFixed(0);
+                    this.callbacks.onError(`Execution timed out after ${secs}s.`);
                     this.terminateAndRespawn();
-                    reject(new Error('Execution timed out'));
+                    reject(new Error(`Execution timed out after ${secs}s`));
                 }, this.RUN_TIMEOUT_MS);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
                 this.worker?.postMessage({ type: 'run', code, runId, editorId });
