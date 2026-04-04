@@ -23,6 +23,7 @@ let canvasCtx: OffscreenCanvasRenderingContext2D | null = null;
 let stdoutBuffer = '';
 let flushTimer: number | null = null;
 let currentRunId: number | undefined = undefined;
+let syncRun = false;   // true while runPython (blocking) is active
 const FLUSH_INTERVAL_MS = 100;
 // Buffer limits (configurable): keep at most these many lines/chars (last N)
 const MAX_OUTPUT_LINES = 100;
@@ -85,9 +86,10 @@ async function init(baseURL: string, indexURL: string) {
         py.setStdout({
             write: (buf: Uint8Array) => {
                 const text = new TextDecoder().decode(buf);
-                // accumulate in buffer and schedule periodic flush to avoid UI thrash
                 stdoutBuffer += text;
-                scheduleFlush();
+                // In sync mode the JS timer never fires, so flush immediately.
+                if (syncRun) { enforceBufferLimits(); flushStdout(); }
+                else scheduleFlush();
                 return buf.length;
             }
         });
@@ -234,6 +236,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // awaits (turtle/kara steps, micropip installs). Fall back to
             // runPythonAsync when await is present.
             const needsAsync = /\bawait\b/.test(code);
+            syncRun = !needsAsync;
             const runCode = needsAsync
                 ? (c: string) => py.runPythonAsync(c)
                 : (c: string) => Promise.resolve(py.runPython(c));
@@ -248,6 +251,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                         flushTimer = null;
                     }
                     flushStdout();
+                    syncRun = false;
                     currentRunId = undefined;
                     post('done', { runId });
                 } catch (err: any) {
@@ -256,6 +260,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                         flushTimer = null;
                     }
                     flushStdout();
+                    syncRun = false;
                     currentRunId = undefined;
                     post('error', { runId, error: String(err) });
                 }
@@ -265,6 +270,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     flushTimer = null;
                 }
                 flushStdout();
+                syncRun = false;
                 currentRunId = undefined;
                 post('error', { runId, error: String(err) });
             }
