@@ -59,6 +59,17 @@ export class BottomEditor extends LitElement {
     @state() private _swCanvas  = true;
     @state() private _swConsole = true;
 
+    /** Code prepended before the editor contents at run time (not shown in editor). */
+    @property({ attribute: false })
+    codePrefix: string = '';
+
+    /**
+     * Optional transform applied to the full code (codePrefix + editor text)
+     * just before execution. Use this to inject wrapping or rewrite syntax.
+     */
+    @property({ attribute: false })
+    transformCode?: (code: string) => string;
+
     @property({ attribute: 'sourcecode' })
     set sourceCode(code: string) { this.replaceDoc(code); }
     get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
@@ -160,14 +171,17 @@ export class BottomEditor extends LitElement {
         if (!this._editor) return;
         this._output?.clearOutput();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
-        const code = this._editor.state.doc.toString();
+        const raw  = this.codePrefix + this._editor.state.doc.toString();
+        const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         try {
             await this.runtime.run(code, (data: string) => this._output?.addOutput(data));
         } catch (err: any) {
             let msg = err?.toString() ?? String(err);
-            const idx = msg.indexOf('  File "<exec>"');
-            if (idx > 0) msg = msg.substring(idx);
+            // Strip traceback — keep only the last exception line.
+            const lastNewline = msg.lastIndexOf('\n', msg.length - 2);
+            if (lastNewline > 0 && msg.includes('  File "<exec>"'))
+                msg = msg.substring(lastNewline + 1).trim();
             this._output?.addOutput(msg);
         } finally {
             if (this._buttons) this._buttons.running = false;

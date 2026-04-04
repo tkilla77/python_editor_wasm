@@ -1,0 +1,87 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="module" src="src/kara-editor.ts"></script>
+<style>
+  body { font-family: system-ui; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  h2 { margin: 2rem 0 0.5rem; color: #1e293b; }
+  p  { margin: 0 0 0.5rem; color: #475569; font-size: 0.9rem; }
+</style>
+
+<h2>Kara — Basic movement</h2>
+<p>Kara moves forward and turns. Trees block the path.</p>
+
+<kara-editor step="300">
+<kara-world>
+###########
+#.........#
+#.T.......#
+#....>....#
+#.........#
+#.........#
+###########
+</kara-world>
+kara.move()
+kara.move()
+kara.turnLeft()
+kara.move()
+kara.move()
+kara.turnRight()
+kara.move()
+</kara-editor>
+
+<h2>Kara — Leaves</h2>
+<p>Kara can place and pick up leaves.</p>
+
+<kara-editor step="250">
+<kara-world>
+#########
+#.......#
+#...>...#
+#.......#
+#########
+</kara-world>
+kara.putLeaf()
+kara.move()
+kara.putLeaf()
+kara.move()
+kara.putLeaf()
+kara.turnRight()
+kara.turnRight()
+kara.move()
+kara.removeLeaf()
+</kara-editor>
+
+<h2>Kara — Mushrooms</h2>
+<p>Kara can push mushrooms if there is room behind them.</p>
+
+<kara-editor step="300">
+<kara-world>
+##########
+#........#
+#..>M....#
+#........#
+##########
+</kara-world>
+kara.move()
+kara.move()
+kara.move()
+</kara-editor>
+
+<h2>Kara — Using sensors</h2>
+<p>Sensors let Kara react to the world.</p>
+
+<kara-editor step="200">
+<kara-world>
+##########
+#>......T#
+#........#
+##########
+</kara-world>
+while not kara.treeFront():
+    kara.move()
+    if kara.onLeaf():
+        kara.removeLeaf()
+    else:
+        kara.putLeaf()
+</kara-editor>

@@ -4,6 +4,39 @@ import { readFileSync } from 'fs'
 import { defineConfig } from 'vite'
 import { marked } from 'marked'
 
+/**
+ * Vite plugin: emits stable-named lib entry files that re-export from the
+ * hashed chunk. Needed because lib entries get merged with HTML page entries
+ * in Vite's combined lib+MPA build and lose their stable names.
+ *
+ * entries: { 'bottom-editor': 'src/editor.ts', 'kara-editor': 'src/kara-editor.ts' }
+ * emits: bottom-editor.js → "export * from './editor-[hash].js'"
+ */
+function stableLibEntriesPlugin(entries) {
+    return {
+        name: 'stable-lib-entries',
+        generateBundle(_, bundle) {
+            for (const [name, srcPath] of Object.entries(entries)) {
+                const rel = resolve(__dirname, srcPath);
+                // Prefer exact facadeModuleId match; fall back to the chunk
+                // with fewest modules (avoids matching large HTML page bundles).
+                const chunks = Object.values(bundle).filter(
+                    c => c.type === 'chunk' && c.moduleIds?.includes(rel)
+                );
+                const chunk = chunks.find(c => c.facadeModuleId === rel)
+                    ?? chunks.sort((a, b) => a.moduleIds.length - b.moduleIds.length)[0];
+                if (chunk) {
+                    this.emitFile({
+                        type: 'asset',
+                        fileName: `${name}.js`,
+                        source: `export * from './${chunk.fileName}';\n`,
+                    });
+                }
+            }
+        },
+    };
+}
+
 /** Vite plugin: converts doc.md → dist/doc.html at build time. */
 function markdownDocPlugin() {
     const virtualId = 'virtual:doc-html';
@@ -96,6 +129,10 @@ export default defineConfig({
   },
   plugins: [
     markdownDocPlugin(),
+    stableLibEntriesPlugin({
+        'bottom-editor': 'src/editor.ts',
+        'kara-editor':   'src/kara-editor.ts',
+    }),
     {
       // Plugin to set COOP/COEP headers for SharedArrayBuffer support in dev/preview
       name: 'coop-coep-headers',
@@ -117,17 +154,20 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      // Could also be a dictionary or array of multiple entry points
-      entry: resolve(__dirname, 'src/editor.js'),
-      name: 'BottomEditor',
+      entry: {
+        'bottom-editor': resolve(__dirname, 'src/editor.ts'),
+        'kara-editor':   resolve(__dirname, 'src/kara-editor.ts'),
+      },
       formats: ['es'],
-      // the proper extensions will be added
-      fileName: 'bottom-editor',
     },
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        nested: resolve(__dirname, 'embed.html'),
+        index:       resolve(__dirname, 'index.html'),
+        embed:       resolve(__dirname, 'embed.html'),
+        'kara-demo': resolve(__dirname, 'kara-demo.html'),
+      },
+      output: {
+        entryFileNames: '[name]-[hash].js',
       },
     },
   },
