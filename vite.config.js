@@ -14,7 +14,14 @@ function markdownDocPlugin() {
         load(id) { if (id === resolvedId) return ''; },
         generateBundle() {
             const md = readFileSync(resolve(__dirname, 'doc.md'), 'utf8');
-            const body = marked.parse(md);
+            // marked treats blank lines inside unknown elements as paragraph
+            // boundaries, injecting <p> tags into the Python code. Collapse
+            // blank lines inside <bottom-editor> blocks before parsing.
+            const clean = md.replace(
+                /(<bottom-editor[^>]*>)([\s\S]*?)(<\/bottom-editor>)/g,
+                (_, open, content, close) => open + content.replace(/\n\n+/g, '\n') + close,
+            );
+            const body = marked.parse(clean);
             // Extract first h1 for the <title>
             const titleMatch = md.match(/^#\s+(.+)/m);
             const title = titleMatch ? titleMatch[1] : 'Documentation';
