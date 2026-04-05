@@ -21,7 +21,7 @@ bottom-editorarea {
 }
 /* Narrow split: 4 rows — code, canvas, output, buttons */
 :host([layout="split"]) bottom-editorarea {
-    grid-template-rows: 2fr 1fr 0.5fr auto;
+    grid-template-rows: 2fr 1fr var(--be-output-row, 0.5fr) auto;
 }
 /* Narrow split with switcher: 3 rows — code, split-col, buttons */
 :host([showswitcher][layout="split"]) bottom-editorarea {
@@ -83,7 +83,7 @@ bottom-code {
     :host(:not([orientation="vertical"])) bottom-editor-canvas  { grid-column: 3/4; }
     :host(:not([orientation="vertical"])) bottom-editor-buttons { grid-column: 2/3; grid-row: 1/2; }
 
-    :host([layout="split"]:not([orientation="vertical"])) bottom-editorarea    { grid-template-rows: 2fr 1fr; }
+    :host([layout="split"]:not([orientation="vertical"])) bottom-editorarea    { grid-template-rows: 2fr var(--be-output-row, 1fr); }
     :host([layout="split"]:not([orientation="vertical"])) bottom-code          { grid-row: 1/3; }
     :host([layout="split"]:not([orientation="vertical"])) bottom-editor-buttons { grid-row: 1/3; }
     :host([layout="split"]:not([orientation="vertical"])) bottom-editor-canvas  { grid-row: 1/2; }
@@ -105,7 +105,7 @@ bottom-code {
 :host([orientation="horizontal"]) bottom-editor-canvas  { grid-column: 3/4; }
 :host([orientation="horizontal"]) bottom-editor-buttons { grid-column: 2/3; grid-row: 1/2; }
 
-:host([layout="split"][orientation="horizontal"]) bottom-editorarea    { grid-template-rows: 2fr 1fr; }
+:host([layout="split"][orientation="horizontal"]) bottom-editorarea    { grid-template-rows: 2fr var(--be-output-row, 1fr); }
 :host([layout="split"][orientation="horizontal"]) bottom-code          { grid-row: 1/3; }
 :host([layout="split"][orientation="horizontal"]) bottom-editor-buttons { grid-row: 1/3; }
 :host([layout="split"][orientation="horizontal"]) bottom-editor-canvas  { grid-row: 1/2; }

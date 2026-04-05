@@ -105,7 +105,7 @@ export class KaraEditor extends LitElement {
         :host { display: block; }
         bottom-editor {
             max-height: initial;
-            --be-output-min-height: 2lh;
+            --be-output-row: 2lh;
         }
     `;
 }
