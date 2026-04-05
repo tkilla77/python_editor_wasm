@@ -103,7 +103,10 @@ export class KaraEditor extends LitElement {
 
     static styles = css`
         :host { display: block; }
-        bottom-editor { max-height: initial; }
+        bottom-editor {
+            max-height: initial;
+            --be-output-min-height: 2lh;
+        }
     `;
 }
 
