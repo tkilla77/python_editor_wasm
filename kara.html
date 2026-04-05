@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="module" src="src/kara-editor-page.ts"></script>
+<link rel="icon" type="image/png" href="icons/bp_lowres.png">
+<title>Kara im Browser</title>
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+        margin: 0;
+        height: 100dvh;
+        background-color: #fafafa;
+        font-family: system-ui;
+    }
+    main {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        max-width: 80rem;
+        margin-inline: auto;
+        padding-inline: 1rem;
+    }
+    h1 {
+        color: #1e293b;
+        font-size: 1.875rem;
+        font-weight: 800;
+        margin-block: 0.5rem;
+        padding-top: 1.5rem;
+        flex-shrink: 0;
+    }
+</style>
+<body>
+    <main>
+        <header>
+            <h1>Kara im Browser</h1>
+            <nav style="font-size:0.8rem; margin-bottom:0.25rem;">
+                <a href="index.html" style="color:#2563eb;">Python editor</a>
+                &nbsp;·&nbsp;
+                <a href="https://github.com/tkilla77/python_editor_wasm" style="color:#2563eb;">GitHub</a>
+            </nav>
+        </header>
+        <kara-editor-page></kara-editor-page>
+    </main>
+</body>

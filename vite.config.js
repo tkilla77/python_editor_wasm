@@ -130,8 +130,9 @@ export default defineConfig({
   plugins: [
     markdownDocPlugin(),
     stableLibEntriesPlugin({
-        'bottom-editor': 'src/editor.ts',
-        'kara-editor':   'src/kara-editor.ts',
+        'bottom-editor':      'src/editor.ts',
+        'kara-editor':        'src/kara-editor.ts',
+        'kara-editor-page':   'src/kara-editor-page.ts',
     }),
     {
       // Plugin to set COOP/COEP headers for SharedArrayBuffer support in dev/preview
@@ -164,6 +165,7 @@ export default defineConfig({
       input: {
         index:       resolve(__dirname, 'index.html'),
         embed:       resolve(__dirname, 'embed.html'),
+        kara:        resolve(__dirname, 'kara.html'),
         'kara-demo': resolve(__dirname, 'kara-demo.html'),
       },
       output: {

@@ -81,6 +81,13 @@ export class BottomEditor extends LitElement {
     @property({ attribute: false })
     transformCode?: (code: string) => string;
 
+    /**
+     * Override the default permalink behaviour. If set, this function is called
+     * instead of copyPermalink()'s built-in URL builder.
+     */
+    @property({ attribute: false })
+    permalinkCallback?: () => void;
+
     @property({ attribute: 'sourcecode' })
     set sourceCode(code: string) { this.replaceDoc(code); }
     get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
@@ -210,6 +217,7 @@ export class BottomEditor extends LitElement {
     }
 
     async copyPermalink() {
+        if (this.permalinkCallback) { this.permalinkCallback(); return; }
         // FIXME allow permalink base to be configured
         const url = new URL("https://bottom.ch/editor/stable/");
         url.searchParams.set('code', this.sourceCode);

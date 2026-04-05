@@ -17,6 +17,8 @@ const DEFAULT_WORLD = `
 ###########
 `.trim();
 
+const PERMALINK_BASE = 'https://bottom.ch/editor/stable/kara.html';
+
 @customElement('kara-editor')
 export class KaraEditor extends LitElement {
     static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
@@ -49,6 +51,14 @@ export class KaraEditor extends LitElement {
             .replace(/^\s*\n/, '');
     }
 
+    /** Set world programmatically (overrides <kara-world> child). */
+    set world(w: string) { this._worldStr = w; }
+    get world()          { return this._worldStr; }
+
+    /** Set user code programmatically (overrides text-node children). */
+    set code(c: string)  { this._userCode = c; }
+    get code()           { return this._userCode; }
+
     // Stable reference — Lit won't diff-update bottom-editor on every render.
     private readonly _transform = (editorCode: string): string => {
         const world = this._worldStr.replace(/"""/g, "'''");
@@ -66,6 +76,15 @@ export class KaraEditor extends LitElement {
         return karaShimSrc + `\n_kara_setup("""${world}""", ${this.step})\n`;
     }
 
+    private readonly _permalink = () => {
+        const url = new URL(PERMALINK_BASE);
+        url.searchParams.set('world', this._worldStr);
+        if (this._userCode.trim()) url.searchParams.set('code', this._userCode);
+        if (this.step !== 200)    url.searchParams.set('step', String(this.step));
+        if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
+        navigator.clipboard.writeText(url.href);
+    };
+
     render() {
         return html`
             <bottom-editor
@@ -73,6 +92,7 @@ export class KaraEditor extends LitElement {
                 .sourceCode=${this._userCode}
                 .transformCode=${this._transform}
                 .readyCode=${this._readyCode}
+                .permalinkCallback=${this._permalink}
                 ?autorun=${this.autorun}
                 ?autofit=${true}
                 session=${this._sessionId}
