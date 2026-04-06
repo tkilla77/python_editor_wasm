@@ -124,10 +124,8 @@ describe('PyodideRuntime', () => {
         await flush();
 
         vi.advanceTimersByTime(500);
-        // terminateAndRespawn() rejects pending runs with 'Worker terminated'
-        // before the outer reject('Execution timed out') fires, so the latter is a no-op.
-        await expect(runPromise).rejects.toThrow('Worker terminated');
-        expect(onLog).toHaveBeenCalledWith(expect.stringContaining('timed out'));
+        await expect(runPromise).rejects.toThrow('Execution timed out');
+        expect(onLog).toHaveBeenCalledWith(expect.stringContaining('Interrupt buffer'));
         vi.useRealTimers();
     });
 
