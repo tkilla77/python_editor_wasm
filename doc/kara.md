@@ -134,6 +134,38 @@ while not kara.treeFront():
 
 ---
 
+## Labyrinth Example
+<kara-editor step="50" timeout="60">
+    <kara-world>
+     TTTTTTTTTTTTTTTTTT
+     T>               T
+     TTTTTTTTTTTTTTTT T
+     T              T T
+     TTT TTTTTTTTTTTT T
+     T                T
+     TTTTTTTT TTTTTTTTT
+     T              T T
+     TTT TTTTTTTTTTTT T
+     T                T
+     TTTTTTTT TTTTTTTTT
+     T              T T
+     TTT TTTTTTTTTTTT T
+     T                T
+     TTTTTTTT TTTTTTTTT
+     T                T
+     TTTTTTTTTTTTMTTTTT
+    </kara-world>
+while not kara.mushroomFront():
+    if not kara.treeRight():
+        kara.turnRight()
+        kara.move()
+    elif not kara.treeFront():
+        kara.move()
+    else:
+        kara.turnLeft()
+</kara-editor>
+---
+
 ## Exceptions
 
 When Kara cannot execute a command, a `KaraException` is raised:

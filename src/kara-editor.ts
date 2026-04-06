@@ -41,7 +41,12 @@ export class KaraEditor extends LitElement {
 
     private _parse() {
         const worldEl = this.querySelector('kara-world');
-        if (worldEl) this._worldStr = worldEl.textContent?.trim() ?? DEFAULT_WORLD;
+        if (worldEl) {
+            const raw = worldEl.textContent?.trim() ?? DEFAULT_WORLD;
+            const lines = raw.split('\n');
+            const indent = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^ */)?.[0].length ?? 0));
+            this._worldStr = indent > 0 ? lines.map(l => l.slice(indent)).join('\n') : raw;
+        }
 
         // User code = direct text-node children (outside <kara-world>).
         this._userCode = Array.from(this.childNodes)
