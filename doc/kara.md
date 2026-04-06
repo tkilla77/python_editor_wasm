@@ -3,11 +3,11 @@
 Kara is a ladybug that lives in a grid world. She can move, turn, pick up
 and place leaves, and push mushrooms. Trees block her path.
 
-The `<kara-editor>` component is a variant of `<bottom-editor>` tailored
+The `<kara-editor>` component is a variant of `<bottom-editor>`  ([Documentation →](index.html))tailored
 for Kara programs: no imports needed, animated step-by-step execution, and
 a compact console showing only error messages.
 
-**Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm) · [Original Kara (SwissEduc)](https://www.swisseduc.ch/informatik/karatojava/kara/index.html) · [Embedding guide →](index.html)
+**Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm) · [Original Kara (SwissEduc)](https://www.swisseduc.ch/informatik/karatojava/kara/index.html)
 
 ---
 

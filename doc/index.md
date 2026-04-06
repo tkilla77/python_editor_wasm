@@ -5,7 +5,9 @@ A self-contained Python editor web component powered by
 required. No code is ever passed to the server, there is no login or account feature, so the component is safe to use from exam systems such
 as [SafeExamBrowser](https://safeexambrowser.org/) or [isTest2](https://istest2.ch/).
 
-**Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm) · [Kara grid world →](kara.html)
+**Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm)
+
+**See also:** [Kara grid world →](kara.html)
 
 ---
 
@@ -246,6 +248,8 @@ mymodule.run()
 
 The archive is unpacked into `/home/pyodide/` (the default Python path),
 so any `.py` files inside are directly importable.
+
+> **CORS required.** The server hosting the zip must send `Access-Control-Allow-Origin: *` (or the page origin).
 
 ---
 
