@@ -12,6 +12,7 @@ canvas {
     width: 100%;
     height: auto;
     aspect-ratio: 1;
+    max-height: var(--be-canvas-max-height, none);
     transform-origin: 0 0;
 }
 button {
