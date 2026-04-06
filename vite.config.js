@@ -43,10 +43,16 @@ function stableLibEntriesPlugin(entries) {
 function mdToHtml(md, scriptTags) {
     // marked treats blank lines inside unknown elements as paragraph boundaries.
     // Collapse them inside <bottom-editor> and <kara-editor> blocks first.
-    const clean = md.replace(
+    // Mask fenced code blocks and inline code spans so the regex below doesn't
+    // match <bottom-editor>/<kara-editor> tags that appear inside them.
+    const masked = md
+        .replace(/```[\s\S]*?```/g, m => m.replace(/</g, '\x00'))
+        .replace(/`[^`\n]+`/g, m => m.replace(/</g, '\x00'));
+    const cleaned = masked.replace(
         /(<(?:bottom|kara)-editor[^>]*>)([\s\S]*?)(<\/(?:bottom|kara)-editor>)/g,
         (_, open, content, close) => open + content.replace(/\n\n+/g, '\n') + close,
     );
+    const clean = cleaned.replace(/\x00/g, '<');
     const body = marked.parse(clean);
     const titleMatch = md.match(/^#\s+(.+)/m);
     const title = titleMatch ? titleMatch[1] : 'Documentation';
