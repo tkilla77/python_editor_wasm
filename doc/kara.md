@@ -153,10 +153,10 @@ while not kara.treeFront():
      T                T
      TTTTTTTT TTTTTTTTT
      T                T
-     TTTTTTTTTTTTMTTTTT
+     TTTTTTTTTTTTLTTTTT
     </kara-world>
 while not kara.mushroomFront():
-    if not kara.treeRight():
+    if not kara.onLeaf():
         kara.turnRight()
         kara.move()
     elif not kara.treeFront():
