@@ -91,7 +91,7 @@ ${scriptTags}
   table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.875rem; }
   th { background: #f1f5f9; text-align: left; }
   th, td { padding: 0.4em 0.75em; border: 1px solid #e2e8f0; }
-  bottom-editor, kara-editor { margin: 1rem 0; display: block; }
+  bottom-editor, kara-editor { margin: 1rem 0; }
   .dark-editor {
     --be-border: none;
     --be-border-radius: 0.25em;

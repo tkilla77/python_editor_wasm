@@ -21,13 +21,13 @@ Load the component script, then drop `<bottom-editor>` anywhere on the page. The
 
 <bottom-editor autorun>
 for i in range(5):
-    print(i ** 2)
+    print(i ** 2, end=' ')
 </bottom-editor>
 ```
 
 <bottom-editor autorun>
 for i in range(5):
-    print(i ** 2, )
+    print(i ** 2, end=' ')
 </bottom-editor>
 
 

@@ -21,11 +21,11 @@ bottom-editorarea {
 }
 /* Narrow split: explicit output row only (canvas sizes to content) */
 :host([layout="split"]) bottom-editorarea {
-    grid-template-rows: auto auto var(--be-output-row, auto) auto;
+    grid-template-rows: auto auto var(--be-output-row, auto) 0fr;
 }
 /* Narrow split with switcher: all rows auto */
 :host([showswitcher][layout="split"]) bottom-editorarea {
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto 0fr;
 }
 bottom-code {
     background-color: var(--be-editor-bg, white);
