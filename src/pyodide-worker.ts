@@ -83,23 +83,32 @@ async function init(baseURL: string, indexURL: string) {
     try {
 
         py = await loadPyodide({ indexURL });
-        py.setStdout({
-            write: (buf: Uint8Array) => {
-                const text = new TextDecoder().decode(buf);
-                stdoutBuffer += text;
-                // In sync mode the JS timer never fires, so flush immediately.
-                if (syncRun) { enforceBufferLimits(); flushStdout(); }
-                else scheduleFlush();
-                return buf.length;
-            }
-        });
+        // Expose write callback as a JS global so Python can call it directly,
+        // bypassing TextIOWrapper buffering (reconfigure(write_through=True) is
+        // unreliable on Pyodide's custom stream wrapper).
+        (self as any)._pyWrite = (text: string) => {
+            stdoutBuffer += text;
+            if (syncRun) { enforceBufferLimits(); flushStdout(); }
+            else scheduleFlush();
+        };
         await py.loadPackage('micropip', { messageCallback: (msg: string) => post('log', { data: msg }) });
         py.FS.writeFile('/home/pyodide/turtle.py', turtleShim);
         py.FS.writeFile('/home/pyodide/canvas_shim.py', canvasShim);
         await py.runPythonAsync(`import canvas_shim`);
-        // Make stdout write-through so print(..., end='') and partial lines
-        // are delivered immediately without waiting for a newline or buffer fill.
-        await py.runPythonAsync(`import sys; sys.stdout.reconfigure(write_through=True)`);
+        // Replace sys.stdout with a thin wrapper that calls _pyWrite directly,
+        // so every write (including print(..., end='')) is sent to JS immediately.
+        await py.runPythonAsync(`
+import sys
+from js import _pyWrite
+class _Stdout:
+    encoding = 'utf-8'
+    errors = 'strict'
+    def write(self, text):
+        if text: _pyWrite(text)
+        return len(text)
+    def flush(self): pass
+sys.stdout = _Stdout()
+`);
         // replace input with a stub that posts back — main thread can implement if desired
         await py.runPythonAsync(`\nfrom js import console\n`);
         post('ready');
