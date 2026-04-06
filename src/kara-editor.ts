@@ -110,7 +110,6 @@ export class KaraEditor extends LitElement {
         bottom-editor {
             max-height: initial;
             --be-output-row: calc(2lh + 1em + 4px); /* 2lh content + 0.5em×2 padding + 2px border */
-            --be-canvas-max-height: 40vw; /* prevent canvas from dominating in narrow/vertical layout */
         }
     `;
 }

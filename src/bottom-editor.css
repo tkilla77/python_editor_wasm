@@ -13,19 +13,18 @@
 bottom-editorarea {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: 2fr 1fr auto;
     gap: 0.5em;
     flex: 1;
     min-height: 0;
     margin-bottom: 0.4em;
 }
-/* Narrow split: 4 rows — code, canvas, output, buttons */
+/* Narrow split: explicit output row only (canvas sizes to content) */
 :host([layout="split"]) bottom-editorarea {
-    grid-template-rows: 2fr 1fr var(--be-output-row, 0.5fr) auto;
+    grid-template-rows: auto auto var(--be-output-row, auto) auto;
 }
-/* Narrow split with switcher: 3 rows — code, split-col, buttons */
+/* Narrow split with switcher: all rows auto */
 :host([showswitcher][layout="split"]) bottom-editorarea {
-    grid-template-rows: 2fr 1fr auto;
+    grid-template-rows: auto auto auto;
 }
 bottom-code {
     background-color: var(--be-editor-bg, white);
