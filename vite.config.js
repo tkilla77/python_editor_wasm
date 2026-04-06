@@ -1,6 +1,6 @@
 // vite.config.js
 import { resolve } from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { defineConfig } from 'vite'
 import { marked } from 'marked'
 
@@ -37,32 +37,24 @@ function stableLibEntriesPlugin(entries) {
     };
 }
 
-/** Vite plugin: converts doc.md → dist/doc.html at build time. */
-function markdownDocPlugin() {
-    const virtualId = 'virtual:doc-html';
-    const resolvedId = '\0' + virtualId;
-    return {
-        name: 'markdown-doc',
-        resolveId(id) { if (id === virtualId) return resolvedId; },
-        load(id) { if (id === resolvedId) return ''; },
-        generateBundle() {
-            const md = readFileSync(resolve(__dirname, 'doc.md'), 'utf8');
-            // marked treats blank lines inside unknown elements as paragraph
-            // boundaries, injecting <p> tags into the Python code. Collapse
-            // blank lines inside <bottom-editor> blocks before parsing.
-            const clean = md.replace(
-                /(<bottom-editor[^>]*>)([\s\S]*?)(<\/bottom-editor>)/g,
-                (_, open, content, close) => open + content.replace(/\n\n+/g, '\n') + close,
-            );
-            const body = marked.parse(clean);
-            // Extract first h1 for the <title>
-            const titleMatch = md.match(/^#\s+(.+)/m);
-            const title = titleMatch ? titleMatch[1] : 'Documentation';
-            const html = `<!doctype html>
+/** Convert one markdown string to an HTML page string.
+ *  scriptTags: extra <script> tags to inject (already-escaped).
+ *  depth: path depth below dist/ (1 = dist/doc/, so assets are at ../) */
+function mdToHtml(md, scriptTags) {
+    // marked treats blank lines inside unknown elements as paragraph boundaries.
+    // Collapse them inside <bottom-editor> and <kara-editor> blocks first.
+    const clean = md.replace(
+        /(<(?:bottom|kara)-editor[^>]*>)([\s\S]*?)(<\/(?:bottom|kara)-editor>)/g,
+        (_, open, content, close) => open + content.replace(/\n\n+/g, '\n') + close,
+    );
+    const body = marked.parse(clean);
+    const titleMatch = md.match(/^#\s+(.+)/m);
+    const title = titleMatch ? titleMatch[1] : 'Documentation';
+    return `<!doctype html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
-<script type="module" src="bottom-editor.js"><\/script>
+${scriptTags}
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body {
@@ -93,7 +85,7 @@ function markdownDocPlugin() {
   table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.875rem; }
   th { background: #f1f5f9; text-align: left; }
   th, td { padding: 0.4em 0.75em; border: 1px solid #e2e8f0; }
-  bottom-editor { margin: 1rem 0; display: block; }
+  bottom-editor, kara-editor { margin: 1rem 0; display: block; }
   .dark-editor {
     --be-border: none;
     --be-border-radius: 0.25em;
@@ -105,7 +97,30 @@ function markdownDocPlugin() {
 ${body}
 </body>
 `;
-            this.emitFile({ type: 'asset', fileName: 'doc.html', source: html });
+}
+
+/** Vite plugin: converts doc/*.md → dist/doc/*.html at build time. */
+function markdownDocPlugin() {
+    const virtualId = 'virtual:doc-html';
+    const resolvedId = '\0' + virtualId;
+    return {
+        name: 'markdown-doc',
+        resolveId(id) { if (id === virtualId) return resolvedId; },
+        load(id) { if (id === resolvedId) return ''; },
+        generateBundle() {
+            const docDir = resolve(__dirname, 'doc');
+            const files = readdirSync(docDir).filter(f => f.endsWith('.md'));
+            for (const file of files) {
+                const md = readFileSync(resolve(docDir, file), 'utf8');
+                // Inline <script> tags already present in kara.md (for kara-editor);
+                // for index.md inject bottom-editor.js from the parent dir.
+                const scripts = file === 'kara.md'
+                    ? `<script type="module" src="../kara-editor.js"><\/script>`
+                    : `<script type="module" src="../bottom-editor.js"><\/script>`;
+                const html = mdToHtml(md, scripts, 1);
+                const outName = file.replace(/\.md$/, '.html');
+                this.emitFile({ type: 'asset', fileName: `doc/${outName}`, source: html });
+            }
         },
     };
 }

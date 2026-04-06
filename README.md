@@ -37,5 +37,5 @@ Properties:
 
 ## Want to use this project?
 
-See [doc.md](https://bottom.ch/editor/stable/doc.html) for the full embedding guide, including attributes,
-sessions, CSS theming, and live examples.
+See [doc/index.md](doc/index.md) for the full embedding guide, or [doc/kara.md](doc/kara.md) for the Kara grid world.
+Live rendered versions at [bottom.ch/editor/stable/doc/](https://bottom.ch/editor/stable/doc/).

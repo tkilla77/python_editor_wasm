@@ -5,7 +5,7 @@ A self-contained Python editor web component powered by
 required. No code is ever passed to the server, there is no login or account feature, so the component is safe to use from exam systems such
 as [SafeExamBrowser](https://safeexambrowser.org/) or [isTest2](https://istest2.ch/).
 
-**Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm)
+**Source:** [github.com/tkilla77/python_editor_wasm](https://github.com/tkilla77/python_editor_wasm) · [Kara grid world →](kara.html)
 
 ---
 
@@ -228,6 +228,24 @@ print("Dark theme")
 <bottom-editor class="dark-editor">
 print("Dark theme")
 </bottom-editor>
+
+---
+
+## Loading files with `zip`
+
+Use the `zip` attribute to pre-load a `.zip` archive into the virtual
+filesystem before the editor runs. Useful for distributing helper modules
+or data files alongside an exercise.
+
+```html
+<bottom-editor zip="https://example.com/exercises.zip" autorun>
+import mymodule
+mymodule.run()
+</bottom-editor>
+```
+
+The archive is unpacked into `/home/pyodide/` (the default Python path),
+so any `.py` files inside are directly importable.
 
 ---
 
