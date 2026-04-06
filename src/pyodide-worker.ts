@@ -97,6 +97,9 @@ async function init(baseURL: string, indexURL: string) {
         py.FS.writeFile('/home/pyodide/turtle.py', turtleShim);
         py.FS.writeFile('/home/pyodide/canvas_shim.py', canvasShim);
         await py.runPythonAsync(`import canvas_shim`);
+        // Make stdout write-through so print(..., end='') and partial lines
+        // are delivered immediately without waiting for a newline or buffer fill.
+        await py.runPythonAsync(`import sys; sys.stdout.reconfigure(write_through=True)`);
         // replace input with a stub that posts back — main thread can implement if desired
         await py.runPythonAsync(`\nfrom js import console\n`);
         post('ready');
@@ -235,7 +238,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // Use the faster synchronous runPython when the code has no top-level
             // awaits (turtle/kara steps, micropip installs). Fall back to
             // runPythonAsync when await is present.
-            const needsAsync = /\bawait\b/.test(code);
+            const needsAsync = /\bawait\b|import turtle\b|from turtle\b/.test(code);
             syncRun = !needsAsync;
             const runCode = needsAsync
                 ? (c: string) => py.runPythonAsync(c)
