@@ -175,7 +175,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
 
         if (msg.type === 'setCanvas' && py && msg.canvas && msg.editorId) {
             try {
-                const ctx = msg.canvas.getContext('2d', { willReadFrequently: true }) as OffscreenCanvasRenderingContext2D;
+                const ctx = msg.canvas.getContext('2d') as OffscreenCanvasRenderingContext2D | null;
+                if (!ctx) {
+                    post('log', { data: 'Canvas context is null — OffscreenCanvas not supported?' });
+                    return;
+                }
                 canvasCtxMap.set(msg.editorId, ctx);
                 post('log', { data: 'Canvas attached' });
             } catch (e) {
