@@ -206,6 +206,13 @@ export class PyodideRuntime {
             this.callbacks.onLog(msg.data);
             return;
         }
+        if (msg.type === 'input') {
+            // Pass '' as defaultValue explicitly — some browsers pre-fill the
+            // input field with the message when no default is given.
+            const value = prompt(msg.prompt ?? '', '') ?? '';
+            this.worker?.postMessage({ type: 'inputResponse', value });
+            return;
+        }
         if (msg.type === 'ready') {
             try {
                 this.interruptBuffer = new Uint8Array(new SharedArrayBuffer(1));

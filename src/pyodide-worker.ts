@@ -13,9 +13,12 @@ type Msg = {
     x?: number,
     y?: number,
     editorId?: string,
+    value?: string,
+    prompt?: string,
 }
 
 let py: any = null;
+let inputResolve: ((value: string) => void) | null = null;
 // Per-editor canvas contexts, keyed by editorId.
 const canvasCtxMap = new Map<string, OffscreenCanvasRenderingContext2D>();
 // The context currently active (set before each run).
@@ -93,15 +96,23 @@ async function init(baseURL: string, indexURL: string) {
             if (syncRun) { enforceBufferLimits(); flushStdout(); }
             else scheduleFlush();
         };
+        (self as any)._pyInput = (prompt: string): Promise<string> => {
+            flushStdout();
+            return new Promise<string>(resolve => {
+                inputResolve = resolve;
+                post('input', { prompt });
+            });
+        };
         await py.loadPackage('micropip', { messageCallback: (msg: string) => post('log', { data: msg }) });
         py.FS.writeFile('/home/pyodide/turtle.py', turtleShim);
         py.FS.writeFile('/home/pyodide/canvas_shim.py', canvasShim);
         await py.runPythonAsync(`import canvas_shim`);
         // Replace sys.stdout with a thin wrapper that calls _pyWrite directly,
         // so every write (including print(..., end='')) is sent to JS immediately.
+        // Also override builtins.input to use _pyInput (async, routed to main thread).
         await py.runPythonAsync(`
-import sys
-from js import _pyWrite
+import sys, builtins
+from js import _pyWrite, _pyInput
 class _Stdout:
     encoding = 'utf-8'
     errors = 'strict'
@@ -110,8 +121,11 @@ class _Stdout:
         return len(text)
     def flush(self): pass
 sys.stdout = _Stdout()
+async def _input(prompt=''):
+    result = await _pyInput(str(prompt))
+    return result.to_py() if hasattr(result, 'to_py') else str(result) if result is not None else ''
+builtins.input = _input
 `);
-        // replace input with a stub that posts back — main thread can implement if desired
         await py.runPythonAsync(`\nfrom js import console\n`);
         post('ready');
     } catch (err: any) {
@@ -122,6 +136,15 @@ sys.stdout = _Stdout()
 self.onmessage = async (ev: MessageEvent<Msg>) => {
     const msg = ev.data;
     try {
+        if (msg.type === 'inputResponse') {
+            if (inputResolve) {
+                const resolve = inputResolve;
+                inputResolve = null;
+                resolve(typeof msg.value === 'string' ? msg.value : '');
+            }
+            return;
+        }
+
         if (msg.type === 'interrupt') {
             // Try to signal Pyodide to interrupt execution if supported.
             try {
@@ -253,14 +276,18 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // Use the faster synchronous runPython when the code has no top-level
             // awaits (turtle/kara steps, micropip installs). Fall back to
             // runPythonAsync when await is present.
-            const needsAsync = /\bawait\b|import turtle\b|from turtle\b/.test(code);
+            const needsAsync = /\bawait\b|import turtle\b|from turtle\b|\binput\s*\(/.test(code);
+            // Rewrite bare input(...) calls to await input(...) so user code doesn't need to.
+            const codeToRun = needsAsync
+                ? code.replace(/\binput\s*\(/g, 'await input(')
+                : code;
             syncRun = !needsAsync;
             const runCode = needsAsync
                 ? (c: string) => py.runPythonAsync(c)
                 : (c: string) => Promise.resolve(py.runPython(c));
             try {
                 try {
-                    await runCode(code);
+                    await runCode(codeToRun);
                     // Patch any libraries installed via micropip during this run.
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
                     // ensure all buffered stdout is flushed before signaling done
