@@ -74,7 +74,7 @@ class Turtle:
         self._speed = _SPEED_PX_PER_SEC[6]   # px/s; 0 = instant
         self._visible = True
         self._filling = False
-        self._fill_pts = []
+        self._fill_subpaths = []  # list of sub-paths; teleport() starts a new one
 
     # ---- internal draw ----------------------------------------------------
 
@@ -98,7 +98,7 @@ class Turtle:
             if self._down:
                 self._draw_line(x0, y0, x, y)
             if self._filling:
-                self._fill_pts.append((x, y))
+                self._fill_subpaths[-1].append((x, y))
             self._x, self._y = x, y
             return
 
@@ -113,7 +113,7 @@ class Turtle:
             if self._down:
                 self._draw_line(prev_x, prev_y, nx, ny)
             if self._filling:
-                self._fill_pts.append((nx, ny))
+                self._fill_subpaths[-1].append((nx, ny))
             prev_x, prev_y = nx, ny
             time.sleep(sleep_per_step)
 
@@ -161,8 +161,11 @@ class Turtle:
         """Move to position instantly without drawing, regardless of pen state."""
         if y is None:
             x, y = x
-        if fill_gap and self._filling:
-            self._fill_pts.append((float(x), float(y)))
+        if self._filling:
+            if fill_gap:
+                self._fill_subpaths[-1].append((float(x), float(y)))
+            else:
+                self._fill_subpaths.append([(float(x), float(y))])
         self._x, self._y = float(x), float(y)
 
     def setheading(self, angle):
@@ -257,22 +260,25 @@ class Turtle:
 
     def begin_fill(self):
         self._filling = True
-        self._fill_pts = [(self._x, self._y)]
+        self._fill_subpaths = [[(self._x, self._y)]]
 
     def end_fill(self):
-        if len(self._fill_pts) < 2:
-            self._filling = False
+        self._filling = False
+        subpaths = self._fill_subpaths
+        self._fill_subpaths = []
+        total_pts = sum(len(sp) for sp in subpaths)
+        if total_pts < 2:
             return
         ctx = _ctx()
         ctx.beginPath()
-        ctx.moveTo(*_tc(*self._fill_pts[0]))
-        for pt in self._fill_pts[1:]:
-            ctx.lineTo(*_tc(*pt))
-        ctx.closePath()
+        for subpath in subpaths:
+            if not subpath:
+                continue
+            ctx.moveTo(*_tc(*subpath[0]))
+            for pt in subpath[1:]:
+                ctx.lineTo(*_tc(*pt))
         ctx.fillStyle = _parse_color(self._fillcolor)
         ctx.fill()
-        self._filling = False
-        self._fill_pts = []
 
     def filling(self):
         return self._filling
