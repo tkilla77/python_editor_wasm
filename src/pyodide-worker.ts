@@ -82,7 +82,9 @@ async function init(baseURL: string, indexURL: string) {
 
     try {
 
+        post('log', { data: 'Loading pyodide...' });
         py = await loadPyodide({ indexURL });
+        post('log', { data: 'Pyodide loaded, loading micropip...' });
         // Expose write callback as a JS global so Python can call it directly,
         // bypassing TextIOWrapper buffering (reconfigure(write_through=True) is
         // unreliable on Pyodide's custom stream wrapper).
