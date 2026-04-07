@@ -42,6 +42,10 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     showclear = false;
 
+    /** When true, the clear button becomes "Reset" and also re-runs readyCode. */
+    @property({ type: Boolean, reflect: true })
+    resetmode = false;
+
     @property({ type: Boolean, reflect: true })
     showswitcher = false;
 
@@ -229,9 +233,12 @@ export class BottomEditor extends LitElement {
         navigator.clipboard.writeText(url.href);
     }
 
-    private clearAll() {
+    private async clearAll() {
         this._output?.clearOutput();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
+        if (this.resetmode && this.readyCode) {
+            await this.runtime.run(this.readyCode, () => {});
+        }
     }
 
     private _handleFitRequest() {
@@ -294,6 +301,7 @@ export class BottomEditor extends LitElement {
                 <bottom-editor-buttons
                     part="buttons"
                     ?showclear="${this.showclear}"
+                    ?resetmode="${this.resetmode}"
                     @bottom-run="${this.evaluatePython}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"

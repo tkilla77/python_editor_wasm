@@ -102,6 +102,7 @@ export class KaraEditor extends LitElement {
                 session=${this._sessionId}
                 timeout=${this.timeout}
                 showclear
+                resetmode
             ></bottom-editor>`;
     }
 
