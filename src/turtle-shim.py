@@ -361,6 +361,8 @@ class Turtle:
     def onrelease(self, *a, **kw): pass
     def ondrag(self, *a, **kw): pass
 
+    def getscreen(self): return Screen()
+
     def setup(self, *a, **kw): pass
     def title(self, *a): pass
     def screensize(self, *a, **kw): return _wh()
