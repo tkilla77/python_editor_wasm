@@ -442,6 +442,12 @@ for _n in [
 ]:
     globals()[_n] = _wrap(_n)
 
+def _reset_default():
+    """Reset the default turtle to its initial state (called by the runtime before each run)."""
+    global _default
+    if _default is not None:
+        _default.reset()
+
 def done(): pass
 def mainloop(): pass
 def bye(): pass

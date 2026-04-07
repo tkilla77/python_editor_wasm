@@ -277,6 +277,10 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // awaits (turtle/kara steps, micropip installs). Fall back to
             // runPythonAsync when await is present.
             const needsAsync = /\bawait\b|import turtle\b|from turtle\b|\binput\s*\(/.test(code);
+            // Reset default turtle state before each run so heading/position don't persist.
+            if (py.runPython(`'turtle' in __import__('sys').modules`)) {
+                py.runPython(`__import__('sys').modules['turtle']._reset_default()`);
+            }
             // Rewrite bare input(...) calls to await input(...) so user code doesn't need to.
             const codeToRun = needsAsync
                 ? code.replace(/\binput\s*\(/g, 'await input(')
