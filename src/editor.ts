@@ -144,7 +144,12 @@ export class BottomEditor extends LitElement {
         }
 
         const text = this._pendingCode ?? this.getSourceCode();
-        this._editor = createPythonEditor(this._code!, text, () => this.onRun ? this.onRun() : this.evaluatePython());
+        this._editor = createPythonEditor(
+            this._code!,
+            text,
+            () => this.onRun ? this.onRun() : this.evaluatePython(),
+            () => this.dispatchEvent(new CustomEvent('bottom-change', { bubbles: true, composed: true })),
+        );
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length >= 4;
 
         const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;

@@ -10,6 +10,7 @@ export function createPythonEditor(
     parent: Element,
     doc: string,
     onRun: () => void,
+    onChange?: () => void,
 ): EditorView {
     const runKeymap = keymap.of([{
         key: "Ctrl-Enter",
@@ -28,6 +29,7 @@ export function createPythonEditor(
             lineNumbers(),
             bracketMatching(),
             gutter({ class: "cm-mygutter" }),
+            ...(onChange ? [EditorView.updateListener.of(u => { if (u.docChanged) onChange(); })] : []),
         ],
     });
     return new EditorView({ state, parent });

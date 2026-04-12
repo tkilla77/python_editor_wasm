@@ -3,13 +3,14 @@ import { customElement, property, query, state } from 'lit/decorators.js'
 import './editor.js' // side-effect: registers <bottom-editor>
 import type { BottomEditor } from './editor.js'
 import type { TestReport } from './pyodide-runtime.js'
+import { LocalStorageAdapter, type ExerciseStatus, type StateAdapter } from './exercise-state.js'
 
 /**
  * <bottom-exercise> wraps a <bottom-editor> with exercise semantics:
  * a prompt, starter code, test assertions, and a test results display.
  *
  * Usage:
- *   <bottom-exercise exercise-id="sum-to">
+ *   <bottom-exercise>   (exercise-id is optional; defaults to a hash of the test code)
  *     <div slot="prompt">
  *       <p>Write a function <code>sum_to(n)</code> that returns 1+2+...+n.</p>
  *     </div>
@@ -30,14 +31,23 @@ export class BottomExercise extends LitElement {
     @property({ attribute: 'exercise-id' })
     exerciseId: string = '';
 
+    /** Override the default LocalStorageAdapter. */
+    @property({ attribute: false })
+    adapter: StateAdapter = new LocalStorageAdapter();
+
     @state()
     private _testReport?: TestReport;
+
+    @state()
+    private _status: ExerciseStatus = 'pristine';
 
     @query('bottom-editor')
     private _editor?: BottomEditor;
 
     private _starterCode: string = '';
     private _testCode: string = '';
+    private _attempts: number = 0;
+    private _solvedAt?: number;
 
     connectedCallback() {
         super.connectedCallback();
@@ -49,6 +59,55 @@ export class BottomExercise extends LitElement {
         if (testTemplate) {
             this._testCode = BottomExercise.dedent(testTemplate.content.textContent || '');
         }
+    }
+
+    /** Stable hash of the test code — used as the storage key when no exercise-id is given. */
+    private static hashCode(s: string): string {
+        let h = 5381;
+        for (let i = 0; i < s.length; i++) {
+            h = Math.imul(h, 31) ^ s.charCodeAt(i);
+        }
+        return (h >>> 0).toString(16).padStart(8, '0');
+    }
+
+    /** The key used for persistence. Explicit exercise-id wins; falls back to hash of test code. */
+    private _effectiveId(): string | null {
+        if (this.exerciseId) return this.exerciseId;
+        if (this._testCode)  return BottomExercise.hashCode(this._testCode);
+        return null;
+    }
+
+    override async firstUpdated() {
+        const id = this._effectiveId();
+        if (!id) return;
+        const saved = await this.adapter.load(id);
+        if (!saved) return;
+        this._status   = saved.status;
+        this._attempts = saved.attempts;
+        this._solvedAt = saved.solvedAt;
+        if (saved.code !== this._starterCode) {
+            this._editor!.sourceCode = saved.code;
+        }
+    }
+
+    private _onCodeChange() {
+        if (this._status !== 'pristine') return;
+        if (this._editor?.sourceCode !== this._starterCode) {
+            this._status = 'started';
+            this._saveState();
+        }
+    }
+
+    private _saveState() {
+        const id = this._effectiveId();
+        if (!id) return;
+        this.adapter.save(id, {
+            exerciseId: id,
+            status:     this._status,
+            code:       this._editor?.sourceCode ?? this._starterCode,
+            attempts:   this._attempts,
+            solvedAt:   this._solvedAt,
+        });
     }
 
     /** Remove leading/trailing blank lines and common leading whitespace. */
@@ -70,6 +129,17 @@ export class BottomExercise extends LitElement {
         if (!this._editor || !this._testCode) return;
         this._testReport = undefined;
         this._testReport = await this._editor.evaluateWithTests(this._testCode);
+        // Advance state machine
+        if (this._testReport.passed) {
+            if (this._status !== 'solved') {
+                this._status  = 'solved';
+                this._solvedAt = Date.now();
+            }
+        } else if (this._status === 'pristine' || this._status === 'started') {
+            this._status = 'attempted';
+        }
+        this._attempts++;
+        this._saveState();
         this.dispatchEvent(new CustomEvent('test-result', {
             detail: this._testReport,
             bubbles: true,
@@ -81,6 +151,10 @@ export class BottomExercise extends LitElement {
         if (this._editor) {
             this._editor.sourceCode = this._starterCode;
             this._testReport = undefined;
+            this._status   = 'pristine';
+            this._attempts = 0;
+            this._solvedAt = undefined;
+            this._saveState();
         }
     }
 
@@ -94,10 +168,23 @@ export class BottomExercise extends LitElement {
                 resetmode
                 .permalink=${false}
                 .onRun=${() => this.runTests()}
+                @bottom-change="${this._onCodeChange}"
                 @bottom-clear="${this.resetCode}"
             >${this._starterCode}</bottom-editor>
+            ${this._renderStatus()}
             ${this._renderResults()}
         `;
+    }
+
+    private _renderStatus() {
+        if (this._status === 'pristine' || this._status === 'started') return nothing;
+        const labels: Record<ExerciseStatus, string> = {
+            pristine: '', started: '',
+            attempted: 'Attempted',
+            solved: 'Solved',
+            'viewed-solution': 'Solution viewed',
+        };
+        return html`<exercise-status class="${this._status}">${labels[this._status]}</exercise-status>`;
     }
 
     private _renderResults() {
@@ -135,6 +222,28 @@ export class BottomExercise extends LitElement {
         }
         bottom-editor {
             max-height: initial;
+        }
+
+        /* Status badge */
+        exercise-status {
+            display: inline-block;
+            font-size: 0.8em;
+            font-weight: 600;
+            padding: 0.15em 0.6em;
+            border-radius: 1em;
+            align-self: flex-start;
+        }
+        exercise-status.attempted {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        exercise-status.solved {
+            background: #dcfce7;
+            color: #166534;
+        }
+        exercise-status.viewed-solution {
+            background: #f3f4f6;
+            color: #6b7280;
         }
 
         /* Test results */
