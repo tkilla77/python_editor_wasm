@@ -3,6 +3,8 @@ import { customElement, property, state, query } from 'lit/decorators.js'
 import { EditorView } from "@codemirror/view"
 import PyodideWorker from './pyodide-worker.ts?worker&inline';
 import { joinSession, leaveSession, type MemberCallbacks, EditorHandle } from './session-registry.js';
+import type { TestReport, TestResult } from './pyodide-runtime.js';
+export type { TestReport, TestResult };
 import { createPythonEditor } from './codemirror-setup.js';
 // Side-effect imports: execute the modules so customElements.define() runs.
 import './bottom-editor-output.js';
@@ -46,6 +48,10 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     resetmode = false;
 
+    /** When false, the permalink button is hidden. Default: true. */
+    @property({ type: Boolean })
+    permalink = true;
+
     @property({ type: Boolean, reflect: true })
     showswitcher = false;
 
@@ -75,6 +81,13 @@ export class BottomEditor extends LitElement {
     @state() private _swConsole = true;
 
     /** Code prepended before the editor contents at run time (not shown in editor). */
+    /**
+     * When set, the Run button calls this instead of evaluatePython().
+     * Used by <bottom-exercise> to wire Run → runTests().
+     */
+    @property({ attribute: false })
+    onRun?: () => void | Promise<void>;
+
     @property({ attribute: false })
     codePrefix: string = '';
 
@@ -131,7 +144,7 @@ export class BottomEditor extends LitElement {
         }
 
         const text = this._pendingCode ?? this.getSourceCode();
-        this._editor = createPythonEditor(this._code!, text, () => this.evaluatePython());
+        this._editor = createPythonEditor(this._code!, text, () => this.onRun ? this.onRun() : this.evaluatePython());
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length >= 4;
 
         const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
@@ -210,6 +223,33 @@ export class BottomEditor extends LitElement {
             if (lastNewline > 0 && msg.includes('  File "<exec>"'))
                 msg = msg.substring(lastNewline + 1).trim();
             this._output?.addOutput(msg);
+        } finally {
+            if (this._buttons) this._buttons.running = false;
+        }
+    }
+
+    /**
+     * Run the editor's code, then run test assertions in the same Python
+     * namespace. Returns a structured TestReport with per-assertion results.
+     */
+    async evaluateWithTests(tests: string): Promise<TestReport> {
+        if (!this._editor) {
+            return { passed: false, results: [{ passed: false, test: '<error>', message: 'Editor not initialized' }] };
+        }
+        this._output?.clearOutput();
+        if (this._offscreenCanvas) this.runtime.clearCanvas();
+        const raw  = this.codePrefix + this._editor.state.doc.toString();
+        const code = this.transformCode ? this.transformCode(raw) : raw;
+        if (this._buttons) this._buttons.running = true;
+        try {
+            return await this.runtime.runWithTests(code, tests, (data: string) => this._output?.addOutput(data));
+        } catch (err: any) {
+            let msg = err?.toString() ?? String(err);
+            const lastNewline = msg.lastIndexOf('\n', msg.length - 2);
+            if (lastNewline > 0 && msg.includes('  File "<exec>"'))
+                msg = msg.substring(lastNewline + 1).trim();
+            this._output?.addOutput(msg);
+            return { passed: false, results: [{ passed: false, test: '<user code>', message: msg }] };
         } finally {
             if (this._buttons) this._buttons.running = false;
         }
@@ -302,7 +342,8 @@ export class BottomEditor extends LitElement {
                     part="buttons"
                     ?showclear="${this.showclear}"
                     ?resetmode="${this.resetmode}"
-                    @bottom-run="${this.evaluatePython}"
+                    .permalink=${this.permalink}
+                    @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"
                     @bottom-permalink="${this.copyPermalink}"

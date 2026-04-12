@@ -10,6 +10,7 @@ export class BottomEditorButtons extends LitElement {
     @property({ type: Boolean, reflect: true }) vertical = false;
     @property({ type: Boolean, reflect: true }) showclear = false;
     @property({ type: Boolean, reflect: true }) resetmode = false;
+    @property({ type: Boolean }) permalink = true;
 
     private fire(name: string) {
         this.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
@@ -20,6 +21,6 @@ export class BottomEditorButtons extends LitElement {
             <button id="run"       @click="${() => this.fire('bottom-run')}"       type="button" title="Run (Ctrl+Enter)"><span class="caption">Run</span></button>
             <button id="stop"      @click="${() => this.fire('bottom-stop')}"      type="button" title="Stop"><span class="caption">Stop</span></button>
             ${this.showclear ? html`<button id="clear" @click="${() => this.fire('bottom-clear')}" type="button" title="${this.resetmode ? 'Reset' : 'Clear Output'}"><span class="caption">${this.resetmode ? 'Reset' : 'Clear'}</span></button>` : ''}
-            <button id="permalink" @click="${() => this.fire('bottom-permalink')}" type="button" title="Copy Permalink"><span class="caption">Link</span></button>`;
+            ${this.permalink ? html`<button id="permalink" @click="${() => this.fire('bottom-permalink')}" type="button" title="Copy Permalink"><span class="caption">Link</span></button>` : ''}`;
     }
 }

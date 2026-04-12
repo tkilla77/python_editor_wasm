@@ -6,6 +6,7 @@ type Msg = {
     baseURL: string,
     indexURL: string,
     code?: string,
+    tests?: string,
     runId?: number,
     url?: string,
     canvas?: OffscreenCanvas,
@@ -16,6 +17,54 @@ type Msg = {
     value?: string,
     prompt?: string,
 }
+
+/**
+ * Clear user-defined names from globals before each exercise run so that
+ * state from a previous run cannot leak into the next one.
+ * Keeps dunder names (__builtins__, etc.) and everything in builtins.
+ */
+const RESET_GLOBALS = `
+import builtins as __bi
+__g = globals()
+[__g.pop(k) for k in list(__g) if k not in dir(__bi) and not k.startswith('__')]
+del __bi, __g
+`;
+
+/**
+ * Python test harness that runs each top-level statement from __test_source__
+ * individually, collecting structured pass/fail results as JSON.
+ * Assumes user code has already been executed in the same namespace.
+ */
+const TEST_HARNESS = `
+def __run_tests__():
+    import ast, json
+    results = []
+    try:
+        tree = ast.parse(__test_source__)
+    except SyntaxError as e:
+        return json.dumps({"results": [{"passed": False, "test": "<parse error>", "message": str(e)}], "passed": False})
+
+    for node in tree.body:
+        source = ast.get_source_segment(__test_source__, node)
+        if source is None:
+            try:
+                source = ast.unparse(node)
+            except Exception:
+                source = "<test>"
+        code = compile(ast.Module(body=[node], type_ignores=[]), '<test>', 'exec')
+        try:
+            exec(code, globals())
+            results.append({"passed": True, "test": source})
+        except AssertionError as e:
+            msg = str(e)
+            results.append({"passed": False, "test": source, "message": msg if msg else None})
+        except Exception as e:
+            results.append({"passed": False, "test": source, "message": f"{type(e).__name__}: {e}"})
+
+    return json.dumps({"results": results, "passed": all(r["passed"] for r in results)})
+
+__run_tests__()
+`;
 
 let py: any = null;
 let inputResolve: ((value: string) => void) | null = null;
@@ -314,6 +363,74 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     post('error', { runId, error: String(err) });
                 }
             } catch (err: any) {
+                if (flushTimer !== null) {
+                    (self as any).clearTimeout(flushTimer);
+                    flushTimer = null;
+                }
+                flushStdout();
+                syncRun = false;
+                currentRunId = undefined;
+                post('error', { runId, error: String(err) });
+            }
+            return;
+        }
+
+        if (msg.type === 'runWithTests') {
+            if (!py) {
+                post('error', { runId: msg.runId, error: 'Pyodide not initialized' });
+                return;
+            }
+            const runId = msg.runId;
+            currentRunId = runId;
+            canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
+            if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
+            const code = (msg.code || '')
+                .replace(/^(\s*)repeat(\s+)(.+?)\s*:([ \t]+[^#\s].*)$/gm,
+                         '$1for _ in range($3):$4')
+                .replace(/^(\s*)repeat(\s+)(.+?)\s*:(\s*(?:#.*)?)$/gm,
+                         '$1for _ in range($3):$4');
+            const needsAsync = /\bawait\b|import turtle\b|from turtle\b|\binput\s*\(/.test(code);
+            if (py.runPython(`'turtle' in __import__('sys').modules`)) {
+                py.runPython(`__import__('sys').modules['turtle']._reset_default()`);
+            }
+            const codeToRun = needsAsync
+                ? code.replace(/\binput\s*\(/g, 'await input(')
+                : code;
+            syncRun = !needsAsync;
+            const runCode = needsAsync
+                ? (c: string) => py.runPythonAsync(c)
+                : (c: string) => Promise.resolve(py.runPython(c));
+            try {
+                // Reset globals so state from a previous run can't leak in.
+                try { py.runPython(RESET_GLOBALS); } catch {}
+                // Phase 1: run user code
+                await runCode(codeToRun);
+                await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
+                if (flushTimer !== null) {
+                    (self as any).clearTimeout(flushTimer);
+                    flushTimer = null;
+                }
+                flushStdout();
+                syncRun = false;
+
+                // Phase 2: run test harness in the same namespace
+                try {
+                    py.globals.set('__test_source__', msg.tests || '');
+                    const resultJson = await py.runPythonAsync(TEST_HARNESS);
+                    const testResults = JSON.parse(resultJson);
+                    currentRunId = undefined;
+                    post('testResults', { runId, results: testResults });
+                } catch (harnessErr: any) {
+                    currentRunId = undefined;
+                    post('testResults', { runId, results: {
+                        passed: false,
+                        results: [{ passed: false, test: '<harness error>', message: String(harnessErr) }]
+                    }});
+                } finally {
+                    try { py.runPython("del __test_source__, __run_tests__"); } catch {}
+                }
+            } catch (err: any) {
+                // User code failed — don't run tests
                 if (flushTimer !== null) {
                     (self as any).clearTimeout(flushTimer);
                     flushTimer = null;

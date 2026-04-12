@@ -1,4 +1,4 @@
-import { PyodideRuntime, type RuntimeCallbacks } from './pyodide-runtime.js';
+import { PyodideRuntime, type RuntimeCallbacks, type TestReport } from './pyodide-runtime.js';
 
 export type MemberCallbacks = {
     onLog:    (data: string) => void;
@@ -29,6 +29,9 @@ export class EditorHandle {
 
     run(code: string, onStdout: (data: string) => void) {
         return this._runtime.runAs(code, onStdout, this.editorId);
+    }
+    runWithTests(code: string, tests: string, onStdout: (data: string) => void): Promise<TestReport> {
+        return this._runtime.runWithTestsAs(code, tests, onStdout, this.editorId);
     }
     loadZip(url: string) { return this._runtime.loadZip(url); }
     setCanvas(canvas: OffscreenCanvas) { return this._runtime.setCanvasFor(canvas, this.editorId); }

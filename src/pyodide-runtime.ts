@@ -1,5 +1,16 @@
 import { PYODIDE_CDN_URL } from './pyodide-version.js';
 
+export interface TestResult {
+    passed: boolean;
+    test: string;
+    message?: string | null;
+}
+
+export interface TestReport {
+    passed: boolean;
+    results: TestResult[];
+}
+
 export type RuntimeCallbacks = {
     onLog: (data: string) => void;
     /** Called for worker-level errors not tied to a specific run. */
@@ -17,7 +28,7 @@ export class PyodideRuntime {
     private ready?: Promise<void>;
     private runIdCounter = 1;
     private pendingRuns = new Map<number, {
-        resolve: () => void;
+        resolve: (value?: any) => void;
         reject: (e: Error) => void;
         timeout: ReturnType<typeof setTimeout> | undefined;
         onStdout: (data: string) => void;
@@ -62,6 +73,34 @@ export class PyodideRuntime {
                 }, this.RUN_TIMEOUT_MS);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
                 this.worker?.postMessage({ type: 'run', code, runId, editorId });
+            });
+        };
+        const result = this._queue.then(doRun);
+        this._queue = result.catch(() => {});
+        return result;
+    }
+
+    /**
+     * Run user code, then run test assertions in the same Python namespace.
+     * Resolves with a structured TestReport. Rejects if user code errors.
+     */
+    runWithTests(code: string, tests: string, onStdout: (data: string) => void): Promise<TestReport> {
+        return this.runWithTestsAs(code, tests, onStdout, this.editorId);
+    }
+
+    runWithTestsAs(code: string, tests: string, onStdout: (data: string) => void, editorId: string): Promise<TestReport> {
+        const doRun = async (): Promise<TestReport> => {
+            await this.ready;
+            const runId = this.runIdCounter++;
+            return new Promise<TestReport>((resolve, reject) => {
+                const timeout = this.RUN_TIMEOUT_MS === Infinity ? undefined : setTimeout(() => {
+                    const secs = (this.RUN_TIMEOUT_MS / 1000).toFixed(0);
+                    this.pendingRuns.delete(runId);
+                    this.terminateAndRespawn();
+                    reject(new Error(`Execution timed out after ${secs}s`));
+                }, this.RUN_TIMEOUT_MS);
+                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
+                this.worker?.postMessage({ type: 'runWithTests', code, tests, runId, editorId });
             });
         };
         const result = this._queue.then(doRun);
@@ -230,6 +269,15 @@ export class PyodideRuntime {
             if (run) {
                 clearTimeout(run.timeout);
                 run.resolve();
+                this.pendingRuns.delete(msg.runId);
+            }
+            return;
+        }
+        if (msg.type === 'testResults') {
+            const run = this.pendingRuns.get(msg.runId);
+            if (run) {
+                clearTimeout(run.timeout);
+                run.resolve(msg.results as TestReport);
                 this.pendingRuns.delete(msg.runId);
             }
             return;

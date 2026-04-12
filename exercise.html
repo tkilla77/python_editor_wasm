@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bottom-exercise demo</title>
+    <script type="module" src="src/exercise.ts"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 900px;
+            margin: 2em auto;
+            padding: 0 1em;
+            color: #1f2937;
+        }
+        h1 { font-size: 1.5em; }
+        h2 { font-size: 1.2em; margin-top: 2em; }
+        bottom-exercise { margin-bottom: 2em; }
+    </style>
+</head>
+
+<body>
+    <h1>bottom-exercise demo</h1>
+
+    <h2>Exercise 1 &mdash; sum_to</h2>
+    <bottom-exercise exercise-id="sum-to">
+        <div slot="prompt">
+            <p>Write a function <code>sum_to(n)</code> that returns
+            <code>1 + 2 + &hellip; + n</code>. Return <code>0</code> for
+            <code>n &le; 0</code>.</p>
+        </div>
+        <template data-type="starter">
+def sum_to(n):
+    pass
+        </template>
+        <template data-type="test">
+assert sum_to(5) == 15, "sum_to(5) should be 15"
+assert sum_to(1) == 1, "sum_to(1) should be 1"
+assert sum_to(0) == 0, "sum_to(0) should be 0"
+        </template>
+    </bottom-exercise>
+
+    <h2>Exercise 2 &mdash; fizzbuzz</h2>
+    <bottom-exercise exercise-id="fizzbuzz">
+        <div slot="prompt">
+            <p>Write a function <code>fizzbuzz(n)</code> that returns
+            <code>"Fizz"</code> if <code>n</code> is divisible by 3,
+            <code>"Buzz"</code> if divisible by 5,
+            <code>"FizzBuzz"</code> if divisible by both, or the number
+            as a string otherwise.</p>
+        </div>
+        <template data-type="starter">
+def fizzbuzz(n):
+    pass
+        </template>
+        <template data-type="test">
+assert fizzbuzz(3) == "Fizz", f"fizzbuzz(3) should be 'Fizz', got {fizzbuzz(3)!r}"
+assert fizzbuzz(5) == "Buzz", f"fizzbuzz(5) should be 'Buzz', got {fizzbuzz(5)!r}"
+assert fizzbuzz(15) == "FizzBuzz", f"fizzbuzz(15) should be 'FizzBuzz', got {fizzbuzz(15)!r}"
+assert fizzbuzz(7) == "7", f"fizzbuzz(7) should be '7', got {fizzbuzz(7)!r}"
+assert fizzbuzz(1) == "1", f"fizzbuzz(1) should be '1', got {fizzbuzz(1)!r}"
+        </template>
+    </bottom-exercise>
+</body>
+</html>

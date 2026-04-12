@@ -186,6 +186,7 @@ export default defineConfig({
       input: {
         index:       resolve(__dirname, 'index.html'),
         embed:       resolve(__dirname, 'embed.html'),
+        exercise:    resolve(__dirname, 'exercise.html'),
         kara:        resolve(__dirname, 'kara.html'),
         'kara-demo': resolve(__dirname, 'kara-demo.html'),
       },
