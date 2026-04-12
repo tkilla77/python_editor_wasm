@@ -134,7 +134,7 @@ function markdownDocPlugin() {
 export default defineConfig({
   base: '',
   worker: {
-    format: 'es',
+    format: 'iife',
     rollupOptions: {
       external: [
         "node-fetch",
