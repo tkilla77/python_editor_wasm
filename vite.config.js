@@ -152,6 +152,7 @@ export default defineConfig({
     markdownDocPlugin(),
     stableLibEntriesPlugin({
         'bottom-editor':      'src/editor.ts',
+        'bottom-exercise':    'src/exercise.ts',
         'kara-editor':        'src/kara-editor.ts',
         'kara-editor-page':   'src/kara-editor-page.ts',
     }),
@@ -177,8 +178,9 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        'bottom-editor': resolve(__dirname, 'src/editor.ts'),
-        'kara-editor':   resolve(__dirname, 'src/kara-editor.ts'),
+        'bottom-editor':   resolve(__dirname, 'src/editor.ts'),
+        'bottom-exercise': resolve(__dirname, 'src/exercise.ts'),
+        'kara-editor':     resolve(__dirname, 'src/kara-editor.ts'),
       },
       formats: ['es'],
     },
