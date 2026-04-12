@@ -21,13 +21,13 @@ type Msg = {
 /**
  * Clear user-defined names from globals before each exercise run so that
  * state from a previous run cannot leak into the next one.
- * Keeps dunder names (__builtins__, etc.) and everything in builtins.
+ * Preserves everything that was present after Pyodide initialised
+ * (__init_globals__), plus dunder names.
  */
 const RESET_GLOBALS = `
-import builtins as __bi
 __g = globals()
-[__g.pop(k) for k in list(__g) if k not in dir(__bi) and not k.startswith('__')]
-del __bi, __g
+[__g.pop(k) for k in list(__g) if k not in __init_globals__ and not k.startswith('__')]
+del __g
 `;
 
 /**
@@ -176,6 +176,8 @@ async def _input(prompt=''):
 builtins.input = _input
 `);
         await py.runPythonAsync(`\nfrom js import console\n`);
+        // Snapshot globals after init so RESET_GLOBALS knows what to preserve.
+        await py.runPython(`__init_globals__ = frozenset(globals()) | {'__init_globals__'}`);
         post('ready');
     } catch (err: any) {
         post('error', { error: String(err) });
