@@ -31,6 +31,13 @@ export class BottomExercise extends LitElement {
     @property({ attribute: 'exercise-id' })
     exerciseId: string = '';
 
+    // Forwarded to the inner <bottom-editor>
+    @property() layout: string = 'console';
+    @property() session: string = '';
+    @property() orientation: string = 'auto';
+    @property() timeout: string = '30';
+    @property() zip: string = '';
+
     /** Override the default LocalStorageAdapter. */
     @property({ attribute: false })
     adapter: StateAdapter = new LocalStorageAdapter();
@@ -173,6 +180,11 @@ export class BottomExercise extends LitElement {
                 resetmode
                 .permalink=${false}
                 .onRun=${() => this.runTests()}
+                layout=${this.layout}
+                session=${this.session}
+                orientation=${this.orientation}
+                timeout=${this.timeout}
+                zip=${this.zip}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-clear="${this.resetCode}"
             >${this._starterCode}</bottom-editor>
