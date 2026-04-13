@@ -51,14 +51,17 @@ export class BottomExercise extends LitElement {
 
     connectedCallback() {
         super.connectedCallback();
+        // Support both <template data-type="starter"> and <script type="text/x-starter">
+        // so the component works on CMS platforms that strip <template> elements.
         const starterTemplate = this.querySelector('template[data-type="starter"]') as HTMLTemplateElement | null;
-        if (starterTemplate) {
-            this._starterCode = BottomExercise.dedent(starterTemplate.content.textContent || '');
-        }
+        const starterScript   = this.querySelector('script[type="text/x-starter"]') as HTMLScriptElement | null;
+        const starterText = starterTemplate?.content.textContent ?? starterScript?.textContent ?? '';
+        if (starterText) this._starterCode = BottomExercise.dedent(starterText);
+
         const testTemplate = this.querySelector('template[data-type="test"]') as HTMLTemplateElement | null;
-        if (testTemplate) {
-            this._testCode = BottomExercise.dedent(testTemplate.content.textContent || '');
-        }
+        const testScript   = this.querySelector('script[type="text/x-test"]') as HTMLScriptElement | null;
+        const testText = testTemplate?.content.textContent ?? testScript?.textContent ?? '';
+        if (testText) this._testCode = BottomExercise.dedent(testText);
     }
 
     /** Stable hash of the test code — used as the storage key when no exercise-id is given. */
@@ -126,7 +129,8 @@ export class BottomExercise extends LitElement {
     }
 
     async runTests() {
-        if (!this._editor || !this._testCode) return;
+        if (!this._editor) return;
+        if (!this._testCode) return this._editor.evaluatePython();
         this._testReport = undefined;
         this._testReport = await this._editor.evaluateWithTests(this._testCode);
         // Advance state machine
@@ -162,6 +166,7 @@ export class BottomExercise extends LitElement {
         return html`
             <exercise-prompt>
                 <slot name="prompt"></slot>
+                <slot></slot>
             </exercise-prompt>
             <bottom-editor
                 showclear
