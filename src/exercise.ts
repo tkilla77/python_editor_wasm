@@ -57,7 +57,6 @@ export class BottomExercise extends LitElement {
      * Alternatively, place solution in <script type="text/x-solution"> inside the element.
      */
     @property() solution: string = '';
-    @property({ attribute: 'solution-encoding' }) solutionEncoding: string = 'plain';
 
     private _starterCode: string = '';
     private _testCode: string = '';
@@ -190,7 +189,8 @@ export class BottomExercise extends LitElement {
     private _resolvedSolution(): string {
         if (this._solutionCode) return this._solutionCode;
         if (!this.solution) return '';
-        if (this.solutionEncoding === 'base64') return atob(this.solution);
+        const m = this.solution.match(/^data:[^,]*?(;base64)?,(.*)$/s);
+        if (m) return m[1] ? atob(m[2]) : decodeURIComponent(m[2]);
         return this.solution;
     }
 
