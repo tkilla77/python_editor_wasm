@@ -158,7 +158,7 @@ export class BottomExercise extends LitElement {
         this._testReport = await this._editor.evaluateWithTests(this._testCode);
         // Advance state machine
         if (this._testReport.passed) {
-            if (this._status !== 'solved') {
+            if (this._status !== 'solved' && this._status !== 'viewed-solution') {
                 this._status  = 'solved';
                 this._solvedAt = Date.now();
             }
@@ -198,7 +198,7 @@ export class BottomExercise extends LitElement {
         const code = this._resolvedSolution();
         if (!code || !this._editor) return;
         this._editor.sourceCode = code;
-        this._status = 'viewed-solution';
+        if (this._status !== 'solved') this._status = 'viewed-solution';
         this._confirmingSolution = false;
         this._testReport = undefined;
         this._saveState();
