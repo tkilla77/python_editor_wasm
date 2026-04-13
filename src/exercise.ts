@@ -51,14 +51,25 @@ export class BottomExercise extends LitElement {
     @query('bottom-editor')
     private _editor?: BottomEditor;
 
+    /**
+     * Solution code shown when the student clicks "Show solution".
+     * Plain text, or base64 when solution-encoding="base64".
+     * Alternatively, place solution in <script type="text/x-solution"> inside the element.
+     */
+    @property() solution: string = '';
+    @property({ attribute: 'solution-encoding' }) solutionEncoding: string = 'plain';
+
     private _starterCode: string = '';
     private _testCode: string = '';
+    private _solutionCode: string = '';
     private _attempts: number = 0;
     private _solvedAt?: number;
 
+    @state() private _confirmingSolution = false;
+
     connectedCallback() {
         super.connectedCallback();
-        // Support both <template data-type="starter"> and <script type="text/x-starter">
+        // Support both <template data-type="..."> and <script type="text/x-...">
         // so the component works on CMS platforms that strip <template> elements.
         const starterTemplate = this.querySelector('template[data-type="starter"]') as HTMLTemplateElement | null;
         const starterScript   = this.querySelector('script[type="text/x-starter"]') as HTMLScriptElement | null;
@@ -69,6 +80,11 @@ export class BottomExercise extends LitElement {
         const testScript   = this.querySelector('script[type="text/x-test"]') as HTMLScriptElement | null;
         const testText = testTemplate?.content.textContent ?? testScript?.textContent ?? '';
         if (testText) this._testCode = BottomExercise.dedent(testText);
+
+        const solutionTemplate = this.querySelector('template[data-type="solution"]') as HTMLTemplateElement | null;
+        const solutionScript   = this.querySelector('script[type="text/x-solution"]') as HTMLScriptElement | null;
+        const solutionText = solutionTemplate?.content.textContent ?? solutionScript?.textContent ?? '';
+        if (solutionText) this._solutionCode = BottomExercise.dedent(solutionText);
     }
 
     /** Stable hash of the test code — used as the storage key when no exercise-id is given. */
@@ -165,8 +181,27 @@ export class BottomExercise extends LitElement {
             this._status   = 'pristine';
             this._attempts = 0;
             this._solvedAt = undefined;
+            this._confirmingSolution = false;
             this._saveState();
         }
+    }
+
+    /** Returns the resolved solution code, or '' if none is provided. */
+    private _resolvedSolution(): string {
+        if (this._solutionCode) return this._solutionCode;
+        if (!this.solution) return '';
+        if (this.solutionEncoding === 'base64') return atob(this.solution);
+        return this.solution;
+    }
+
+    private _showSolution() {
+        const code = this._resolvedSolution();
+        if (!code || !this._editor) return;
+        this._editor.sourceCode = code;
+        this._status = 'viewed-solution';
+        this._confirmingSolution = false;
+        this._testReport = undefined;
+        this._saveState();
     }
 
     render() {
@@ -189,6 +224,7 @@ export class BottomExercise extends LitElement {
                 @bottom-clear="${this.resetCode}"
             >${this._starterCode}</bottom-editor>
             ${this._renderStatus()}
+            ${this._renderSolution()}
             ${this._renderResults()}
         `;
     }
@@ -202,6 +238,24 @@ export class BottomExercise extends LitElement {
             'viewed-solution': 'Solution viewed',
         };
         return html`<exercise-status class="${this._status}">${labels[this._status]}</exercise-status>`;
+    }
+
+    private _renderSolution() {
+        if (!this._resolvedSolution()) return nothing;
+        if (this._confirmingSolution) {
+            return html`
+                <exercise-solution-confirm>
+                    Show solution? Your code will be replaced.
+                    <button class="confirm-yes" @click="${this._showSolution}">Show it</button>
+                    <button class="confirm-no" @click="${() => this._confirmingSolution = false}">Cancel</button>
+                </exercise-solution-confirm>
+            `;
+        }
+        return html`
+            <button class="show-solution" @click="${() => this._confirmingSolution = true}">
+                Show solution
+            </button>
+        `;
     }
 
     private _renderResults() {
@@ -318,6 +372,51 @@ export class BottomExercise extends LitElement {
             font-size: 0.85em;
             width: 100%;
             padding-left: 1.5em;
+        }
+
+        /* Show solution */
+        button.show-solution {
+            align-self: flex-start;
+            font-size: 0.8em;
+            padding: 0.2em 0.7em;
+            border: 1px solid #d1d5db;
+            border-radius: 1em;
+            background: transparent;
+            color: #6b7280;
+            cursor: pointer;
+        }
+        button.show-solution:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        exercise-solution-confirm {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            font-size: 0.85em;
+            color: #374151;
+        }
+        exercise-solution-confirm button {
+            padding: 0.2em 0.7em;
+            border-radius: 0.3em;
+            border: 1px solid #d1d5db;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        exercise-solution-confirm .confirm-yes {
+            background: #fee2e2;
+            color: #991b1b;
+            border-color: #fca5a5;
+        }
+        exercise-solution-confirm .confirm-yes:hover {
+            background: #fecaca;
+        }
+        exercise-solution-confirm .confirm-no {
+            background: transparent;
+            color: #6b7280;
+        }
+        exercise-solution-confirm .confirm-no:hover {
+            background: #f3f4f6;
         }
 
     `

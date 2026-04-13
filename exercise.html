@@ -41,7 +41,7 @@ assert sum_to(0) == 0, "sum_to(0) should be 0"
         </template>
     </bottom-exercise>
 
-    <h2>Exercise 2 &mdash; fizzbuzz (CMS-friendly syntax)</h2>
+    <h2>Exercise 2 &mdash; fizzbuzz (CMS-friendly syntax + solution)</h2>
     <bottom-exercise>
         Write a function <code>fizzbuzz(n)</code> that returns
         <code>"Fizz"</code> if <code>n</code> is divisible by 3,
@@ -58,6 +58,16 @@ assert fizzbuzz(5) == "Buzz", f"fizzbuzz(5) should be 'Buzz', got {fizzbuzz(5)!r
 assert fizzbuzz(15) == "FizzBuzz", f"fizzbuzz(15) should be 'FizzBuzz', got {fizzbuzz(15)!r}"
 assert fizzbuzz(7) == "7", f"fizzbuzz(7) should be '7', got {fizzbuzz(7)!r}"
 assert fizzbuzz(1) == "1", f"fizzbuzz(1) should be '1', got {fizzbuzz(1)!r}"
+        </script>
+        <script type="text/x-solution">
+def fizzbuzz(n):
+    if n % 15 == 0:
+        return "FizzBuzz"
+    if n % 3 == 0:
+        return "Fizz"
+    if n % 5 == 0:
+        return "Buzz"
+    return str(n)
         </script>
     </bottom-exercise>
 </body>
