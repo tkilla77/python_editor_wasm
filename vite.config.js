@@ -49,7 +49,7 @@ function mdToHtml(md, scriptTags) {
         .replace(/```[\s\S]*?```/g, m => m.replace(/</g, '\x00'))
         .replace(/`[^`\n]+`/g, m => m.replace(/</g, '\x00'));
     const cleaned = masked.replace(
-        /(<(?:bottom|kara)-editor[^>]*>)([\s\S]*?)(<\/(?:bottom|kara)-editor>)/g,
+        /(<(?:bottom|kara)-(?:editor|exercise)[^>]*>)([\s\S]*?)(<\/(?:bottom|kara)-(?:editor|exercise)>)/g,
         (_, open, content, close) => open + content.replace(/\n\n+/g, '\n') + close,
     );
     const clean = cleaned.replace(/\x00/g, '<');
@@ -122,7 +122,7 @@ function markdownDocPlugin() {
                 // for index.md inject bottom-editor.js from the parent dir.
                 const scripts = file === 'kara.md'
                     ? `<script type="module" src="../kara-editor.js"><\/script>`
-                    : `<script type="module" src="../bottom-editor.js"><\/script>`;
+                    : `<script type="module" src="../bottom-editor.js"><\/script>\n<script type="module" src="../bottom-exercise.js"><\/script>`;
                 const html = mdToHtml(md, scripts, 1);
                 const outName = file.replace(/\.md$/, '.html');
                 this.emitFile({ type: 'asset', fileName: `doc/${outName}`, source: html });

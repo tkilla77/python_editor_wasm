@@ -191,6 +191,98 @@ while True:
 
 ---
 
+## Exercises
+
+`<bottom-exercise>` wraps `<bottom-editor>` with exercise semantics: a prompt,
+starter code, test assertions, and a results panel. The Run button runs the
+tests; the Clear button resets to the starter code. Progress is saved in
+`localStorage` automatically — no exercise ID required (a stable key is derived
+from the test code).
+
+Load `bottom-exercise.js` **instead of** (or alongside) `bottom-editor.js`:
+
+```html
+<script type="module" src="https://bottom.ch/editor/stable/bottom-exercise.js"></script>
+```
+
+### Template syntax
+
+Place starter code and tests in `<template>` elements inside the component:
+
+```html
+<bottom-exercise>
+  <div slot="prompt">
+    <p>Write a function <code>sum_to(n)</code> that returns 1 + 2 + … + n.</p>
+  </div>
+  <template data-type="starter">
+def sum_to(n):
+    pass
+  </template>
+  <template data-type="test">
+assert sum_to(5) == 15, "sum_to(5) should be 15"
+assert sum_to(1) == 1
+assert sum_to(0) == 0
+  </template>
+</bottom-exercise>
+```
+
+<bottom-exercise>
+<div slot="prompt">
+<p>Write a function <code>sum_to(n)</code> that returns 1 + 2 + … + n.
+Return 0 for n ≤ 0.</p>
+</div>
+<template data-type="starter">
+def sum_to(n):
+    pass
+</template>
+<template data-type="test">
+assert sum_to(5) == 15, "sum_to(5) should be 15"
+assert sum_to(1) == 1, "sum_to(1) should be 1"
+assert sum_to(0) == 0, "sum_to(0) should be 0"
+</template>
+</bottom-exercise>
+
+### CMS-friendly syntax
+
+Some CMS platforms strip `<template>` elements. Use `<script type="text/x-starter">` and
+`<script type="text/x-test">` instead — they are preserved by all parsers. For the
+prompt, use inline text (no `<div>`) so the component survives being wrapped in `<p>`:
+
+```html
+<bottom-exercise>
+  Write a function <code>fizzbuzz(n)</code> that returns <code>"Fizz"</code>,
+  <code>"Buzz"</code>, <code>"FizzBuzz"</code>, or the number as a string.
+  <script type="text/x-starter">
+def fizzbuzz(n):
+    pass
+  </script>
+  <script type="text/x-test">
+assert fizzbuzz(3) == "Fizz"
+assert fizzbuzz(5) == "Buzz"
+assert fizzbuzz(15) == "FizzBuzz"
+assert fizzbuzz(7) == "7"
+  </script>
+</bottom-exercise>
+```
+
+<bottom-exercise>
+Write a function <code>fizzbuzz(n)</code> that returns <code>"Fizz"</code> if divisible
+by 3, <code>"Buzz"</code> if divisible by 5, <code>"FizzBuzz"</code> if both, or the
+number as a string otherwise.
+<script type="text/x-starter">
+def fizzbuzz(n):
+    pass
+</script>
+<script type="text/x-test">
+assert fizzbuzz(3) == "Fizz", f"fizzbuzz(3) should be 'Fizz', got {fizzbuzz(3)!r}"
+assert fizzbuzz(5) == "Buzz", f"fizzbuzz(5) should be 'Buzz', got {fizzbuzz(5)!r}"
+assert fizzbuzz(15) == "FizzBuzz", f"fizzbuzz(15) should be 'FizzBuzz', got {fizzbuzz(15)!r}"
+assert fizzbuzz(7) == "7", f"fizzbuzz(7) should be '7', got {fizzbuzz(7)!r}"
+</script>
+</bottom-exercise>
+
+---
+
 ## CSS theming
 
 Four custom properties can be set on the element or any ancestor:
