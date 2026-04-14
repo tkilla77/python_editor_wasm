@@ -31,6 +31,64 @@ del __g
 `;
 
 /**
+ * Replaces sys.stdout with a tee that forwards every write to the original
+ * (so the output panel stays live) while also capturing into a StringIO buffer.
+ * Must be run before user code; CAPTURE_INJECT must be run after.
+ */
+const CAPTURE_SETUP = `
+import sys as __sys, io as __io
+class __TeeCapture:
+    encoding = 'utf-8'
+    errors = 'strict'
+    def __init__(self, orig):
+        self._orig = orig
+        self._buf = __io.StringIO()
+    def write(self, text):
+        self._orig.write(text)
+        self._buf.write(text)
+        return len(text)
+    def flush(self): pass
+    def getvalue(self): return self._buf.getvalue()
+del __io
+__sys.stdout = __TeeCapture(__sys.stdout)
+`;
+
+/**
+ * Restores sys.stdout and injects output() / output_lines() helpers into the
+ * test namespace so assertions can check what the user's code printed.
+ * Must be run after user code completes (including after a flush).
+ */
+const CAPTURE_INJECT = `
+__captured_output__ = __sys.stdout.getvalue()
+__sys.stdout = __sys.stdout._orig
+del __TeeCapture, __sys
+def output():
+    """Return everything printed by the user's code as a single string."""
+    return __captured_output__
+def output_lines():
+    """Return each printed line as a list, stripping the trailing newline."""
+    return __captured_output__.splitlines()
+`;
+
+/**
+ * Restores sys.stdout when user code raises — leaves no dangling tee wrapper.
+ */
+const CAPTURE_RESTORE = `
+try:
+    import sys as __sys
+    if hasattr(__sys.stdout, '_orig'):
+        __sys.stdout = __sys.stdout._orig
+    del __sys
+except Exception:
+    pass
+for __k in ['__TeeCapture']:
+    try: del globals()[__k]
+    except: pass
+try: del __k
+except: pass
+`;
+
+/**
  * Python test harness that runs each top-level statement from __test_source__
  * individually, collecting structured pass/fail results as JSON.
  * Assumes user code has already been executed in the same namespace.
@@ -405,17 +463,31 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             try {
                 // Reset globals so state from a previous run can't leak in.
                 try { py.runPython(RESET_GLOBALS); } catch {}
-                // Phase 1: run user code
-                await runCode(codeToRun);
-                await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
-                if (flushTimer !== null) {
-                    (self as any).clearTimeout(flushTimer);
-                    flushTimer = null;
+                // Phase 1: run user code with stdout teed to capture buffer
+                try { py.runPython(CAPTURE_SETUP); } catch {}
+                try {
+                    await runCode(codeToRun);
+                    await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
+                    if (flushTimer !== null) {
+                        (self as any).clearTimeout(flushTimer);
+                        flushTimer = null;
+                    }
+                    flushStdout();
+                    syncRun = false;
+                } catch (userErr: any) {
+                    // User code failed — restore stdout then re-throw so tests are skipped
+                    if (flushTimer !== null) {
+                        (self as any).clearTimeout(flushTimer);
+                        flushTimer = null;
+                    }
+                    flushStdout();
+                    syncRun = false;
+                    try { py.runPython(CAPTURE_RESTORE); } catch {}
+                    throw userErr;
                 }
-                flushStdout();
-                syncRun = false;
 
-                // Phase 2: run test harness in the same namespace
+                // Phase 2: inject output helpers, then run test harness
+                try { py.runPython(CAPTURE_INJECT); } catch {}
                 try {
                     py.globals.set('__test_source__', msg.tests || '');
                     const resultJson = await py.runPythonAsync(TEST_HARNESS);
@@ -429,16 +501,15 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                         results: [{ passed: false, test: '<harness error>', message: String(harnessErr) }]
                     }});
                 } finally {
-                    try { py.runPython("del __test_source__, __run_tests__"); } catch {}
+                    try { py.runPython(`
+for __k in ['__test_source__', '__run_tests__', '__captured_output__', 'output', 'output_lines']:
+    try: del globals()[__k]
+    except: pass
+del __k
+`); } catch {}
                 }
             } catch (err: any) {
-                // User code failed — don't run tests
-                if (flushTimer !== null) {
-                    (self as any).clearTimeout(flushTimer);
-                    flushTimer = null;
-                }
-                flushStdout();
-                syncRun = false;
+                // User code failed — tests skipped, error already flushed above
                 currentRunId = undefined;
                 post('error', { runId, error: String(err) });
             }
