@@ -36,21 +36,28 @@ del __g
  * Must be run before user code; CAPTURE_INJECT must be run after.
  */
 const CAPTURE_SETUP = `
-import sys as __sys, io as __io
-class __TeeCapture:
-    encoding = 'utf-8'
-    errors = 'strict'
-    def __init__(self, orig):
-        self._orig = orig
-        self._buf = __io.StringIO()
-    def write(self, text):
-        self._orig.write(text)
-        self._buf.write(text)
-        return len(text)
-    def flush(self): pass
-    def getvalue(self): return self._buf.getvalue()
-del __io
-__sys.stdout = __TeeCapture(__sys.stdout)
+import sys as __sys
+
+def __make_tee(orig):
+    # Factory keeps io and buf as closure variables so no double-underscore
+    # names appear inside the class body (which would trigger Python's name
+    # mangling and produce a NameError at instantiation time).
+    import io
+    buf = io.StringIO()
+    class _Capture:
+        encoding = 'utf-8'
+        errors = 'strict'
+        _orig = orig          # single-underscore: no mangling
+        def write(self, text):
+            orig.write(text)  # closure variable: no mangling
+            buf.write(text)
+            return len(text)
+        def flush(self): pass
+        def getvalue(self): return buf.getvalue()
+    return _Capture()
+
+__sys.stdout = __make_tee(__sys.stdout)
+del __make_tee
 `;
 
 /**
@@ -61,7 +68,7 @@ __sys.stdout = __TeeCapture(__sys.stdout)
 const CAPTURE_INJECT = `
 __captured_output__ = __sys.stdout.getvalue()
 __sys.stdout = __sys.stdout._orig
-del __TeeCapture, __sys
+del __sys
 def output():
     """Return everything printed by the user's code as a single string."""
     return __captured_output__
@@ -81,11 +88,6 @@ try:
     del __sys
 except Exception:
     pass
-for __k in ['__TeeCapture']:
-    try: del globals()[__k]
-    except: pass
-try: del __k
-except: pass
 `;
 
 /**
