@@ -363,13 +363,36 @@ For embedding in a CMS, the `solution` attribute accepts plain text or a
 after solving keeps the `solved` badge; passing tests after viewing the solution
 keeps the `viewed-solution` badge.
 
-### Exercise attributes
+### Test-free exercises
 
-All attributes of `<bottom-editor>` that affect the runtime are forwarded:
+Tests are optional. Without a `<template data-type="test">` block, the Run
+button simply executes the code and shows output — useful for turtle graphics,
+open-ended prompts, or stages where students haven't learned functions yet.
+A solution can still be provided.
+
+```html
+<bottom-exercise id="turtle-square">
+  <div slot="prompt"><p>Draw a square with side length 100.</p></div>
+  <template data-type="starter">
+import turtle
+t = turtle.Turtle()
+# your code here
+  </template>
+  <template data-type="solution">
+import turtle
+t = turtle.Turtle()
+for _ in range(4):
+    t.forward(100)
+    t.right(90)
+  </template>
+</bottom-exercise>
+```
+
+### Exercise attributes
 
 | Attribute | Default | Description |
 |-----------|---------|-------------|
-| `exercise-id` | (hash of test code) | Explicit localStorage key; auto-derived from test code if omitted |
+| `id` | — | localStorage key for persistence; page-scoped (same as `<bottom-editor>`). Without `id`, nothing is saved. |
 | `layout` | `console` | Which output panel(s) to show (`console` \| `canvas` \| `split`) |
 | `session` | — | Share a Pyodide worker with other editors on the page |
 | `orientation` | `auto` | Layout direction (`auto` \| `horizontal` \| `vertical`) |
@@ -378,10 +401,10 @@ All attributes of `<bottom-editor>` that affect the runtime are forwarded:
 
 ### Persistence
 
-Exercise state is saved to `localStorage` automatically. The storage key is a
-hash of the test code, so exercises stay in sync even if moved between pages.
-Set `exercise-id` explicitly when you need a stable key independent of the test
-code, or when two exercises share the same tests.
+Add an `id` attribute to save exercise state to `localStorage`. The key is
+page-scoped (using `<link rel="canonical">` or `location.pathname+search`,
+same as `<bottom-editor>`), so the same `id` on different pages is safe and
+a review chapter always starts fresh.
 
 The state machine:
 
@@ -390,7 +413,8 @@ pristine → started → attempted ──→ solved
                                ↘→ viewed-solution
 ```
 
-`solved` and `viewed-solution` are terminal — neither transitions to the other.
+`solved` and `viewed-solution` are terminal. For test-free exercises the state
+only advances to `started`.
 
 ---
 

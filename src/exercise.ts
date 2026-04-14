@@ -4,13 +4,21 @@ import './editor.js' // side-effect: registers <bottom-editor>
 import type { BottomEditor } from './editor.js'
 import type { TestReport } from './pyodide-runtime.js'
 import { LocalStorageAdapter, type ExerciseStatus, type StateAdapter } from './exercise-state.js'
+import { getPageId } from './page-id.js'
 
 /**
  * <bottom-exercise> wraps a <bottom-editor> with exercise semantics:
- * a prompt, starter code, test assertions, and a test results display.
+ * a prompt, optional starter code, optional test assertions, an optional
+ * solution, and a results panel.
+ *
+ * Add an `id` attribute to enable localStorage persistence. Without `id`,
+ * no state is saved. The id is used as a global key (no page prefix), so
+ * the same exercise appearing on multiple pages shares its saved state.
+ *
+ * Tests are optional. Without them the Run button just executes the code.
  *
  * Usage:
- *   <bottom-exercise>   (exercise-id is optional; defaults to a hash of the test code)
+ *   <bottom-exercise id="sum-to">
  *     <div slot="prompt">
  *       <p>Write a function <code>sum_to(n)</code> that returns 1+2+...+n.</p>
  *     </div>
@@ -18,18 +26,17 @@ import { LocalStorageAdapter, type ExerciseStatus, type StateAdapter } from './e
  *       def sum_to(n):
  *           pass
  *     </template>
- *     <template data-type="test">
+ *     <template data-type="test">          <!-- optional -->
  *       assert sum_to(5) == 15, "sum_to(5) should be 15"
- *       assert sum_to(0) == 0
- *       assert sum_to(1) == 1
+ *     </template>
+ *     <template data-type="solution">     <!-- optional -->
+ *       def sum_to(n):
+ *           return n * (n + 1) // 2
  *     </template>
  *   </bottom-exercise>
  */
 @customElement('bottom-exercise')
 export class BottomExercise extends LitElement {
-
-    @property({ attribute: 'exercise-id' })
-    exerciseId: string = '';
 
     // Forwarded to the inner <bottom-editor>
     @property() layout: string = 'console';
@@ -86,20 +93,9 @@ export class BottomExercise extends LitElement {
         if (solutionText) this._solutionCode = BottomExercise.dedent(solutionText);
     }
 
-    /** Stable hash of the test code — used as the storage key when no exercise-id is given. */
-    private static hashCode(s: string): string {
-        let h = 5381;
-        for (let i = 0; i < s.length; i++) {
-            h = Math.imul(h, 31) ^ s.charCodeAt(i);
-        }
-        return (h >>> 0).toString(16).padStart(8, '0');
-    }
-
-    /** The key used for persistence. Explicit exercise-id wins; falls back to hash of test code. */
+    /** The key used for persistence. Requires an explicit `id` attribute; null means no persistence. */
     private _effectiveId(): string | null {
-        if (this.exerciseId) return this.exerciseId;
-        if (this._testCode)  return BottomExercise.hashCode(this._testCode);
-        return null;
+        return this.id ? `${getPageId()}:${this.id}` : null;
     }
 
     override async firstUpdated() {
