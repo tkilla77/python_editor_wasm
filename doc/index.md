@@ -45,6 +45,8 @@ for i in range(5):
 | `session` | string | — | Share a Pyodide worker with other editors that use the same session name |
 | `zip` | URL | — | Zip archive to unpack into the virtual filesystem before running |
 | `timeout` | seconds or `inf` | `30` | Maximum run time in seconds; `inf` disables the timeout |
+| `id` | string | — | Enables localStorage persistence; code is saved and restored on reload (see [Editor persistence](#editor-persistence)) |
+| `storage` | `local` \| `none` | `local` when `id` set | Storage backend; `none` opts out even when `id` is present |
 | `sourcecode` | string | — | Set code programmatically (property, not reflected attribute) |
 
 ---
@@ -194,10 +196,9 @@ while True:
 ## Exercises
 
 `<bottom-exercise>` wraps `<bottom-editor>` with exercise semantics: a prompt,
-starter code, test assertions, and a results panel. The Run button runs the
-tests; the Clear button resets to the starter code. Progress is saved in
-`localStorage` automatically — no exercise ID required (a stable key is derived
-from the test code).
+starter code, test assertions, and a results panel. The Run button runs the tests;
+the Reset button restores the starter code. Progress is saved in `localStorage`
+automatically — no exercise ID required.
 
 Load `bottom-exercise.js` **instead of** (or alongside) `bottom-editor.js`:
 
@@ -207,7 +208,8 @@ Load `bottom-exercise.js` **instead of** (or alongside) `bottom-editor.js`:
 
 ### Template syntax
 
-Place starter code and tests in `<template>` elements inside the component:
+Place starter code and tests in `<template>` elements inside the component.
+The prompt goes in a `<div slot="prompt">`:
 
 ```html
 <bottom-exercise>
@@ -244,9 +246,11 @@ assert sum_to(0) == 0, "sum_to(0) should be 0"
 
 ### CMS-friendly syntax
 
-Some CMS platforms strip `<template>` elements. Use `<script type="text/x-starter">` and
-`<script type="text/x-test">` instead — they are preserved by all parsers. For the
-prompt, use inline text (no `<div>`) so the component survives being wrapped in `<p>`:
+Some CMS platforms strip `<template>` elements, or wrap the whole block in `<p>`
+which the HTML parser uses to eject block-level children. Use
+`<script type="text/x-starter">` / `<script type="text/x-test">` instead — they
+are phrasing content and survive both problems. For the prompt, use inline text
+rather than a `<div>` for the same reason:
 
 ```html
 <bottom-exercise>
@@ -280,6 +284,142 @@ assert fizzbuzz(15) == "FizzBuzz", f"fizzbuzz(15) should be 'FizzBuzz', got {fiz
 assert fizzbuzz(7) == "7", f"fizzbuzz(7) should be '7', got {fizzbuzz(7)!r}"
 </script>
 </bottom-exercise>
+
+### Testing printed output
+
+Each test statement runs as a separate Python assertion in the same namespace as
+the user's code. Two helpers are automatically available for exercises where the
+student prints output rather than returning a value:
+
+| Helper | Returns |
+|--------|---------|
+| `output()` | Everything the code printed, as a single string (newlines included) |
+| `output_lines()` | `output().splitlines()` — each printed line as a clean string |
+
+Output is still shown in the output panel as normal — the helpers just provide
+a second view of the same text for assertions.
+
+```html
+<bottom-exercise>
+  <div slot="prompt"><p>Print the numbers 1 to 5, one per line.</p></div>
+  <template data-type="starter">
+# your code here
+  </template>
+  <template data-type="test">
+assert output_lines() == ["1", "2", "3", "4", "5"], \
+    f"Expected lines 1–5, got {output_lines()!r}"
+  </template>
+</bottom-exercise>
+```
+
+<bottom-exercise>
+<div slot="prompt"><p>Print the numbers 1 to 5, one per line.</p></div>
+<template data-type="starter">
+# your code here
+</template>
+<template data-type="test">
+assert output_lines() == ["1", "2", "3", "4", "5"], \
+    f"Expected lines 1–5, got {output_lines()!r}"
+</template>
+</bottom-exercise>
+
+Other useful patterns:
+
+```python
+assert "hello" in output().lower()           # substring check
+assert len(output_lines()) == 10             # line count
+assert output().strip() == "42"             # ignore trailing newline
+```
+
+### Solutions
+
+Add a `<template data-type="solution">` (or `<script type="text/x-solution">`) to
+provide a model solution. A **Show solution** button appears and requires a
+confirmation click before replacing the editor contents.
+
+```html
+<bottom-exercise>
+  ...
+  <template data-type="solution">
+def sum_to(n):
+    return n * (n + 1) // 2
+  </template>
+</bottom-exercise>
+```
+
+For embedding in a CMS, the `solution` attribute accepts plain text or a
+[data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs)
+(useful for multi-line code encoded as base64):
+
+```html
+<!-- plain text (simple cases) -->
+<bottom-exercise solution="return n * (n + 1) // 2">...</bottom-exercise>
+
+<!-- base64 (multi-line, no escaping needed) -->
+<bottom-exercise solution="data:text/plain;base64,ZGVmIHN1bV90...">...</bottom-exercise>
+```
+
+`solved` and `viewed-solution` are both terminal states: showing the solution
+after solving keeps the `solved` badge; passing tests after viewing the solution
+keeps the `viewed-solution` badge.
+
+### Exercise attributes
+
+All attributes of `<bottom-editor>` that affect the runtime are forwarded:
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `exercise-id` | (hash of test code) | Explicit localStorage key; auto-derived from test code if omitted |
+| `layout` | `console` | Which output panel(s) to show (`console` \| `canvas` \| `split`) |
+| `session` | — | Share a Pyodide worker with other editors on the page |
+| `orientation` | `auto` | Layout direction (`auto` \| `horizontal` \| `vertical`) |
+| `timeout` | `30` | Run timeout in seconds; `inf` disables it |
+| `zip` | — | Zip archive to pre-load into the virtual filesystem |
+
+### Persistence
+
+Exercise state is saved to `localStorage` automatically. The storage key is a
+hash of the test code, so exercises stay in sync even if moved between pages.
+Set `exercise-id` explicitly when you need a stable key independent of the test
+code, or when two exercises share the same tests.
+
+The state machine:
+
+```
+pristine → started → attempted ──→ solved
+                               ↘→ viewed-solution
+```
+
+`solved` and `viewed-solution` are terminal — neither transitions to the other.
+
+---
+
+## Editor persistence
+
+Add an `id` attribute to persist editor contents in `localStorage`. The code is restored on the next page load. A **Revert** button appears automatically in the toolbar, restoring the original code and clearing the saved entry.
+
+```html
+<bottom-editor id="hello-world">
+print("Hello, world!")
+</bottom-editor>
+```
+
+The storage key combines the page URL and the element id, so reusing the same `id` on different pages is safe.
+
+**Opt out** on a specific editor with `storage="none"`:
+
+```html
+<bottom-editor id="demo" storage="none">...</bottom-editor>
+```
+
+**Site-wide default** — set `window.BottomEditorConfig` before the script tag to configure all editors on the page (useful for a site-wide include):
+
+```html
+<script>window.BottomEditorConfig = { storage: 'none' }</script>
+<script type="module" src="bottom-editor.js"></script>
+```
+
+**Page identity** — the storage key uses `<link rel="canonical">` (pathname + search) if present, falling back to `location.pathname + location.search`. Fragments are excluded so anchor-link navigation never orphans saved state. CMS systems that identify pages by query parameter (e.g. `?id=mypage`) work correctly when a canonical tag is present.
 
 ---
 
