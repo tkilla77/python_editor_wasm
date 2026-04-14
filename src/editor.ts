@@ -14,6 +14,7 @@ import type { BottomEditorOutput } from './bottom-editor-output.js';
 import type { BottomEditorButtons } from './bottom-editor-buttons.js';
 import type { BottomEditorCanvas } from './bottom-editor-canvas.js';
 import styles from './bottom-editor.css?inline';
+import { getPageId } from './page-id.js';
 
 // Allow Python code to call input() via a browser prompt.
 declare global {
@@ -32,6 +33,7 @@ export class BottomEditor extends LitElement {
     private runtime!: EditorHandle;
     private _memberCallbacks?: MemberCallbacks;
     private _readyResolve!: () => void;
+    private _initialCode: string = '';
     /** Resolves when Pyodide is ready. Useful for testing. */
     readonly ready: Promise<void> = new Promise(r => { this._readyResolve = r; });
 
@@ -51,6 +53,15 @@ export class BottomEditor extends LitElement {
     /** When false, the permalink button is hidden. Default: true. */
     @property({ type: Boolean })
     permalink = true;
+
+    /**
+     * Storage backend. 'local' persists code in localStorage keyed by the
+     * element's `id` + page URL. 'none' disables storage. Defaults to 'local'
+     * when an `id` is present, otherwise no storage.
+     * Global default can be set via window.BottomEditorConfig = { storage: '...' }.
+     */
+    @property()
+    storage: string = '';
 
     @property({ type: Boolean, reflect: true })
     showswitcher = false;
@@ -135,6 +146,27 @@ export class BottomEditor extends LitElement {
         return parseFloat(v) * 1000;
     }
 
+    /** Resolved storage backend: element attr → global config → 'local' if id present. */
+    private _effectiveStorage(): string {
+        const resolved = this.storage
+            || (window as any).BottomEditorConfig?.storage
+            || '';
+        if (!this.id) return '';
+        if (resolved === 'none') return '';
+        return resolved || 'local';
+    }
+
+    private _storageKey(): string {
+        return `bottom-editor:${getPageId()}:${this.id}`;
+    }
+
+    revertCode() {
+        this.replaceDoc(this._initialCode);
+        if (this._effectiveStorage() === 'local') {
+            localStorage.removeItem(this._storageKey());
+        }
+    }
+
     async firstUpdated() {
         // Seed switcher state from the initial layout attribute.
         if (this.showswitcher) {
@@ -144,13 +176,24 @@ export class BottomEditor extends LitElement {
         }
 
         const text = this._pendingCode ?? this.getSourceCode();
+        this._initialCode = text;
         this._editor = createPythonEditor(
             this._code!,
             text,
             () => this.onRun ? this.onRun() : this.evaluatePython(),
-            () => this.dispatchEvent(new CustomEvent('bottom-change', { bubbles: true, composed: true })),
+            () => {
+                this.dispatchEvent(new CustomEvent('bottom-change', { bubbles: true, composed: true }));
+                if (this._effectiveStorage() === 'local') {
+                    localStorage.setItem(this._storageKey(), this.sourceCode);
+                }
+            },
         );
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length >= 4;
+
+        if (this._effectiveStorage() === 'local') {
+            const saved = localStorage.getItem(this._storageKey());
+            if (saved !== null) this.replaceDoc(saved);
+        }
 
         const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
         if (canvasEl) await canvasEl.updateComplete;
@@ -348,9 +391,11 @@ export class BottomEditor extends LitElement {
                     ?showclear="${this.showclear}"
                     ?resetmode="${this.resetmode}"
                     .permalink=${this.permalink}
+                    ?showrevert="${this._effectiveStorage() === 'local'}"
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"
+                    @bottom-revert="${this.revertCode}"
                     @bottom-permalink="${this.copyPermalink}"
                 ></bottom-editor-buttons>
             </bottom-editorarea>`;
