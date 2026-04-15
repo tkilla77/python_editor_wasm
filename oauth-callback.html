@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Connecting…</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #374151;
+            background: #f9fafb;
+        }
+        .card {
+            text-align: center;
+            padding: 2em 3em;
+            background: white;
+            border-radius: 0.75em;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            max-width: 400px;
+        }
+        p { margin: 0.5em 0 0; color: #6b7280; font-size: 0.9em; }
+        .error { color: #dc2626; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div id="status">Connecting…</div>
+    <p id="detail"></p>
+</div>
+<script>
+    (function () {
+        const params   = new URLSearchParams(location.search);
+        const code     = params.get('code');
+        const state    = params.get('state');
+        const error    = params.get('error');
+        const statusEl = document.getElementById('status');
+        const detailEl = document.getElementById('detail');
+
+        if (error) {
+            statusEl.textContent = 'Connection cancelled.';
+            statusEl.className = 'error';
+            detailEl.textContent = error;
+            return;
+        }
+
+        if (!code || !state) {
+            statusEl.textContent = 'No authorisation code received.';
+            statusEl.className = 'error';
+            return;
+        }
+
+        try {
+            const decoded  = JSON.parse(atob(state));
+            const returnUrl = new URL(decoded.returnUrl);
+            returnUrl.searchParams.set('oauth_code', code);
+            returnUrl.searchParams.set('oauth_state', state);
+            statusEl.textContent = 'Redirecting back…';
+            location.replace(returnUrl.toString());
+        } catch (e) {
+            statusEl.textContent = 'Could not redirect back.';
+            statusEl.className = 'error';
+            detailEl.textContent = String(e);
+        }
+    })();
+</script>
+</body>
+</html>

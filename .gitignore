@@ -75,8 +75,9 @@ target/
 # celery beat schedule file
 celerybeat-schedule
 
-# dotenv
-.env
+# dotenv — .env is a committed template (values empty); put real secrets in .env.local
+.env.local
+.env.prod
 
 # local deploy config (copy from deploy.config.example.json)
 deploy.config.json

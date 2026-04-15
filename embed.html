@@ -75,3 +75,21 @@ cv2.circle(img, (150, 150), 80, (255, 255, 255), 3)
 cv2.putText(img, 'OpenCV', (75, 160), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
 cv2.imshow('result', img)
 </bottom-editor>
+
+<h2>Cloud Storage</h2>
+<p>Editors with an <code>id</code> attribute get automatic local storage, and a <em>revert</em> button.</p>
+
+<p>To allow cloud storage providers if the user has an account:</p>
+
+<script>
+window.BottomEditorConfig = {
+    storage: 'google',
+}
+</script>
+
+<bottom-editor id="demo" session="storage">
+def greet(name):
+    print(f'Hi, {name}!')
+greet('Mike')
+</bottom-editor>
+

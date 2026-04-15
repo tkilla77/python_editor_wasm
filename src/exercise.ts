@@ -3,8 +3,13 @@ import { customElement, property, query, state } from 'lit/decorators.js'
 import './editor.js' // side-effect: registers <bottom-editor>
 import type { BottomEditor } from './editor.js'
 import type { TestReport } from './pyodide-runtime.js'
-import { LocalStorageAdapter, type ExerciseStatus, type StateAdapter } from './exercise-state.js'
+import { type ExerciseStatus } from './exercise-state.js'
 import { getPageId } from './page-id.js'
+import { StorageManager, initStorageManager } from './storage-manager.js'
+import type { BackendId } from './storage-manager.js'
+
+// Kick off OAuth redirect detection early (no-op if not an OAuth return).
+initStorageManager();
 
 /**
  * <bottom-exercise> wraps a <bottom-editor> with exercise semantics:
@@ -45,12 +50,11 @@ export class BottomExercise extends LitElement {
     @property() timeout: string = '30';
     @property() zip: string = '';
 
-    /** Override the default LocalStorageAdapter. */
-    @property({ attribute: false })
-    adapter: StateAdapter = new LocalStorageAdapter();
-
     @state()
     private _testReport?: TestReport;
+
+    @state() private _syncBackend: BackendId = 'local';
+    @state() private _showSyncPicker = false;
 
     @state()
     private _status: ExerciseStatus = 'pristine';
@@ -99,9 +103,14 @@ export class BottomExercise extends LitElement {
     }
 
     override async firstUpdated() {
+        // Reflect initial storage backend state.
+        this._syncBackend = StorageManager.instance.backend;
+
+        window.addEventListener('bottom-storage-change', this._onStorageChange);
+
         const id = this._effectiveId();
         if (!id) return;
-        const saved = await this.adapter.load(id);
+        const saved = await StorageManager.instance.adapter.load(id);
         if (!saved) return;
         this._status   = saved.status;
         this._attempts = saved.attempts;
@@ -119,10 +128,41 @@ export class BottomExercise extends LitElement {
         }
     }
 
+    override disconnectedCallback() {
+        super.disconnectedCallback();
+        window.removeEventListener('bottom-storage-change', this._onStorageChange);
+    }
+
+    private _onStorageChange = (ev: Event) => {
+        this._syncBackend = (ev as CustomEvent<{ backend: BackendId }>).detail.backend;
+        this._showSyncPicker = false;
+    };
+
+    private _syncAvailable(): boolean {
+        return !!(import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_MICROSOFT_CLIENT_ID);
+    }
+
+    private async _onSync() {
+        if (this._syncBackend !== 'local') {
+            StorageManager.instance.disconnect(this._syncBackend as 'google' | 'microsoft');
+        } else {
+            this._showSyncPicker = !this._showSyncPicker;
+        }
+    }
+
+    private async _connectBackend(backend: 'google' | 'microsoft') {
+        this._showSyncPicker = false;
+        try {
+            await StorageManager.instance.connect(backend);
+        } catch (err) {
+            console.error('Cloud sync connect failed:', err);
+        }
+    }
+
     private _saveState() {
         const id = this._effectiveId();
         if (!id) return;
-        this.adapter.save(id, {
+        StorageManager.instance.adapter.save(id, {
             exerciseId: id,
             status:     this._status,
             code:       this._editor?.sourceCode ?? this._starterCode,
@@ -201,6 +241,8 @@ export class BottomExercise extends LitElement {
     }
 
     render() {
+        const hasGoogle    = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        const hasMicrosoft = !!import.meta.env.VITE_MICROSOFT_CLIENT_ID;
         return html`
             <exercise-prompt>
                 <slot name="prompt"></slot>
@@ -211,6 +253,8 @@ export class BottomExercise extends LitElement {
                 resetmode
                 .permalink=${false}
                 .onRun=${() => this.runTests()}
+                .showsync=${this._syncAvailable()}
+                .syncbackend=${this._syncBackend}
                 layout=${this.layout}
                 session=${this.session}
                 orientation=${this.orientation}
@@ -218,7 +262,16 @@ export class BottomExercise extends LitElement {
                 zip=${this.zip}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-clear="${this.resetCode}"
+                @bottom-sync="${this._onSync}"
             >${this._starterCode}</bottom-editor>
+            ${this._showSyncPicker ? html`
+                <exercise-sync-picker>
+                    <span>Connect cloud sync:</span>
+                    ${hasGoogle    ? html`<button @click="${() => this._connectBackend('google')}">Google Drive</button>`    : nothing}
+                    ${hasMicrosoft ? html`<button @click="${() => this._connectBackend('microsoft')}">OneDrive</button>` : nothing}
+                    <button class="cancel" @click="${() => this._showSyncPicker = false}">Cancel</button>
+                </exercise-sync-picker>
+            ` : nothing}
             ${this._renderStatus()}
             ${this._renderSolution()}
             ${this._renderResults()}
@@ -412,6 +465,36 @@ export class BottomExercise extends LitElement {
             color: #6b7280;
         }
         exercise-solution-confirm .confirm-no:hover {
+            background: #f3f4f6;
+        }
+
+        /* Cloud sync picker */
+        exercise-sync-picker {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            font-size: 0.85em;
+            color: #374151;
+            flex-wrap: wrap;
+        }
+        exercise-sync-picker button {
+            padding: 0.2em 0.7em;
+            border-radius: 0.3em;
+            border: 1px solid #d1d5db;
+            cursor: pointer;
+            font-size: 1em;
+            background: white;
+        }
+        exercise-sync-picker button:hover {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        exercise-sync-picker button.cancel {
+            background: transparent;
+            color: #6b7280;
+        }
+        exercise-sync-picker button.cancel:hover {
             background: #f3f4f6;
         }
 

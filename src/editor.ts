@@ -70,6 +70,14 @@ export class BottomEditor extends LitElement {
     @property({ reflect: true })
     orientation: string = 'auto';
 
+    /** Show the cloud-sync button (forwarded to bottom-editor-buttons). */
+    @property({ type: Boolean })
+    showsync = false;
+
+    /** Active cloud backend shown on the sync button ('local' | 'google' | 'microsoft'). */
+    @property()
+    syncbackend: string = 'local';
+
     /** Run timeout in seconds, or "inf" for no timeout. Default: 30. */
     @property()
     timeout: string = '30';
@@ -392,6 +400,8 @@ export class BottomEditor extends LitElement {
                     ?resetmode="${this.resetmode}"
                     .permalink=${this.permalink}
                     ?showrevert="${this._effectiveStorage() === 'local'}"
+                    ?showsync="${this.showsync}"
+                    syncbackend="${this.syncbackend}"
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"
