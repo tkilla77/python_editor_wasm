@@ -59,7 +59,7 @@ export class OneDriveAdapter implements StateAdapter {
     /** Read the full state map, or empty map if file not found. */
     private async _readAll(): Promise<Record<string, ExerciseState>> {
         const res = await fetch(this._fileUrl, { headers: await this._headers() });
-        if (res.status === 404) return {};
+        if (res.status === 404 || res.status === 400) return {}; // 400 = approot not yet initialised
         if (!res.ok) throw new Error(`OneDrive read failed: ${res.status}`);
         try { return await res.json(); } catch { return {}; }
     }
@@ -67,12 +67,19 @@ export class OneDriveAdapter implements StateAdapter {
     /** Write the full state map back (PUT creates or replaces). */
     private async _writeAll(map: Record<string, ExerciseState>): Promise<void> {
         const headers = await this._headers();
-        const res = await fetch(this._fileUrl, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify(map),
-        });
-        if (!res.ok) throw new Error(`OneDrive write failed: ${res.status}`);
+        // GET special/approot provisions the app folder if it doesn't exist yet;
+        // without this, the first PUT returns 400 on a fresh account.
+        await fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot', { headers });
+        const body = JSON.stringify(map);
+        // Retry up to 3× on 503 "pending provisioning" (transient on new accounts).
+        for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) await new Promise(r => setTimeout(r, 2000 * attempt));
+            const res = await fetch(this._fileUrl, { method: 'PUT', headers, body });
+            if (res.ok) return;
+            const text = await res.text();
+            if (res.status !== 503) throw new Error(`OneDrive write failed: ${res.status} ${text}`);
+            if (attempt === 2)      throw new Error(`OneDrive write failed after retries: ${text}`);
+        }
     }
 
     // ── StateAdapter ─────────────────────────────────────────────────────────
