@@ -447,6 +447,39 @@ The storage key combines the page URL and the element id, so reusing the same `i
 
 ---
 
+## Cloud sync (`<bottom-exercise>`)
+
+When the deployed build includes cloud credentials, a **Sync** button appears in every `<bottom-exercise>`. Students can connect Google Drive or OneDrive so their progress follows them across devices and browsers.
+
+Cloud state is layered on top of localStorage: every edit is written locally first; cloud writes are debounced by 2 s. On page load, localStorage is applied immediately and the cloud copy is fetched in the background.
+
+### Restricting available backends
+
+The build may support multiple cloud providers, but a site administrator or page author can limit which ones are offered — useful when a school mandates a specific provider.
+
+**Site-wide** (e.g. in a shared header include):
+
+```html
+<script>
+window.BottomEditorConfig = {
+    storageBackends: ['microsoft'],   // only OneDrive; omit key to allow all compiled-in backends
+}
+</script>
+<script type="module" src="https://bottom.ch/editor/stable/bottom-editor.js"></script>
+```
+
+**Page-wide** (same pattern, just on one page):
+
+```html
+<script>
+window.BottomEditorConfig = { storageBackends: ['google'] }
+</script>
+```
+
+`storageBackends` is the subset of `['google', 'microsoft']` to offer. Providers not compiled into the build are silently ignored. Omitting the key (or setting it to a non-array) shows all compiled-in backends.
+
+---
+
 ## CSS theming
 
 Four custom properties can be set on the element or any ancestor:

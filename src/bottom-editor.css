@@ -116,3 +116,43 @@ bottom-code {
 :host([showswitcher][layout="split"][orientation="horizontal"]) bottom-editorarea    { grid-template-rows: 1fr; }
 :host([showswitcher][layout="split"][orientation="horizontal"]) bottom-code          { grid-row: 1/2; }
 :host([showswitcher][layout="split"][orientation="horizontal"]) bottom-editor-buttons { grid-row: 1/2; }
+
+/* Cloud sync provider picker */
+editor-sync-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-size: 0.85em;
+    font-family: system-ui, sans-serif;
+    color: #374151;
+    flex-wrap: wrap;
+    margin-block: 0.3em;
+}
+editor-sync-picker button {
+    padding: 0.2em 0.7em;
+    border-radius: 0.3em;
+    border: 1px solid #d1d5db;
+    cursor: pointer;
+    font-size: 1em;
+    background: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+}
+editor-sync-picker button:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+editor-sync-picker button.cancel {
+    background: transparent;
+    color: #6b7280;
+}
+editor-sync-picker button.cancel:hover {
+    background: #f3f4f6;
+}
+editor-sync-picker .provider-icon {
+    width: 1.1em;
+    height: 1.1em;
+    flex-shrink: 0;
+}

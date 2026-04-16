@@ -1,4 +1,4 @@
-import { LitElement, html, unsafeCSS } from 'lit'
+import { LitElement, html, nothing, unsafeCSS } from 'lit'
 import { customElement, property, state, query } from 'lit/decorators.js'
 import { EditorView } from "@codemirror/view"
 import PyodideWorker from './pyodide-worker.ts?worker&inline';
@@ -15,6 +15,12 @@ import type { BottomEditorButtons } from './bottom-editor-buttons.js';
 import type { BottomEditorCanvas } from './bottom-editor-canvas.js';
 import styles from './bottom-editor.css?inline';
 import { getPageId } from './page-id.js';
+import { LocalStorageAdapter, type ExerciseState } from './exercise-state.js';
+import { StorageManager, initStorageManager } from './storage-manager.js';
+import type { BackendId } from './storage-manager.js';
+
+// Detect OAuth redirect returns on every page load (no-op if none pending).
+initStorageManager();
 
 // Allow Python code to call input() via a browser prompt.
 declare global {
@@ -70,14 +76,6 @@ export class BottomEditor extends LitElement {
     @property({ reflect: true })
     orientation: string = 'auto';
 
-    /** Show the cloud-sync button (forwarded to bottom-editor-buttons). */
-    @property({ type: Boolean })
-    showsync = false;
-
-    /** Active cloud backend shown on the sync button ('local' | 'google' | 'microsoft'). */
-    @property()
-    syncbackend: string = 'local';
-
     /** Run timeout in seconds, or "inf" for no timeout. Default: 30. */
     @property()
     timeout: string = '30';
@@ -124,6 +122,37 @@ export class BottomEditor extends LitElement {
     @property({ attribute: false })
     permalinkCallback?: () => void;
 
+    /**
+     * Override the storage key used for persistence. When set, bypasses the
+     * id+storage attribute logic and uses this key directly. Used by
+     * <bottom-exercise> to share a key with its own exercise state.
+     */
+    @property({ attribute: false })
+    storageKey: string = '';
+
+    /**
+     * Called at save time; returned fields are merged into the saved state
+     * alongside the code. Used by <bottom-exercise> to persist exercise
+     * metadata (status, attempts, solvedAt) through the same storage path.
+     */
+    @property({ attribute: false })
+    stateSaver?: () => Record<string, unknown>;
+
+    /**
+     * Called when state is loaded from localStorage or the cloud. The argument
+     * is the full saved state object. Used by <bottom-exercise> to restore
+     * exercise metadata from the loaded state.
+     */
+    @property({ attribute: false })
+    stateLoader?: (saved: Record<string, unknown>) => void;
+
+    // ── Cloud sync state ───────────────────────────────────────────────────────
+    @state() private _syncBackend: BackendId = 'local';
+    @state() private _cloudSyncing = false;
+    @state() private _showSyncPicker = false;
+    private readonly _local = new LocalStorageAdapter();
+    private _cloudSaveTimer?: ReturnType<typeof setTimeout>;
+
     @property({ attribute: 'sourcecode' })
     set sourceCode(code: string) { this.replaceDoc(code); }
     get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
@@ -154,26 +183,124 @@ export class BottomEditor extends LitElement {
         return parseFloat(v) * 1000;
     }
 
-    /** Resolved storage backend: element attr → global config → 'local' if id present. */
-    private _effectiveStorage(): string {
-        const resolved = this.storage
-            || (window as any).BottomEditorConfig?.storage
-            || '';
-        if (!this.id) return '';
-        if (resolved === 'none') return '';
-        return resolved || 'local';
-    }
-
-    private _storageKey(): string {
+    /**
+     * Resolved storage key for persistence. Returns null when storage is
+     * disabled (`storage="none"`) or when no id is present. An explicit
+     * `storageKey` property (set by <bottom-exercise>) bypasses id/storage
+     * attribute checks entirely.
+     */
+    private _effectiveStorageKey(): string | null {
+        if (this.storageKey) return this.storageKey;
+        if (!this.id) return null;
+        const storage = this.storage || (window as any).BottomEditorConfig?.storage || '';
+        if (storage === 'none') return null;
         return `bottom-editor:${getPageId()}:${this.id}`;
     }
 
-    revertCode() {
-        this.replaceDoc(this._initialCode);
-        if (this._effectiveStorage() === 'local') {
-            localStorage.removeItem(this._storageKey());
+    /**
+     * Cloud backends available in this context: intersection of what was
+     * compiled in (client IDs present at build time) and what the site/page
+     * author allows via window.BottomEditorConfig.storageBackends.
+     *
+     * Site-wide:  <script>window.BottomEditorConfig = { storageBackends: ['microsoft'] }</script>
+     */
+    private _availableBackends(): Array<'google' | 'microsoft'> {
+        const compiled: Array<'google' | 'microsoft'> = [];
+        if (import.meta.env.VITE_GOOGLE_CLIENT_ID)    compiled.push('google');
+        if (import.meta.env.VITE_MICROSOFT_CLIENT_ID) compiled.push('microsoft');
+        const allowed: unknown = (window as any).BottomEditorConfig?.storageBackends;
+        if (!Array.isArray(allowed)) return compiled;
+        return compiled.filter(b => allowed.includes(b));
+    }
+
+    private _syncAvailable(): boolean {
+        return !!this._effectiveStorageKey() && this._availableBackends().length > 0;
+    }
+
+    // ── Persistence ────────────────────────────────────────────────────────────
+
+    private _saveState(): void {
+        const key = this._effectiveStorageKey();
+        if (!key) return;
+        const extra = this.stateSaver?.() ?? {};
+        const state: ExerciseState = {
+            exerciseId: key,
+            code:       this.sourceCode,
+            status:     (extra.status   as ExerciseState['status']) ?? 'started',
+            attempts:   (extra.attempts as number)                  ?? 0,
+            solvedAt:   extra.solvedAt  as number | undefined,
+        };
+        this._local.save(key, state);
+        if (this._syncBackend !== 'local') {
+            clearTimeout(this._cloudSaveTimer);
+            this._cloudSaveTimer = setTimeout(() => {
+                StorageManager.instance.adapter.save(key, state).catch(err =>
+                    console.warn('Cloud save failed:', err),
+                );
+            }, 2000);
         }
     }
+
+    /** Trigger an immediate save (used by <bottom-exercise> after state transitions). */
+    saveNow(): void { this._saveState(); }
+
+    private _applyState(saved: ExerciseState): void {
+        if (saved.code !== this._initialCode) {
+            this.replaceDoc(saved.code);
+        }
+        this.stateLoader?.(saved);
+    }
+
+    private async _loadFromCloud(): Promise<void> {
+        const key = this._effectiveStorageKey();
+        if (!key) return;
+        this._cloudSyncing = true;
+        try {
+            const cloud = await StorageManager.instance.adapter.load(key);
+            if (cloud) this._applyState(cloud);
+        } catch (err) {
+            console.warn('Cloud load failed, using local cache:', err);
+        } finally {
+            this._cloudSyncing = false;
+        }
+    }
+
+    private _onStorageChange = (ev: Event) => {
+        const newBackend = (ev as CustomEvent<{ backend: BackendId }>).detail.backend;
+        const wasLocal = this._syncBackend === 'local';
+        this._syncBackend = newBackend;
+        this._showSyncPicker = false;
+        if (wasLocal && newBackend !== 'local') {
+            this._loadFromCloud();
+        }
+    };
+
+    private async _onSync() {
+        if (this._syncBackend !== 'local') {
+            StorageManager.instance.disconnect(this._syncBackend as 'google' | 'microsoft');
+        } else {
+            this._showSyncPicker = !this._showSyncPicker;
+        }
+    }
+
+    private async _connectBackend(backend: 'google' | 'microsoft') {
+        this._showSyncPicker = false;
+        try {
+            await StorageManager.instance.connect(backend);
+        } catch (err) {
+            console.error('Cloud sync connect failed:', err);
+        }
+    }
+
+    // ── Revert ─────────────────────────────────────────────────────────────────
+
+    revertCode() {
+        this.replaceDoc(this._initialCode);
+        const key = this._effectiveStorageKey();
+        if (key) this._saveState(); // overwrite saved state with initial code
+    }
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
 
     async firstUpdated() {
         // Seed switcher state from the initial layout attribute.
@@ -191,16 +318,39 @@ export class BottomEditor extends LitElement {
             () => this.onRun ? this.onRun() : this.evaluatePython(),
             () => {
                 this.dispatchEvent(new CustomEvent('bottom-change', { bubbles: true, composed: true }));
-                if (this._effectiveStorage() === 'local') {
-                    localStorage.setItem(this._storageKey(), this.sourceCode);
-                }
+                this._saveState();
             },
         );
         if (this._buttons) this._buttons.vertical = text.split('\n', 6).length >= 4;
 
-        if (this._effectiveStorage() === 'local') {
-            const saved = localStorage.getItem(this._storageKey());
-            if (saved !== null) this.replaceDoc(saved);
+        // ── Cloud sync init ───────────────────────────────────────────────────
+        this._syncBackend = StorageManager.instance.backend;
+        window.addEventListener('bottom-storage-change', this._onStorageChange);
+
+        const key = this._effectiveStorageKey();
+        if (key) {
+            // Migrate old plain-string localStorage format to adapter format.
+            // Old format: localStorage['bottom-editor:pageId:id'] = 'code string'
+            // New format: localStorage['bottom-exercise:bottom-editor:pageId:id'] = JSON
+            if (!this.storageKey && this.id) {
+                const oldKey = `bottom-editor:${getPageId()}:${this.id}`;
+                const oldValue = localStorage.getItem(oldKey);
+                if (oldValue !== null) {
+                    await this._local.save(key, {
+                        exerciseId: key, code: oldValue, status: 'started', attempts: 0,
+                    });
+                    localStorage.removeItem(oldKey);
+                }
+            }
+
+            // Cache-first: apply localStorage immediately (zero delay).
+            const cached = await this._local.load(key);
+            if (cached) this._applyState(cached);
+
+            // Background cloud sync if already connected.
+            if (this._syncBackend !== 'local') {
+                await this._loadFromCloud();
+            }
         }
 
         const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
@@ -246,7 +396,11 @@ export class BottomEditor extends LitElement {
         if (this._memberCallbacks) {
             leaveSession(this.session || '__default__', this._memberCallbacks);
         }
+        window.removeEventListener('bottom-storage-change', this._onStorageChange);
+        clearTimeout(this._cloudSaveTimer);
     }
+
+    // ── Public API ─────────────────────────────────────────────────────────────
 
     public replaceDoc(text: string) {
         if (!this._editor) {
@@ -363,9 +517,13 @@ export class BottomEditor extends LitElement {
         this._swConsole = !this._swConsole;
     }
 
+    // ── Render ─────────────────────────────────────────────────────────────────
+
     render() {
-        const hasCanvas = this.layout === 'canvas' || this.layout === 'split';
-        const hasOutput = this.layout !== 'canvas';
+        const hasCanvas  = this.layout === 'canvas' || this.layout === 'split';
+        const hasOutput  = this.layout !== 'canvas';
+        const backends   = this._availableBackends();
+        const syncBackend = this._cloudSyncing ? 'syncing' : this._syncBackend;
 
         // When showswitcher is on, always render both canvas+output inside a
         // flex-column wrapper with a clickable rail between them.
@@ -399,16 +557,88 @@ export class BottomEditor extends LitElement {
                     ?showclear="${this.showclear}"
                     ?resetmode="${this.resetmode}"
                     .permalink=${this.permalink}
-                    ?showrevert="${this._effectiveStorage() === 'local'}"
-                    ?showsync="${this.showsync}"
-                    syncbackend="${this.syncbackend}"
+                    ?showrevert="${!!this._effectiveStorageKey()}"
+                    ?showsync="${this._syncAvailable()}"
+                    syncbackend="${syncBackend}"
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"
                     @bottom-revert="${this.revertCode}"
                     @bottom-permalink="${this.copyPermalink}"
+                    @bottom-sync="${this._onSync}"
                 ></bottom-editor-buttons>
-            </bottom-editorarea>`;
+            </bottom-editorarea>
+            ${this._showSyncPicker ? html`
+                <editor-sync-picker>
+                    <span>Connect cloud sync:</span>
+                    ${backends.includes('google') ? html`
+                        <button @click="${() => this._connectBackend('google')}">
+                            <svg class="provider-icon" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                                <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/>
+                                <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 11.5z" fill="#ea4335"/>
+                                <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                                <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                                <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                            </svg>
+                            Google Drive™
+                        </button>` : nothing}
+                    ${backends.includes('microsoft') ? html`
+                        <button @click="${() => this._connectBackend('microsoft')}">
+                            <svg class="provider-icon" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="35.98 139.2 648.03 430.85" aria-hidden="true">
+                                <defs>
+                                    <radialGradient id="od-r0" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(130.864814,156.804864,-260.089994,217.063603,48.669602,228.766494)">
+                                        <stop offset="0" style="stop-color:rgb(28.235294%,58.039216%,99.607843%);stop-opacity:1;"/>
+                                        <stop offset="0.695072" style="stop-color:rgb(3.529412%,20.392157%,70.196078%);stop-opacity:1;"/>
+                                    </radialGradient>
+                                    <radialGradient id="od-r1" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(-575.289668,663.594003,-491.728488,-426.294267,596.956501,-6.380235)">
+                                        <stop offset="0.165327" style="stop-color:rgb(13.72549%,75.294118%,99.607843%);stop-opacity:1;"/>
+                                        <stop offset="0.534" style="stop-color:rgb(10.980392%,56.862745%,100%);stop-opacity:1;"/>
+                                    </radialGradient>
+                                    <radialGradient id="od-r2" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(-136.753383,-114.806698,262.816935,-313.057562,181.196995,240.395994)">
+                                        <stop offset="0" style="stop-color:rgb(100%,100%,100%);stop-opacity:0.4;"/>
+                                        <stop offset="0.660528" style="stop-color:rgb(67.843137%,75.294118%,100%);stop-opacity:0;"/>
+                                    </radialGradient>
+                                    <radialGradient id="od-r3" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(-153.638428,-130.000063,197.433014,-233.332948,375.353994,451.43549)">
+                                        <stop offset="0" style="stop-color:rgb(1.176471%,22.745098%,80%);stop-opacity:1;"/>
+                                        <stop offset="1" style="stop-color:rgb(21.176471%,55.686275%,100%);stop-opacity:0;"/>
+                                    </radialGradient>
+                                    <radialGradient id="od-r4" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(175.585899,405.198026,-437.434522,189.555055,169.378495,125.589294)">
+                                        <stop offset="0.592618" style="stop-color:rgb(20.392157%,39.215686%,89.019608%);stop-opacity:0;"/>
+                                        <stop offset="1" style="stop-color:rgb(1.176471%,22.745098%,80%);stop-opacity:0.6;"/>
+                                    </radialGradient>
+                                    <radialGradient id="od-r5" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(-459.329491,459.329491,-719.614455,-719.614455,589.876499,39.484649)">
+                                        <stop offset="0" style="stop-color:rgb(29.411765%,99.215686%,90.980392%);stop-opacity:0.898039;"/>
+                                        <stop offset="0.543937" style="stop-color:rgb(29.411765%,99.215686%,90.980392%);stop-opacity:0;"/>
+                                    </radialGradient>
+                                    <linearGradient id="od-l0" gradientUnits="userSpaceOnUse" x1="29.999701" y1="37.9823" x2="29.999701" y2="18.398199" gradientTransform="matrix(15,0,0,15,0,0)">
+                                        <stop offset="0" style="stop-color:rgb(0%,52.54902%,100%);stop-opacity:1;"/>
+                                        <stop offset="0.49" style="stop-color:rgb(0%,73.333333%,100%);stop-opacity:1;"/>
+                                    </linearGradient>
+                                    <radialGradient id="od-r6" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(273.622108,108.513684,-205.488428,518.148261,296.488495,307.441492)">
+                                        <stop offset="0" style="stop-color:rgb(100%,100%,100%);stop-opacity:0.4;"/>
+                                        <stop offset="0.785262" style="stop-color:rgb(100%,100%,100%);stop-opacity:0;"/>
+                                    </radialGradient>
+                                    <radialGradient id="od-r7" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="matrix(-305.683909,263.459223,-264.352324,-306.720147,674.845505,249.378004)">
+                                        <stop offset="0" style="stop-color:rgb(29.411765%,99.215686%,90.980392%);stop-opacity:0.898039;"/>
+                                        <stop offset="0.584724" style="stop-color:rgb(29.411765%,99.215686%,90.980392%);stop-opacity:0;"/>
+                                    </radialGradient>
+                                </defs>
+                                <path style="fill:url(#od-r0);" d="M 215.078125 205.089844 C 116.011719 205.09375 41.957031 286.1875 36.382812 376.527344 C 39.835938 395.992188 51.175781 434.429688 68.941406 432.457031 C 91.144531 429.988281 147.066406 432.457031 194.765625 346.105469 C 229.609375 283.027344 301.285156 205.085938 215.078125 205.089844 Z"/>
+                                <path style="fill:url(#od-r1);" d="M 192.171875 238.8125 C 158.871094 291.535156 114.042969 367.085938 98.914062 390.859375 C 80.929688 419.121094 33.304688 407.113281 37.25 366.609375 C 36.863281 369.894531 36.5625 373.210938 36.355469 376.546875 C 29.84375 481.933594 113.398438 569.453125 217.375 569.453125 C 331.96875 569.453125 605.269531 426.671875 577.609375 283.609375 C 548.457031 199.519531 466.523438 139.203125 373.664062 139.203125 C 280.808594 139.203125 221.296875 192.699219 192.171875 238.8125 Z"/>
+                                <path style="fill:url(#od-r2);" d="M 192.171875 238.8125 C 158.871094 291.535156 114.042969 367.085938 98.914062 390.859375 C 80.929688 419.121094 33.304688 407.113281 37.25 366.609375 C 36.863281 369.894531 36.5625 373.210938 36.355469 376.546875 C 29.84375 481.933594 113.398438 569.453125 217.375 569.453125 C 331.96875 569.453125 605.269531 426.671875 577.609375 283.609375 C 548.457031 199.519531 466.523438 139.203125 373.664062 139.203125 C 280.808594 139.203125 221.296875 192.699219 192.171875 238.8125 Z"/>
+                                <path style="fill:url(#od-r3);" d="M 192.171875 238.8125 C 158.871094 291.535156 114.042969 367.085938 98.914062 390.859375 C 80.929688 419.121094 33.304688 407.113281 37.25 366.609375 C 36.863281 369.894531 36.5625 373.210938 36.355469 376.546875 C 29.84375 481.933594 113.398438 569.453125 217.375 569.453125 C 331.96875 569.453125 605.269531 426.671875 577.609375 283.609375 C 548.457031 199.519531 466.523438 139.203125 373.664062 139.203125 C 280.808594 139.203125 221.296875 192.699219 192.171875 238.8125 Z"/>
+                                <path style="fill:url(#od-r4);" d="M 192.171875 238.8125 C 158.871094 291.535156 114.042969 367.085938 98.914062 390.859375 C 80.929688 419.121094 33.304688 407.113281 37.25 366.609375 C 36.863281 369.894531 36.5625 373.210938 36.355469 376.546875 C 29.84375 481.933594 113.398438 569.453125 217.375 569.453125 C 331.96875 569.453125 605.269531 426.671875 577.609375 283.609375 C 548.457031 199.519531 466.523438 139.203125 373.664062 139.203125 C 280.808594 139.203125 221.296875 192.699219 192.171875 238.8125 Z"/>
+                                <path style="fill:url(#od-r5);" d="M 192.171875 238.8125 C 158.871094 291.535156 114.042969 367.085938 98.914062 390.859375 C 80.929688 419.121094 33.304688 407.113281 37.25 366.609375 C 36.863281 369.894531 36.5625 373.210938 36.355469 376.546875 C 29.84375 481.933594 113.398438 569.453125 217.375 569.453125 C 331.96875 569.453125 605.269531 426.671875 577.609375 283.609375 C 548.457031 199.519531 466.523438 139.203125 373.664062 139.203125 C 280.808594 139.203125 221.296875 192.699219 192.171875 238.8125 Z"/>
+                                <path style="fill:url(#od-l0);" d="M 215.699219 569.496094 C 215.699219 569.496094 489.320312 570.035156 535.734375 570.035156 C 619.960938 570.035156 684 501.273438 684 421.03125 C 684 340.789062 618.671875 272.445312 535.734375 272.445312 C 452.792969 272.445312 405.027344 334.492188 369.152344 402.226562 C 327.117188 481.59375 273.488281 568.546875 215.699219 569.496094 Z"/>
+                                <path style="fill:url(#od-r6);" d="M 215.699219 569.496094 C 215.699219 569.496094 489.320312 570.035156 535.734375 570.035156 C 619.960938 570.035156 684 501.273438 684 421.03125 C 684 340.789062 618.671875 272.445312 535.734375 272.445312 C 452.792969 272.445312 405.027344 334.492188 369.152344 402.226562 C 327.117188 481.59375 273.488281 568.546875 215.699219 569.496094 Z"/>
+                                <path style="fill:url(#od-r7);" d="M 215.699219 569.496094 C 215.699219 569.496094 489.320312 570.035156 535.734375 570.035156 C 619.960938 570.035156 684 501.273438 684 421.03125 C 684 340.789062 618.671875 272.445312 535.734375 272.445312 C 452.792969 272.445312 405.027344 334.492188 369.152344 402.226562 C 327.117188 481.59375 273.488281 568.546875 215.699219 569.496094 Z"/>
+                            </svg>
+                            OneDrive
+                        </button>` : nothing}
+                    <button class="cancel" @click="${() => this._showSyncPicker = false}">Cancel</button>
+                </editor-sync-picker>
+            ` : nothing}`;
     }
 }
 

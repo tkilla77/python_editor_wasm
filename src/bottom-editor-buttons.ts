@@ -22,15 +22,23 @@ export class BottomEditorButtons extends LitElement {
     }
 
     private _syncTitle(): string {
+        if (this.syncbackend === 'syncing')   return 'Cloud sync: loading…';
         if (this.syncbackend === 'google')    return 'Cloud sync: Google Drive (click to disconnect)';
         if (this.syncbackend === 'microsoft') return 'Cloud sync: OneDrive (click to disconnect)';
         return 'Enable cloud sync';
     }
 
     private _syncCaption(): string {
+        if (this.syncbackend === 'syncing')   return '…';
         if (this.syncbackend === 'google')    return 'Drive';
         if (this.syncbackend === 'microsoft') return 'OneDrive';
         return 'Sync';
+    }
+
+    private _syncClass(): string {
+        if (this.syncbackend === 'syncing')   return 'syncing';
+        if (this.syncbackend !== 'local')     return 'active';
+        return '';
     }
 
     render() {
@@ -40,6 +48,6 @@ export class BottomEditorButtons extends LitElement {
             ${this.showclear ? html`<button id="clear" @click="${() => this.fire('bottom-clear')}" type="button" title="${this.resetmode ? 'Reset' : 'Clear Output'}"><span class="caption">${this.resetmode ? 'Reset' : 'Clear'}</span></button>` : ''}
             ${this.showrevert ? html`<button id="revert" @click="${() => this.fire('bottom-revert')}" type="button" title="Revert to initial code"><span class="caption">Revert</span></button>` : ''}
             ${this.permalink ? html`<button id="permalink" @click="${() => this.fire('bottom-permalink')}" type="button" title="Copy Permalink"><span class="caption">Link</span></button>` : ''}
-            ${this.showsync ? html`<button id="sync" class="${this.syncbackend !== 'local' ? 'active' : ''}" @click="${() => this.fire('bottom-sync')}" type="button" title="${this._syncTitle()}"><span class="caption">${this._syncCaption()}</span></button>` : ''}`;
+            ${this.showsync ? html`<button id="sync" class="${this._syncClass()}" @click="${() => this.fire('bottom-sync')}" type="button" title="${this._syncTitle()}"><span class="caption">${this._syncCaption()}</span></button>` : ''}`;
     }
 }
