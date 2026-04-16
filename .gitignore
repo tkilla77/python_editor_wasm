@@ -75,9 +75,11 @@ target/
 # celery beat schedule file
 celerybeat-schedule
 
-# dotenv — .env is a committed template (values empty); put real secrets in .env.local
+# dotenv — .env is a committed template (values empty).
+# Dev secrets: .env.local  (Vite default mode)
+# Prod secrets: .env.prod.local  (vite build --mode prod)
 .env.local
-.env.prod
+.env.prod.local
 
 # local deploy config (copy from deploy.config.example.json)
 deploy.config.json

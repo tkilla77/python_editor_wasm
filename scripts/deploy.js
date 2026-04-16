@@ -28,8 +28,8 @@ const run = cmd => execSync(cmd, { stdio: 'inherit', cwd: root })
 
 // --- build ---
 if (!noBuild) {
-    console.log('\nBuilding...')
-    run('npm run build')
+    console.log('\nBuilding (--mode prod)...')
+    run('npm run build -- --mode prod')
 }
 
 // --- deploy versioned dir ---
