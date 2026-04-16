@@ -1,0 +1,618 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bottom-editor — Embedding Guide</title>
+<script type="module" src="../bottom-editor.js"></script>
+<script type="module" src="../bottom-exercise.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 1.5rem 4rem;
+    color: #1e293b;
+    background: #fafafa;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.875rem; font-weight: 800; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.25rem; font-weight: 700; margin: 2.5rem 0 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.25rem; }
+  p  { margin: 0.5rem 0; color: #334155; }
+  a  { color: #2563eb; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0; }
+  pre {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.4em;
+    padding: 0.8em 1em;
+    overflow-x: auto;
+    font-size: 0.85em;
+    margin: 0.75rem 0;
+  }
+  code { font-family: ui-monospace, monospace; font-size: 0.875em; }
+  p code, li code { background: #f1f5f9; padding: 0.1em 0.3em; border-radius: 0.25em; }
+  blockquote { margin: 0.75rem 0; padding: 0.6em 1em; background: #f1f5f9; border-left: 3px solid #cbd5e1; border-radius: 0 0.4em 0.4em 0; }
+  blockquote p { color: #475569; margin: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.875rem; }
+  th { background: #f1f5f9; text-align: left; }
+  th, td { padding: 0.4em 0.75em; border: 1px solid #e2e8f0; }
+  bottom-editor, kara-editor, bottom-exercise { margin: 1rem 0; display: block; }
+  .dark-editor {
+    --be-border: none;
+    --be-border-radius: 0.25em;
+    --be-editor-bg: #1e1e1e;
+    --be-output-bg: #111;
+  }
+</style>
+<body>
+<h1>bottom-editor — Embedding Guide</h1>
+<p>A self-contained Python editor web component powered by
+<a href="https://pyodide.org">Pyodide</a> and <a href="https://codemirror.net/">Codemirror</a>. Runs entirely in the browser — no server
+required. No code is ever passed to the server, there is no login or account feature, so the component is safe to use from exam systems such
+as <a href="https://safeexambrowser.org/">SafeExamBrowser</a> or <a href="https://istest2.ch/">isTest2</a>.</p>
+<p><strong>Source:</strong> <a href="https://github.com/tkilla77/python_editor_wasm">github.com/tkilla77/python_editor_wasm</a></p>
+<p><strong>See also:</strong> <a href="kara.html">Kara grid world →</a></p>
+<hr>
+<h2>Quick start</h2>
+<p>Load the component script, then drop <code>&lt;bottom-editor&gt;</code> anywhere on the page. The initial Python code goes as text content of the element.</p>
+<pre><code class="language-html">&lt;script type=&quot;module&quot; src=&quot;https://bottom.ch/editor/stable/bottom-editor.js&quot;&gt;&lt;/script&gt;
+
+&lt;bottom-editor autorun&gt;
+for i in range(5):
+    print(i ** 2, end=&#39; &#39;)
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor autorun>
+for i in range(5):
+    print(i ** 2, end=' ')
+</bottom-editor>
+
+
+<hr>
+<h2>Attributes</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Values</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>layout</code></td>
+<td><code>console</code> | <code>canvas</code> | <code>split</code></td>
+<td><code>console</code></td>
+<td>Which output panel(s) to show</td>
+</tr>
+<tr>
+<td><code>autorun</code></td>
+<td>boolean</td>
+<td>off</td>
+<td>Run code automatically on load</td>
+</tr>
+<tr>
+<td><code>showclear</code></td>
+<td>boolean</td>
+<td>off</td>
+<td>Show a Clear output button</td>
+</tr>
+<tr>
+<td><code>showswitcher</code></td>
+<td>boolean</td>
+<td>off</td>
+<td>Show canvas/console toggle rail (used by the standalone page)</td>
+</tr>
+<tr>
+<td><code>orientation</code></td>
+<td><code>auto</code> | <code>horizontal</code> | <code>vertical</code></td>
+<td><code>auto</code></td>
+<td>Force layout direction regardless of container width</td>
+</tr>
+<tr>
+<td><code>session</code></td>
+<td>string</td>
+<td>—</td>
+<td>Share a Pyodide worker with other editors that use the same session name</td>
+</tr>
+<tr>
+<td><code>zip</code></td>
+<td>URL</td>
+<td>—</td>
+<td>Zip archive to unpack into the virtual filesystem before running</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>seconds or <code>inf</code></td>
+<td><code>30</code></td>
+<td>Maximum run time in seconds; <code>inf</code> disables the timeout</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>—</td>
+<td>Enables localStorage persistence; code is saved and restored on reload (see <a href="#editor-persistence">Editor persistence</a>)</td>
+</tr>
+<tr>
+<td><code>storage</code></td>
+<td><code>local</code> | <code>none</code></td>
+<td><code>local</code> when <code>id</code> set</td>
+<td>Storage backend; <code>none</code> opts out even when <code>id</code> is present</td>
+</tr>
+<tr>
+<td><code>sourcecode</code></td>
+<td>string</td>
+<td>—</td>
+<td>Set code programmatically (property, not reflected attribute)</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Turtle graphics</h2>
+<p>Set <code>layout=&quot;canvas&quot;</code> to show only the canvas, or <code>layout=&quot;split&quot;</code> for
+canvas and console side by side.</p>
+<pre><code class="language-html">&lt;bottom-editor layout=&quot;canvas&quot; showclear&gt;
+import turtle
+
+t = turtle.Turtle()
+t.speed(6)
+colors = [&#39;red&#39;, &#39;orange&#39;, &#39;gold&#39;, &#39;green&#39;, &#39;blue&#39;, &#39;purple&#39;]
+for i in range(90):
+    t.pencolor(colors[i % len(colors)])
+    t.forward(i * 0.5)
+    t.left(59)
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor layout="canvas">
+import turtle
+t = turtle.Turtle()
+t.speed(9)
+colors = ['red', 'orange', 'gold', 'green', 'blue', 'purple']
+for i in range(90):
+    t.pencolor(colors[i % len(colors)])
+    t.forward(i * 0.5)
+    t.left(59)
+</bottom-editor>
+
+<hr>
+<h2>Matplotlib</h2>
+<p><code>plt.show()</code> renders the figure to the canvas.</p>
+<pre><code class="language-html">&lt;bottom-editor layout=&quot;canvas&quot;&gt;
+import micropip
+await micropip.install(&#39;matplotlib&#39;)
+
+import matplotlib.pyplot as plt
+import math
+
+x = [i * 0.1 for i in range(63)]
+plt.figure(figsize=(5, 4))
+plt.plot(x, [math.sin(v) for v in x], label=&#39;sin&#39;)
+plt.plot(x, [math.cos(v) for v in x], label=&#39;cos&#39;)
+plt.legend()
+plt.title(&#39;Trigonometric functions&#39;)
+plt.tight_layout()
+plt.show()
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor layout="canvas">
+import micropip
+await micropip.install('matplotlib')
+import matplotlib.pyplot as plt
+import math
+x = [i * 0.1 for i in range(63)]
+plt.figure(figsize=(5, 4))
+plt.plot(x, [math.sin(v) for v in x], label='sin')
+plt.plot(x, [math.cos(v) for v in x], label='cos')
+plt.legend()
+plt.title('Trigonometric functions')
+plt.tight_layout()
+plt.show()
+</bottom-editor>
+
+<hr>
+<h2>Shared sessions</h2>
+<p>Editors with the same <code>session</code> attribute share a single Pyodide worker.
+Functions or variables defined in one editor are immediately available in
+the other.</p>
+<pre><code class="language-html">&lt;bottom-editor session=&quot;demo&quot; autorun&gt;
+def greet(name):
+    print(f&quot;Hi, {name}!&quot;)
+&lt;/bottom-editor&gt;
+
+&lt;bottom-editor session=&quot;demo&quot; autorun&gt;
+greet(&quot;World&quot;)
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor session="demo" autorun>
+def greet(name):
+    print(f"Hi, {name}!")
+</bottom-editor>
+
+<bottom-editor session="demo" autorun>
+greet("World")
+</bottom-editor>
+
+<hr>
+<h2>Orientation</h2>
+<p>By default the layout switches from vertical (code above, output below) to
+horizontal (code left, output right) when the container is wider than 768 px.
+Use <code>orientation=&quot;horizontal&quot;</code> or <code>orientation=&quot;vertical&quot;</code> to lock it.</p>
+<pre><code class="language-html">&lt;bottom-editor orientation=&quot;vertical&quot;&gt;
+print(&quot;lways fills horizontally.&quot;)
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor orientation="vertical">
+print("Always fills horizontally.")
+</bottom-editor>
+
+<hr>
+<h2>Timeout</h2>
+<p>The default run timeout is 30 s. Set <code>timeout=&quot;inf&quot;</code> for long-running code,
+or a lower value for stricter sandboxing.</p>
+<pre><code class="language-html">&lt;bottom-editor timeout=&quot;5&quot; session=&quot;timeout-demo&quot;&gt;
+# will be interrupted after 5 s
+while True:
+    pass
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor timeout="5" session="timeout-demo">
+# will be interrupted after 5 s
+while True:
+    pass
+</bottom-editor>
+
+<hr>
+<h2>Exercises</h2>
+<p><code>&lt;bottom-exercise&gt;</code> wraps <code>&lt;bottom-editor&gt;</code> with exercise semantics: a prompt,
+starter code, test assertions, and a results panel. The Run button runs the tests;
+the Reset button restores the starter code. Progress is saved in <code>localStorage</code>
+automatically — no exercise ID required.</p>
+<p>Load <code>bottom-exercise.js</code> <strong>instead of</strong> (or alongside) <code>bottom-editor.js</code>:</p>
+<pre><code class="language-html">&lt;script type=&quot;module&quot; src=&quot;https://bottom.ch/editor/stable/bottom-exercise.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<h3>Template syntax</h3>
+<p>Place starter code and tests in <code>&lt;template&gt;</code> elements inside the component.
+The prompt goes in a <code>&lt;div slot=&quot;prompt&quot;&gt;</code>:</p>
+<pre><code class="language-html">&lt;bottom-exercise&gt;
+  &lt;div slot=&quot;prompt&quot;&gt;
+    &lt;p&gt;Write a function &lt;code&gt;sum_to(n)&lt;/code&gt; that returns 1 + 2 + … + n.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;template data-type=&quot;starter&quot;&gt;
+def sum_to(n):
+    pass
+  &lt;/template&gt;
+  &lt;template data-type=&quot;test&quot;&gt;
+assert sum_to(5) == 15, &quot;sum_to(5) should be 15&quot;
+assert sum_to(1) == 1
+assert sum_to(0) == 0
+  &lt;/template&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
+<bottom-exercise>
+<div slot="prompt">
+<p>Write a function <code>sum_to(n)</code> that returns 1 + 2 + … + n.
+Return 0 for n ≤ 0.</p>
+</div>
+<template data-type="starter">
+def sum_to(n):
+    pass
+</template>
+<template data-type="test">
+assert sum_to(5) == 15, "sum_to(5) should be 15"
+assert sum_to(1) == 1, "sum_to(1) should be 1"
+assert sum_to(0) == 0, "sum_to(0) should be 0"
+</template>
+</bottom-exercise>
+
+<h3>CMS-friendly syntax</h3>
+<p>Some CMS platforms strip <code>&lt;template&gt;</code> elements, or wrap the whole block in <code>&lt;p&gt;</code>
+which the HTML parser uses to eject block-level children. Use
+<code>&lt;script type=&quot;text/x-starter&quot;&gt;</code> / <code>&lt;script type=&quot;text/x-test&quot;&gt;</code> instead — they
+are phrasing content and survive both problems. For the prompt, use inline text
+rather than a <code>&lt;div&gt;</code> for the same reason:</p>
+<pre><code class="language-html">&lt;bottom-exercise&gt;
+  Write a function &lt;code&gt;fizzbuzz(n)&lt;/code&gt; that returns &lt;code&gt;&quot;Fizz&quot;&lt;/code&gt;,
+  &lt;code&gt;&quot;Buzz&quot;&lt;/code&gt;, &lt;code&gt;&quot;FizzBuzz&quot;&lt;/code&gt;, or the number as a string.
+  &lt;script type=&quot;text/x-starter&quot;&gt;
+def fizzbuzz(n):
+    pass
+  &lt;/script&gt;
+  &lt;script type=&quot;text/x-test&quot;&gt;
+assert fizzbuzz(3) == &quot;Fizz&quot;
+assert fizzbuzz(5) == &quot;Buzz&quot;
+assert fizzbuzz(15) == &quot;FizzBuzz&quot;
+assert fizzbuzz(7) == &quot;7&quot;
+  &lt;/script&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
+<bottom-exercise>
+Write a function <code>fizzbuzz(n)</code> that returns <code>"Fizz"</code> if divisible
+by 3, <code>"Buzz"</code> if divisible by 5, <code>"FizzBuzz"</code> if both, or the
+number as a string otherwise.
+<script type="text/x-starter">
+def fizzbuzz(n):
+    pass
+</script>
+<script type="text/x-test">
+assert fizzbuzz(3) == "Fizz", f"fizzbuzz(3) should be 'Fizz', got {fizzbuzz(3)!r}"
+assert fizzbuzz(5) == "Buzz", f"fizzbuzz(5) should be 'Buzz', got {fizzbuzz(5)!r}"
+assert fizzbuzz(15) == "FizzBuzz", f"fizzbuzz(15) should be 'FizzBuzz', got {fizzbuzz(15)!r}"
+assert fizzbuzz(7) == "7", f"fizzbuzz(7) should be '7', got {fizzbuzz(7)!r}"
+</script>
+</bottom-exercise>
+
+<h3>Testing printed output</h3>
+<p>Each test statement runs as a separate Python assertion in the same namespace as
+the user&#39;s code. Two helpers are automatically available for exercises where the
+student prints output rather than returning a value:</p>
+<table>
+<thead>
+<tr>
+<th>Helper</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>output()</code></td>
+<td>Everything the code printed, as a single string (newlines included)</td>
+</tr>
+<tr>
+<td><code>output_lines()</code></td>
+<td><code>output().splitlines()</code> — each printed line as a clean string</td>
+</tr>
+</tbody></table>
+<p>Output is still shown in the output panel as normal — the helpers just provide
+a second view of the same text for assertions.</p>
+<pre><code class="language-html">&lt;bottom-exercise&gt;
+  &lt;div slot=&quot;prompt&quot;&gt;&lt;p&gt;Print the numbers 1 to 5, one per line.&lt;/p&gt;&lt;/div&gt;
+  &lt;template data-type=&quot;starter&quot;&gt;
+# your code here
+  &lt;/template&gt;
+  &lt;template data-type=&quot;test&quot;&gt;
+assert output_lines() == [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;], \
+    f&quot;Expected lines 1–5, got {output_lines()!r}&quot;
+  &lt;/template&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
+<bottom-exercise>
+<div slot="prompt"><p>Print the numbers 1 to 5, one per line.</p></div>
+<template data-type="starter">
+# your code here
+</template>
+<template data-type="test">
+assert output_lines() == ["1", "2", "3", "4", "5"], \
+    f"Expected lines 1–5, got {output_lines()!r}"
+</template>
+</bottom-exercise>
+
+<p>Other useful patterns:</p>
+<pre><code class="language-python">assert &quot;hello&quot; in output().lower()           # substring check
+assert len(output_lines()) == 10             # line count
+assert output().strip() == &quot;42&quot;             # ignore trailing newline
+</code></pre>
+<h3>Solutions</h3>
+<p>Add a <code>&lt;template data-type=&quot;solution&quot;&gt;</code> (or <code>&lt;script type=&quot;text/x-solution&quot;&gt;</code>) to
+provide a model solution. A <strong>Show solution</strong> button appears and requires a
+confirmation click before replacing the editor contents.</p>
+<pre><code class="language-html">&lt;bottom-exercise&gt;
+  ...
+  &lt;template data-type=&quot;solution&quot;&gt;
+def sum_to(n):
+    return n * (n + 1) // 2
+  &lt;/template&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
+<p>For embedding in a CMS, the <code>solution</code> attribute accepts plain text or a
+<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs">data URL</a>
+(useful for multi-line code encoded as base64):</p>
+<pre><code class="language-html">&lt;!-- plain text (simple cases) --&gt;
+&lt;bottom-exercise solution=&quot;return n * (n + 1) // 2&quot;&gt;...&lt;/bottom-exercise&gt;
+
+&lt;!-- base64 (multi-line, no escaping needed) --&gt;
+&lt;bottom-exercise solution=&quot;data:text/plain;base64,ZGVmIHN1bV90...&quot;&gt;...&lt;/bottom-exercise&gt;
+</code></pre>
+<p><code>solved</code> and <code>viewed-solution</code> are both terminal states: showing the solution
+after solving keeps the <code>solved</code> badge; passing tests after viewing the solution
+keeps the <code>viewed-solution</code> badge.</p>
+<h3>Test-free exercises</h3>
+<p>Tests are optional. Without a <code>&lt;template data-type=&quot;test&quot;&gt;</code> block, the Run
+button simply executes the code and shows output — useful for turtle graphics,
+open-ended prompts, or stages where students haven&#39;t learned functions yet.
+A solution can still be provided.</p>
+<pre><code class="language-html">&lt;bottom-exercise id=&quot;turtle-square&quot;&gt;
+  &lt;div slot=&quot;prompt&quot;&gt;&lt;p&gt;Draw a square with side length 100.&lt;/p&gt;&lt;/div&gt;
+  &lt;template data-type=&quot;starter&quot;&gt;
+import turtle
+t = turtle.Turtle()
+# your code here
+  &lt;/template&gt;
+  &lt;template data-type=&quot;solution&quot;&gt;
+import turtle
+t = turtle.Turtle()
+for _ in range(4):
+    t.forward(100)
+    t.right(90)
+  &lt;/template&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
+<h3>Exercise attributes</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>—</td>
+<td>localStorage key for persistence; page-scoped (same as <code>&lt;bottom-editor&gt;</code>). Without <code>id</code>, nothing is saved.</td>
+</tr>
+<tr>
+<td><code>layout</code></td>
+<td><code>console</code></td>
+<td>Which output panel(s) to show (<code>console</code> | <code>canvas</code> | <code>split</code>)</td>
+</tr>
+<tr>
+<td><code>session</code></td>
+<td>—</td>
+<td>Share a Pyodide worker with other editors on the page</td>
+</tr>
+<tr>
+<td><code>orientation</code></td>
+<td><code>auto</code></td>
+<td>Layout direction (<code>auto</code> | <code>horizontal</code> | <code>vertical</code>)</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>30</code></td>
+<td>Run timeout in seconds; <code>inf</code> disables it</td>
+</tr>
+<tr>
+<td><code>zip</code></td>
+<td>—</td>
+<td>Zip archive to pre-load into the virtual filesystem</td>
+</tr>
+</tbody></table>
+<h3>Persistence</h3>
+<p>Add an <code>id</code> attribute to save exercise state to <code>localStorage</code>. The key is
+page-scoped (using <code>&lt;link rel=&quot;canonical&quot;&gt;</code> or <code>location.pathname+search</code>,
+same as <code>&lt;bottom-editor&gt;</code>), so the same <code>id</code> on different pages is safe and
+a review chapter always starts fresh.</p>
+<p>The state machine:</p>
+<pre><code>pristine → started → attempted ──→ solved
+                               ↘→ viewed-solution
+</code></pre>
+<p><code>solved</code> and <code>viewed-solution</code> are terminal. For test-free exercises the state
+only advances to <code>started</code>.</p>
+<hr>
+<h2>Editor persistence</h2>
+<p>Add an <code>id</code> attribute to persist editor contents in <code>localStorage</code>. The code is restored on the next page load. A <strong>Revert</strong> button appears automatically in the toolbar, restoring the original code and clearing the saved entry.</p>
+<pre><code class="language-html">&lt;bottom-editor id=&quot;hello-world&quot;&gt;
+print(&quot;Hello, world!&quot;)
+&lt;/bottom-editor&gt;
+</code></pre>
+<p>The storage key combines the page URL and the element id, so reusing the same <code>id</code> on different pages is safe.</p>
+<p><strong>Opt out</strong> on a specific editor with <code>storage=&quot;none&quot;</code>:</p>
+<pre><code class="language-html">&lt;bottom-editor id=&quot;demo&quot; storage=&quot;none&quot;&gt;...&lt;/bottom-editor&gt;
+</code></pre>
+<p><strong>Site-wide default</strong> — set <code>window.BottomEditorConfig</code> before the script tag to configure all editors on the page (useful for a site-wide include):</p>
+<pre><code class="language-html">&lt;script&gt;window.BottomEditorConfig = { storage: &#39;none&#39; }&lt;/script&gt;
+&lt;script type=&quot;module&quot; src=&quot;bottom-editor.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p><strong>Page identity</strong> — the storage key uses <code>&lt;link rel=&quot;canonical&quot;&gt;</code> (pathname + search) if present, falling back to <code>location.pathname + location.search</code>. Fragments are excluded so anchor-link navigation never orphans saved state. CMS systems that identify pages by query parameter (e.g. <code>?id=mypage</code>) work correctly when a canonical tag is present.</p>
+<hr>
+<h2>Cloud sync (<code>&lt;bottom-exercise&gt;</code>)</h2>
+<p>When the deployed build includes cloud credentials, a <strong>Sync</strong> button appears in every <code>&lt;bottom-exercise&gt;</code>. Students can connect Google Drive or OneDrive so their progress follows them across devices and browsers.</p>
+<p>Cloud state is layered on top of localStorage: every edit is written locally first; cloud writes are debounced by 2 s. On page load, localStorage is applied immediately and the cloud copy is fetched in the background.</p>
+<h3>Restricting available backends</h3>
+<p>The build may support multiple cloud providers, but a site administrator or page author can limit which ones are offered — useful when a school mandates a specific provider.</p>
+<p><strong>Site-wide</strong> (e.g. in a shared header include):</p>
+<pre><code class="language-html">&lt;script&gt;
+window.BottomEditorConfig = {
+    storageBackends: [&#39;microsoft&#39;],   // only OneDrive; omit key to allow all compiled-in backends
+}
+&lt;/script&gt;
+&lt;script type=&quot;module&quot; src=&quot;https://bottom.ch/editor/stable/bottom-editor.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p><strong>Page-wide</strong> (same pattern, just on one page):</p>
+<pre><code class="language-html">&lt;script&gt;
+window.BottomEditorConfig = { storageBackends: [&#39;google&#39;] }
+&lt;/script&gt;
+</code></pre>
+<p><code>storageBackends</code> is the subset of <code>[&#39;google&#39;, &#39;microsoft&#39;]</code> to offer. Providers not compiled into the build are silently ignored. Omitting the key (or setting it to a non-array) shows all compiled-in backends.</p>
+<hr>
+<h2>CSS theming</h2>
+<p>Four custom properties can be set on the element or any ancestor:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>--be-border</code></td>
+<td><code>1px solid #d4d4d4</code></td>
+<td>Border of editor, console, and canvas boxes</td>
+</tr>
+<tr>
+<td><code>--be-border-radius</code></td>
+<td><code>0.5em</code></td>
+<td>Corner radius of those boxes</td>
+</tr>
+<tr>
+<td><code>--be-editor-bg</code></td>
+<td><code>white</code></td>
+<td>Background of the code editor and canvas</td>
+</tr>
+<tr>
+<td><code>--be-output-bg</code></td>
+<td><code>#f5f5f5</code></td>
+<td>Background of the console output</td>
+</tr>
+</tbody></table>
+<pre><code class="language-html">&lt;style&gt;
+  .dark-editor {
+    --be-border: none;
+    --be-border-radius: 0.25em;
+    --be-editor-bg: #1e1e1e;
+    --be-output-bg: #1e1e1e;
+    color-scheme: dark;
+  }
+&lt;/style&gt;
+
+&lt;bottom-editor class=&quot;dark-editor&quot;&gt;
+print(&quot;Dark theme&quot;)
+&lt;/bottom-editor&gt;
+</code></pre>
+<style>
+  .dark-editor {
+    --be-border: none;
+    --be-border-radius: 0.25em;
+    --be-editor-bg: #1e1e1e;
+    --be-output-bg: #111;
+  }
+</style>
+
+<bottom-editor class="dark-editor">
+print("Dark theme")
+</bottom-editor>
+
+<hr>
+<h2>Loading files with <code>zip</code></h2>
+<p>Use the <code>zip</code> attribute to pre-load a <code>.zip</code> archive into the virtual
+filesystem before the editor runs. Useful for distributing helper modules
+or data files alongside an exercise.</p>
+<pre><code class="language-html">&lt;bottom-editor zip=&quot;https://example.com/exercises.zip&quot; autorun&gt;
+import mymodule
+mymodule.run()
+&lt;/bottom-editor&gt;
+</code></pre>
+<p>The archive is unpacked into <code>/home/pyodide/</code> (the default Python path),
+so any <code>.py</code> files inside are directly importable.</p>
+<blockquote>
+<p><strong>CORS required.</strong> The server hosting the zip must send <code>Access-Control-Allow-Origin: *</code> (or the page origin).</p>
+</blockquote>
+<hr>
+<h2>Programmatic use</h2>
+<p>The element exposes a few properties and methods:</p>
+<pre><code class="language-js">const editor = document.querySelector(&#39;bottom-editor&#39;);
+
+// Wait for Pyodide to be ready
+await editor.ready;
+
+// Read / set source code
+console.log(editor.sourceCode);
+editor.sourceCode = &#39;print(42)&#39;;
+
+// Run programmatically
+await editor.evaluatePython();
+
+// Read last output
+console.log(editor.outputText);
+</code></pre>
+
+</body>

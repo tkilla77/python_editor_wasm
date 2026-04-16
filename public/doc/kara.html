@@ -1,0 +1,291 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kara — Grid World Guide</title>
+<script type="module" src="../kara-editor.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 1.5rem 4rem;
+    color: #1e293b;
+    background: #fafafa;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.875rem; font-weight: 800; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.25rem; font-weight: 700; margin: 2.5rem 0 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.25rem; }
+  p  { margin: 0.5rem 0; color: #334155; }
+  a  { color: #2563eb; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0; }
+  pre {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.4em;
+    padding: 0.8em 1em;
+    overflow-x: auto;
+    font-size: 0.85em;
+    margin: 0.75rem 0;
+  }
+  code { font-family: ui-monospace, monospace; font-size: 0.875em; }
+  p code, li code { background: #f1f5f9; padding: 0.1em 0.3em; border-radius: 0.25em; }
+  blockquote { margin: 0.75rem 0; padding: 0.6em 1em; background: #f1f5f9; border-left: 3px solid #cbd5e1; border-radius: 0 0.4em 0.4em 0; }
+  blockquote p { color: #475569; margin: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.875rem; }
+  th { background: #f1f5f9; text-align: left; }
+  th, td { padding: 0.4em 0.75em; border: 1px solid #e2e8f0; }
+  bottom-editor, kara-editor, bottom-exercise { margin: 1rem 0; display: block; }
+  .dark-editor {
+    --be-border: none;
+    --be-border-radius: 0.25em;
+    --be-editor-bg: #1e1e1e;
+    --be-output-bg: #111;
+  }
+</style>
+<body>
+<h1>Kara — Grid World Guide</h1>
+<p>Kara is a ladybug that lives in a grid world. She can move, turn, pick up
+and place leaves, and push mushrooms. Trees block her path.</p>
+<p>The <code>&lt;kara-editor&gt;</code> component is a variant of <code>&lt;bottom-editor&gt;</code>  (<a href="index.html">Documentation →</a>)tailored
+for Kara programs: no imports needed, animated step-by-step execution, and
+a compact console showing only error messages.</p>
+<p><strong>Source:</strong> <a href="https://github.com/tkilla77/python_editor_wasm">github.com/tkilla77/python_editor_wasm</a> · <a href="https://www.swisseduc.ch/informatik/karatojava/kara/index.html">Original Kara (SwissEduc)</a></p>
+<hr>
+<h2>Quick start</h2>
+<pre><code class="language-html">&lt;script type=&quot;module&quot; src=&quot;https://bottom.ch/editor/stable/kara-editor.js&quot;&gt;&lt;/script&gt;
+
+&lt;kara-editor&gt;
+&lt;kara-world&gt;
+#########
+#...&gt;...#
+#########
+&lt;/kara-world&gt;
+kara.move()
+kara.move()
+kara.turnLeft()
+&lt;/kara-editor&gt;
+</code></pre>
+<kara-editor>
+<kara-world>
+#########
+#...>...#
+#########
+</kara-world>
+kara.move()
+kara.move()
+kara.turnLeft()
+</kara-editor>
+
+<hr>
+<h2>The world</h2>
+<p>Define the world inside a <code>&lt;kara-world&gt;</code> child element using a simple text grid:</p>
+<table>
+<thead>
+<tr>
+<th>Character</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>#</code></td>
+<td>Tree (also used for borders)</td>
+</tr>
+<tr>
+<td><code>T</code></td>
+<td>Tree (inside the grid)</td>
+</tr>
+<tr>
+<td><code>&gt;</code></td>
+<td>Kara facing right</td>
+</tr>
+<tr>
+<td><code>&lt;</code></td>
+<td>Kara facing left</td>
+</tr>
+<tr>
+<td><code>^</code></td>
+<td>Kara facing up</td>
+</tr>
+<tr>
+<td><code>v</code></td>
+<td>Kara facing down</td>
+</tr>
+<tr>
+<td><code>L</code></td>
+<td>Leaf</td>
+</tr>
+<tr>
+<td><code>M</code></td>
+<td>Mushroom</td>
+</tr>
+<tr>
+<td><code>.</code></td>
+<td>Empty cell</td>
+</tr>
+</tbody></table>
+<p>If no <code>&lt;kara-world&gt;</code> is given, a default empty grid is used.</p>
+<hr>
+<h2>Commands</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>kara.move()</code></td>
+<td>Move one step in the current direction</td>
+</tr>
+<tr>
+<td><code>kara.turnLeft()</code></td>
+<td>Turn 90° counter-clockwise</td>
+</tr>
+<tr>
+<td><code>kara.turnRight()</code></td>
+<td>Turn 90° clockwise</td>
+</tr>
+<tr>
+<td><code>kara.putLeaf()</code></td>
+<td>Place a leaf on the current cell</td>
+</tr>
+<tr>
+<td><code>kara.removeLeaf()</code></td>
+<td>Pick up the leaf on the current cell</td>
+</tr>
+</tbody></table>
+<p><code>await</code> is inserted automatically — just write <code>kara.move()</code>, not <code>await kara.move()</code>.</p>
+<hr>
+<h2>Sensors</h2>
+<table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>kara.treeFront()</code></td>
+<td><code>True</code> if there is a tree directly ahead</td>
+</tr>
+<tr>
+<td><code>kara.treeLeft()</code></td>
+<td><code>True</code> if there is a tree to the left</td>
+</tr>
+<tr>
+<td><code>kara.treeRight()</code></td>
+<td><code>True</code> if there is a tree to the right</td>
+</tr>
+<tr>
+<td><code>kara.mushroomFront()</code></td>
+<td><code>True</code> if there is a mushroom directly ahead</td>
+</tr>
+<tr>
+<td><code>kara.onLeaf()</code></td>
+<td><code>True</code> if Kara is standing on a leaf</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Mushrooms</h2>
+<p>Kara can push a mushroom if the cell behind it is empty or has a leaf.
+Pushing into a tree or another mushroom raises a <code>KaraException</code>.</p>
+<kara-editor step="300">
+<kara-world>
+##########
+#..>M....#
+##########
+</kara-world>
+kara.move()
+kara.move()
+kara.move()
+</kara-editor>
+
+<hr>
+<h2>Sensors example</h2>
+<kara-editor step="200">
+<kara-world>
+##########
+#>......T#
+#........#
+##########
+</kara-world>
+while not kara.treeFront():
+    kara.move()
+    if kara.onLeaf():
+        kara.removeLeaf()
+    else:
+        kara.putLeaf()
+</kara-editor>
+
+<hr>
+<h2>Attributes</h2>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>step</code></td>
+<td><code>200</code></td>
+<td>Animation delay between steps in milliseconds; <code>0</code> for instant</td>
+</tr>
+<tr>
+<td><code>autorun</code></td>
+<td>off</td>
+<td>Run the program automatically when Pyodide is ready</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>30</code></td>
+<td>Maximum run time in seconds; <code>inf</code> to disable</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Labyrinth Example</h2>
+<kara-editor step="50" timeout="60">
+    <kara-world>
+     TTTTTTTTTTTTTTTTTT
+     T>               T
+     TTTTTTTTTTTTTTTT T
+     T              T T
+     TTT TTTTTTTTTTTT T
+     T                T
+     TTTTTTTT TTTTTTTTT
+     T              T T
+     TTT TTTTTTTTTTTT T
+     T                T
+     TTTTTTTT TTTTTTTTT
+     T              T T
+     TTT TTTTTTTTTTTT T
+     T                T
+     TTTTTTTT TTTTTTTTT
+     T                T
+     TTTTTTTTTTTTLTTTTT
+    </kara-world>
+while not kara.onLeaf():
+    if not kara.treeRight():
+        kara.turnRight()
+        kara.move()
+    elif not kara.treeFront():
+        kara.move()
+    else:
+        kara.turnLeft()
+</kara-editor>
+
+<hr>
+<h2>Exceptions</h2>
+<p>When Kara cannot execute a command, a <code>KaraException</code> is raised:</p>
+<ul>
+<li><code>Tree blocking the path!</code> — <code>kara.move()</code> would walk into a tree or boundary</li>
+<li><code>Cannot push mushroom — blocked!</code> — the cell behind the mushroom is occupied</li>
+<li><code>Already a leaf here!</code> — <code>kara.putLeaf()</code> on a cell that already has a leaf</li>
+<li><code>No leaf here!</code> — <code>kara.removeLeaf()</code> on an empty cell</li>
+</ul>
+<p>The exception message is shown in the console panel below the world.</p>
+
+</body>
