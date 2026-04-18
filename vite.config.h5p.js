@@ -7,6 +7,12 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
     publicDir: false,
+    define: {
+        // Polyfill import.meta.url for IIFE. Uses the <script> element's own
+        // src URL so relative asset loads (Pyodide, oauth-callback) resolve
+        // against the H5P library's scripts/ directory rather than throwing.
+        'import.meta.url': 'document.currentScript?.src ?? location.href',
+    },
     worker: {
         format: 'iife',
         rollupOptions: {
