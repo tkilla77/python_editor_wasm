@@ -60,6 +60,10 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean })
     permalink = true;
 
+    /** When true, the revert button is never shown even if a storage key exists. */
+    @property({ type: Boolean })
+    norevert = false;
+
     /**
      * Storage backend. 'local' persists code in localStorage keyed by the
      * element's `id` + page URL. 'none' disables storage. Defaults to 'local'
@@ -557,7 +561,7 @@ export class BottomEditor extends LitElement {
                     ?showclear="${this.showclear}"
                     ?resetmode="${this.resetmode}"
                     .permalink=${this.permalink}
-                    ?showrevert="${!!this._effectiveStorageKey()}"
+                    ?showrevert="${!this.norevert && !!this._effectiveStorageKey()}"
                     ?showsync="${this._syncAvailable()}"
                     syncbackend="${syncBackend}"
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"

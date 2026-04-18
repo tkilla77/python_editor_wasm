@@ -256,6 +256,7 @@ export class BottomExercise extends LitElement {
             <bottom-editor
                 showclear
                 resetmode
+                norevert
                 .permalink=${false}
                 .onRun=${() => this.runTests()}
                 .storageKey=${this._effectiveId() ?? ''}
