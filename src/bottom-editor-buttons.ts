@@ -11,6 +11,7 @@ export class BottomEditorButtons extends LitElement {
     @property({ type: Boolean, reflect: true }) showclear = false;
     @property({ type: Boolean, reflect: true }) resetmode = false;
     @property({ type: Boolean }) permalink = true;
+    @property() shareState: 'idle' | 'copied' | 'error' = 'idle';
     @property({ type: Boolean }) showrevert = false;
     /** Show the cloud-sync button. Set when at least one cloud backend is configured. */
     @property({ type: Boolean, reflect: true }) showsync = false;
@@ -47,7 +48,7 @@ export class BottomEditorButtons extends LitElement {
             <button id="stop"      @click="${() => this.fire('bottom-stop')}"      type="button" title="Stop"><span class="caption">Stop</span></button>
             ${this.showclear ? html`<button id="clear" @click="${() => this.fire('bottom-clear')}" type="button" title="${this.resetmode ? 'Reset' : 'Clear Output'}"><span class="caption">${this.resetmode ? 'Reset' : 'Clear'}</span></button>` : ''}
             ${this.showrevert ? html`<button id="revert" @click="${() => this.fire('bottom-revert')}" type="button" title="Revert to initial code"><span class="caption">Revert</span></button>` : ''}
-            ${this.permalink ? html`<button id="permalink" @click="${() => this.fire('bottom-permalink')}" type="button" title="Copy Permalink"><span class="caption">Link</span></button>` : ''}
+            ${this.permalink ? html`<button id="permalink" class="${this.shareState !== 'idle' ? this.shareState : ''}" @click="${() => this.fire('bottom-permalink')}" type="button" title="Copy share link"><span class="caption">${this.shareState === 'copied' ? 'Copied!' : this.shareState === 'error' ? 'Failed' : 'Share'}</span></button>` : ''}
             ${this.showsync ? html`<button id="sync" class="${this._syncClass()}" @click="${() => this.fire('bottom-sync')}" type="button" title="${this._syncTitle()}"><span class="caption">${this._syncCaption()}</span></button>` : ''}`;
     }
 }

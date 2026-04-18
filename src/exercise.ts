@@ -5,7 +5,7 @@ import type { BottomEditor } from './editor.js'
 import type { TestReport } from './pyodide-runtime.js'
 import { type ExerciseStatus } from './exercise-state.js'
 import { getPageId } from './page-id.js'
-import { encodeExercise, type ExercisePermalinkState } from './exercise-permalink.js'
+import { encodeExercise } from './exercise-permalink.js'
 
 /**
  * <bottom-exercise> wraps a <bottom-editor> with exercise semantics:
@@ -73,7 +73,6 @@ export class BottomExercise extends LitElement {
     private _solvedAt?: number;
 
     @state() private _confirmingSolution = false;
-    @state() private _shareState: 'idle' | 'copied' | 'error' = 'idle';
 
     connectedCallback() {
         super.connectedCallback();
@@ -226,7 +225,7 @@ export class BottomExercise extends LitElement {
     }
 
     async shareExercise() {
-        const state: ExercisePermalinkState = {
+        const encoded = await encodeExercise({
             code:    this._editor?.sourceCode ?? '',
             starter: this._starterCode  || undefined,
             tests:   this._testCode     || undefined,
@@ -234,17 +233,11 @@ export class BottomExercise extends LitElement {
             layout:  this.layout  !== 'console' ? this.layout  : undefined,
             zip:     this.zip     || undefined,
             timeout: this.timeout !== '30'     ? this.timeout : undefined,
-        };
-        try {
-            const encoded = await encodeExercise(state);
-            const url = new URL('https://bottom.ch/editor/stable/exercise-view.html');
-            url.searchParams.set('x', encoded);
-            await navigator.clipboard.writeText(url.href);
-            this._shareState = 'copied';
-        } catch {
-            this._shareState = 'error';
-        }
-        setTimeout(() => this._shareState = 'idle', 2000);
+        });
+        const url = new URL('https://bottom.ch/editor/stable/exercise-view.html');
+        url.searchParams.set('x', encoded);
+        await navigator.clipboard.writeText(url.href);
+        // State feedback is handled by the editor's Share button via permalinkCallback
     }
 
     render() {
@@ -257,7 +250,7 @@ export class BottomExercise extends LitElement {
                 showclear
                 resetmode
                 norevert
-                .permalink=${false}
+                .permalinkCallback=${() => this.shareExercise()}
                 .onRun=${() => this.runTests()}
                 .storageKey=${this._effectiveId() ?? ''}
                 .stateSaver=${this._stateSaver}
@@ -272,7 +265,6 @@ export class BottomExercise extends LitElement {
             >${this.code || this._starterCode}</bottom-editor>
             ${this._renderStatus()}
             ${this._renderSolution()}
-            ${this._renderShare()}
             ${this._renderResults()}
         `;
     }
@@ -302,17 +294,6 @@ export class BottomExercise extends LitElement {
         return html`
             <button class="show-solution" @click="${() => this._confirmingSolution = true}">
                 Show solution
-            </button>
-        `;
-    }
-
-    private _renderShare() {
-        const label = this._shareState === 'copied' ? 'Link copied!'
-                    : this._shareState === 'error'  ? 'Failed'
-                    : 'Share';
-        return html`
-            <button class="share ${this._shareState}" @click="${this.shareExercise}">
-                ${label}
             </button>
         `;
     }
@@ -431,33 +412,6 @@ export class BottomExercise extends LitElement {
             font-size: 0.85em;
             width: 100%;
             padding-left: 1.5em;
-        }
-
-        /* Share */
-        button.share {
-            align-self: flex-start;
-            font-size: 0.8em;
-            padding: 0.2em 0.7em;
-            border: 1px solid #d1d5db;
-            border-radius: 1em;
-            background: transparent;
-            color: #6b7280;
-            cursor: pointer;
-            transition: background 0.15s, color 0.15s;
-        }
-        button.share:hover {
-            background: #f3f4f6;
-            color: #374151;
-        }
-        button.share.copied {
-            border-color: #bbf7d0;
-            background: #f0fdf4;
-            color: #166534;
-        }
-        button.share.error {
-            border-color: #fecaca;
-            background: #fef2f2;
-            color: #991b1b;
         }
 
         /* Show solution */

@@ -124,7 +124,7 @@ export class BottomEditor extends LitElement {
      * instead of copyPermalink()'s built-in URL builder.
      */
     @property({ attribute: false })
-    permalinkCallback?: () => void;
+    permalinkCallback?: () => Promise<void> | void;
 
     /**
      * Override the storage key used for persistence. When set, bypasses the
@@ -154,6 +154,7 @@ export class BottomEditor extends LitElement {
     @state() private _syncBackend: BackendId = 'local';
     @state() private _cloudSyncing = false;
     @state() private _showSyncPicker = false;
+    @state() private _shareState: 'idle' | 'copied' | 'error' = 'idle';
     private readonly _local = new LocalStorageAdapter();
     private _cloudSaveTimer?: ReturnType<typeof setTimeout>;
 
@@ -475,16 +476,25 @@ export class BottomEditor extends LitElement {
     }
 
     async copyPermalink() {
-        if (this.permalinkCallback) { this.permalinkCallback(); return; }
-        // FIXME allow permalink base to be configured
-        const url = new URL("https://bottom.ch/editor/stable/");
-        url.searchParams.set('code', this.sourceCode);
-        const defaultLayout = this.showswitcher ? 'split' : 'console';
-        if (this.layout !== defaultLayout) url.searchParams.set('layout', this.layout);
-        const zip = this.getAttribute("zip");
-        if (zip) url.searchParams.set('zip', zip);
-        if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
-        navigator.clipboard.writeText(url.href);
+        try {
+            if (this.permalinkCallback) {
+                await this.permalinkCallback();
+            } else {
+                // FIXME allow permalink base to be configured
+                const url = new URL("https://bottom.ch/editor/stable/");
+                url.searchParams.set('code', this.sourceCode);
+                const defaultLayout = this.showswitcher ? 'split' : 'console';
+                if (this.layout !== defaultLayout) url.searchParams.set('layout', this.layout);
+                const zip = this.getAttribute("zip");
+                if (zip) url.searchParams.set('zip', zip);
+                if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
+                await navigator.clipboard.writeText(url.href);
+            }
+            this._shareState = 'copied';
+        } catch {
+            this._shareState = 'error';
+        }
+        setTimeout(() => this._shareState = 'idle', 2000);
     }
 
     private async clearAll() {
@@ -561,6 +571,7 @@ export class BottomEditor extends LitElement {
                     ?showclear="${this.showclear}"
                     ?resetmode="${this.resetmode}"
                     .permalink=${this.permalink}
+                    .shareState=${this._shareState}
                     ?showrevert="${!this.norevert && !!this._effectiveStorageKey()}"
                     ?showsync="${this._syncAvailable()}"
                     syncbackend="${syncBackend}"
