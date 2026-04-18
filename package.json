@@ -17,6 +17,8 @@
   },
   "scripts": {
     "build": "vite build",
+    "build:h5p": "vite build --config vite.config.h5p.js",
+    "package:h5p": "node scripts/package-h5p.mjs",
     "push": "node scripts/deploy.js",
     "release": "node scripts/deploy.js --stable",
     "test": "vitest run",
