@@ -5,6 +5,7 @@ import type { BottomEditor } from './editor.js'
 import type { TestReport } from './pyodide-runtime.js'
 import { type ExerciseStatus } from './exercise-state.js'
 import { getPageId } from './page-id.js'
+import { encodeExercise, type ExercisePermalinkState } from './exercise-permalink.js'
 
 /**
  * <bottom-exercise> wraps a <bottom-editor> with exercise semantics:
@@ -45,6 +46,10 @@ export class BottomExercise extends LitElement {
     @property() timeout: string = '30';
     @property() zip: string = '';
 
+    /** Initial code shown in the editor — overrides starter code if set.
+     *  Used by the exercise-view landing page to show the student's submission. */
+    @property() code: string = '';
+
     @state()
     private _testReport?: TestReport;
 
@@ -68,6 +73,7 @@ export class BottomExercise extends LitElement {
     private _solvedAt?: number;
 
     @state() private _confirmingSolution = false;
+    @state() private _shareState: 'idle' | 'copied' | 'error' = 'idle';
 
     connectedCallback() {
         super.connectedCallback();
@@ -198,6 +204,49 @@ export class BottomExercise extends LitElement {
         this._editor.saveNow();
     }
 
+    // ── Sharing ────────────────────────────────────────────────────────────────
+
+    /** Extract the prompt's HTML from light DOM (named slot or CMS text). */
+    private _getPromptHtml(): string {
+        const named = this.querySelector('[slot="prompt"]');
+        if (named) return named.innerHTML.trim();
+        // CMS mode: collect non-data child nodes
+        const parts: string[] = [];
+        for (const child of this.childNodes) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                if (child.textContent?.trim()) parts.push(child.textContent);
+            } else if (child instanceof HTMLElement) {
+                const t = child.tagName.toLowerCase();
+                if (t === 'template') continue;
+                if (t === 'script' && child.getAttribute('type')?.startsWith('text/x-')) continue;
+                parts.push(child.outerHTML);
+            }
+        }
+        return parts.join('').trim();
+    }
+
+    async shareExercise() {
+        const state: ExercisePermalinkState = {
+            code:    this._editor?.sourceCode ?? '',
+            starter: this._starterCode  || undefined,
+            tests:   this._testCode     || undefined,
+            prompt:  this._getPromptHtml() || undefined,
+            layout:  this.layout  !== 'console' ? this.layout  : undefined,
+            zip:     this.zip     || undefined,
+            timeout: this.timeout !== '30'     ? this.timeout : undefined,
+        };
+        try {
+            const encoded = await encodeExercise(state);
+            const url = new URL('https://bottom.ch/editor/stable/exercise-view.html');
+            url.searchParams.set('x', encoded);
+            await navigator.clipboard.writeText(url.href);
+            this._shareState = 'copied';
+        } catch {
+            this._shareState = 'error';
+        }
+        setTimeout(() => this._shareState = 'idle', 2000);
+    }
+
     render() {
         return html`
             <exercise-prompt>
@@ -219,9 +268,10 @@ export class BottomExercise extends LitElement {
                 zip=${this.zip}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-clear="${this.resetCode}"
-            >${this._starterCode}</bottom-editor>
+            >${this.code || this._starterCode}</bottom-editor>
             ${this._renderStatus()}
             ${this._renderSolution()}
+            ${this._renderShare()}
             ${this._renderResults()}
         `;
     }
@@ -251,6 +301,17 @@ export class BottomExercise extends LitElement {
         return html`
             <button class="show-solution" @click="${() => this._confirmingSolution = true}">
                 Show solution
+            </button>
+        `;
+    }
+
+    private _renderShare() {
+        const label = this._shareState === 'copied' ? 'Link copied!'
+                    : this._shareState === 'error'  ? 'Failed'
+                    : 'Share';
+        return html`
+            <button class="share ${this._shareState}" @click="${this.shareExercise}">
+                ${label}
             </button>
         `;
     }
@@ -369,6 +430,33 @@ export class BottomExercise extends LitElement {
             font-size: 0.85em;
             width: 100%;
             padding-left: 1.5em;
+        }
+
+        /* Share */
+        button.share {
+            align-self: flex-start;
+            font-size: 0.8em;
+            padding: 0.2em 0.7em;
+            border: 1px solid #d1d5db;
+            border-radius: 1em;
+            background: transparent;
+            color: #6b7280;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        button.share:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        button.share.copied {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #166534;
+        }
+        button.share.error {
+            border-color: #fecaca;
+            background: #fef2f2;
+            color: #991b1b;
         }
 
         /* Show solution */

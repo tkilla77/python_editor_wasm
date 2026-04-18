@@ -89,12 +89,13 @@ export default defineConfig({
     },
     rollupOptions: {
       input: {
-        index:            resolve(__dirname, 'index.html'),
-        embed:            resolve(__dirname, 'embed.html'),
-        exercise:         resolve(__dirname, 'exercise.html'),
-        kara:             resolve(__dirname, 'kara.html'),
-        'kara-demo':      resolve(__dirname, 'kara-demo.html'),
-        'oauth-callback': resolve(__dirname, 'oauth-callback.html'),
+        index:             resolve(__dirname, 'index.html'),
+        embed:             resolve(__dirname, 'embed.html'),
+        exercise:          resolve(__dirname, 'exercise.html'),
+        'exercise-view':   resolve(__dirname, 'exercise-view.html'),
+        kara:              resolve(__dirname, 'kara.html'),
+        'kara-demo':       resolve(__dirname, 'kara-demo.html'),
+        'oauth-callback':  resolve(__dirname, 'oauth-callback.html'),
       },
       output: {
         entryFileNames: '[name]-[hash].js',
