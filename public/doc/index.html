@@ -401,6 +401,28 @@ def sum_to(n):
   &lt;/template&gt;
 &lt;/bottom-exercise&gt;
 </code></pre>
+
+<bottom-exercise>
+<div slot="prompt">
+<p>Write a function <code>sum_to(n)</code> that returns 1 + 2 + … + n.
+Return 0 for n ≤ 0.</p>
+</div>
+<template data-type="starter">
+def sum_to(n):
+    pass
+</template>
+<template data-type="test">
+assert sum_to(5) == 15, "sum_to(5) should be 15"
+assert sum_to(1) == 1, "sum_to(1) should be 1"
+assert sum_to(0) == 0, "sum_to(0) should be 0"
+</template>
+<template data-type="solution">
+def sum_to(n):
+    return n * (n + 1) // 2
+</template>
+</bottom-exercise>
+
+
 <p>For embedding in a CMS, the <code>solution</code> attribute accepts plain text or a
 <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs">data URL</a>
 (useful for multi-line code encoded as base64):</p>
