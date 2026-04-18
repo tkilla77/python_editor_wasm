@@ -1,0 +1,80 @@
+[
+  {
+    "name": "exercise",
+    "type": "group",
+    "label": "Exercise content",
+    "importance": "high",
+    "fields": [
+      {
+        "name": "prompt",
+        "type": "text",
+        "widget": "html",
+        "label": "Prompt",
+        "description": "Exercise description shown above the editor.",
+        "optional": true,
+        "tags": [
+          "p", "br", "strong", "em", "u", "code", "pre",
+          "h2", "h3", "h4", "ul", "ol", "li", "a",
+          "table", "thead", "tbody", "tr", "th", "td", "blockquote"
+        ]
+      },
+      {
+        "name": "starterCode",
+        "type": "text",
+        "widget": "textarea",
+        "label": "Starter code",
+        "description": "Initial Python code shown in the editor.",
+        "optional": true
+      },
+      {
+        "name": "testCode",
+        "type": "text",
+        "widget": "textarea",
+        "label": "Test assertions",
+        "description": "Python assert statements run when the student clicks Run. Leave empty for free-form exercises (completion-only, no score).",
+        "optional": true
+      },
+      {
+        "name": "solutionCode",
+        "type": "text",
+        "widget": "textarea",
+        "label": "Solution code",
+        "description": "Shown when the student requests the solution. Only available if 'Enable solution button' is checked.",
+        "optional": true
+      },
+      {
+        "name": "layout",
+        "type": "select",
+        "label": "Editor layout",
+        "default": "console",
+        "options": [
+          {"value": "console", "label": "Text console"},
+          {"value": "canvas",  "label": "Canvas (turtle graphics)"},
+          {"value": "split",   "label": "Split (editor + canvas + console)"}
+        ]
+      }
+    ]
+  },
+  {
+    "name": "behaviour",
+    "type": "group",
+    "label": "Behavioural settings",
+    "importance": "low",
+    "fields": [
+      {
+        "name": "enableSolutionsButton",
+        "type": "boolean",
+        "label": "Enable \"Show solution\" button",
+        "description": "Allow students to view the solution after attempting the exercise. Disable for exam/assessment use.",
+        "default": true
+      },
+      {
+        "name": "enableRetry",
+        "type": "boolean",
+        "label": "Enable \"Retry\" button",
+        "description": "Allow students to reset the editor and start over.",
+        "default": true
+      }
+    ]
+  }
+]
