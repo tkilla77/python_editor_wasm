@@ -32,6 +32,21 @@ function stableLibEntriesPlugin(entries) {
                 }
             }
         },
+        // In dev, /bottom-editor.js etc. don't exist as files — serve shims
+        // that re-export from the real source so doc pages work with `vite`.
+        configureServer(server) {
+            server.middlewares.use((req, res, next) => {
+                const url = (req.url ?? '').split('?')[0];
+                for (const [name, srcPath] of Object.entries(entries)) {
+                    if (url === `/${name}.js`) {
+                        res.setHeader('Content-Type', 'application/javascript');
+                        res.end(`export * from '/${srcPath}';\n`);
+                        return;
+                    }
+                }
+                next();
+            });
+        },
     };
 }
 
