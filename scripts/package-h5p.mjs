@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Builds the H5P IIFE bundle and produces an installable .h5p content package.
 // Run via: npm run package:h5p
-// Output: h5p/H5P.BottomExercise-1.0.h5p
+// Output: h5p/H5P.H5P.BottomExercise-1.0.h5p
 //
 // An .h5p file is a zip with this root structure:
 //   h5p.json                      ← content-package metadata
 //   content/content.json          ← example content instance
-//   H5P.BottomExercise-1.0/      ← library (installed as side-effect)
+//   H5P.H5P.BottomExercise-1.0/      ← library (installed as side-effect)
 //     library.json
 //     semantics.json
 //     scripts/…
@@ -17,7 +17,7 @@ import { join } from 'node:path';
 
 const ROOT    = new URL('..', import.meta.url).pathname;
 const H5P_DIR = join(ROOT, 'h5p');
-const LIB_DIR = join(H5P_DIR, 'BottomExercise-1.0');
+const LIB_DIR = join(H5P_DIR, 'H5P.BottomExercise-1.0');
 const STAGE   = join(H5P_DIR, '.stage');          // temporary assembly dir
 const OUT     = join(H5P_DIR, 'H5P.BottomExercise-1.0.h5p');
 
@@ -58,7 +58,7 @@ writeFileSync(join(STAGE, 'content', 'content.json'), JSON.stringify({
 }, null, 2));
 
 // Copy library folder into staging root
-execSync(`cp -r "${LIB_DIR}" "${join(STAGE, 'BottomExercise-1.0')}"`);
+execSync(`cp -r "${LIB_DIR}" "${join(STAGE, 'H5P.BottomExercise-1.0')}"`);
 
 // ── 3. Zip staging dir → .h5p ────────────────────────────────────────────────
 console.log('Zipping…');
@@ -69,4 +69,4 @@ execSync(
 );
 
 rmSync(STAGE, { recursive: true });
-console.log(`\nPackage written to: h5p/H5P.BottomExercise-1.0.h5p`);
+console.log(`\nPackage written to: ${OUT}`);

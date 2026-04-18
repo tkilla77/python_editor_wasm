@@ -1,7 +1,7 @@
 // vite.config.h5p.js
 // Produces the IIFE bundle for the H5P library package.
 // Run with: npm run build:h5p
-// Output: h5p/BottomExercise-1.0/scripts/bottom-exercise.iife.js
+// Output: h5p/H5P.BottomExercise-1.0/scripts/bottom-exercise.iife.js
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
@@ -17,7 +17,7 @@ export default defineConfig({
         },
     },
     build: {
-        outDir: 'h5p/BottomExercise-1.0/scripts',
+        outDir: 'h5p/H5P.BottomExercise-1.0/scripts',
         emptyOutDir: false,
         lib: {
             entry: resolve(__dirname, 'src/exercise.ts'),
