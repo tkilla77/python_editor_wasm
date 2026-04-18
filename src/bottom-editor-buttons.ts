@@ -8,6 +8,8 @@ export class BottomEditorButtons extends LitElement {
 
     @property({ type: Boolean, reflect: true }) running = false;
     @property({ type: Boolean, reflect: true }) vertical = false;
+    /** 'auto' (default) | 'show' | 'hide' — overrides container-query caption logic */
+    @property({ reflect: true }) captionmode: string = 'auto';
     @property({ type: Boolean, reflect: true }) showclear = false;
     @property({ type: Boolean, reflect: true }) resetmode = false;
     @property({ type: Boolean }) permalink = true;

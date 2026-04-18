@@ -568,6 +568,9 @@ export class BottomEditor extends LitElement {
                 ${outputArea}
                 <bottom-editor-buttons
                     part="buttons"
+                    captionmode="${this.orientation === 'horizontal' ? 'hide'
+                                : this.orientation === 'vertical'   ? 'show'
+                                : 'auto'}"
                     ?showclear="${this.showclear}"
                     ?resetmode="${this.resetmode}"
                     .permalink=${this.permalink}

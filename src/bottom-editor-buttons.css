@@ -5,14 +5,23 @@
     gap: 0.4em;
     position: relative;
 }
+/* Auto mode: follow container width. Excluded when captionmode forces a value. */
 @container (min-width: 768px) {
-    :host([vertical]) {
+    :host(:not([captionmode="show"])[vertical]) {
         flex-direction: column;
     }
-    button span.caption {
+    :host(:not([captionmode="show"])) button span.caption {
         display: none;
     }
 }
+/* Forced horizontal layout (orientation=horizontal): column, no captions */
+:host([captionmode="hide"]) {
+    flex-direction: column;
+}
+:host([captionmode="hide"]) button span.caption {
+    display: none;
+}
+/* captionmode=show (orientation=vertical): row layout + captions always visible by default */
 button {
     min-height: 2.2em;
     padding-inline: 0.4em;
