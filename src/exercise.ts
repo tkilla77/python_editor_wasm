@@ -226,13 +226,14 @@ export class BottomExercise extends LitElement {
 
     async shareExercise() {
         const encoded = await encodeExercise({
-            code:    this._editor?.sourceCode ?? '',
-            starter: this._starterCode  || undefined,
-            tests:   this._testCode     || undefined,
-            prompt:  this._getPromptHtml() || undefined,
-            layout:  this.layout  !== 'console' ? this.layout  : undefined,
-            zip:     this.zip     || undefined,
-            timeout: this.timeout !== '30'     ? this.timeout : undefined,
+            code:     this._editor?.sourceCode ?? '',
+            starter:  this._starterCode         || undefined,
+            tests:    this._testCode            || undefined,
+            solution: this._resolvedSolution()  || undefined,
+            prompt:   this._getPromptHtml()     || undefined,
+            layout:   this.layout  !== 'console' ? this.layout  : undefined,
+            zip:      this.zip                  || undefined,
+            timeout:  this.timeout !== '30'     ? this.timeout : undefined,
         });
         const url = new URL('https://bottom.ch/editor/stable/exercise-view.html');
         url.searchParams.set('x', encoded);

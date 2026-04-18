@@ -43,6 +43,14 @@ async function main() {
             ex.appendChild(t);
         }
 
+        // Solution
+        if (state.solution) {
+            const t = document.createElement('template') as HTMLTemplateElement;
+            t.dataset.type = 'solution';
+            t.content.textContent = state.solution;
+            ex.appendChild(t);
+        }
+
         document.getElementById('container')!.appendChild(ex);
     } catch (err) {
         console.error('Exercise permalink decode failed:', err);

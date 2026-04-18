@@ -2,6 +2,7 @@ export interface ExercisePermalinkState {
     code: string;
     starter?: string;
     tests?: string;
+    solution?: string;
     prompt?: string;
     layout?: string;
     zip?: string;
