@@ -7,6 +7,7 @@
 // Output:  h5p/H5P.BottomExercise-1.0.lib.h5p
 
 import { execSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT    = new URL('..', import.meta.url).pathname;
@@ -18,6 +19,7 @@ console.log('Building IIFE bundle…');
 execSync('npm run build:h5p', { cwd: ROOT, stdio: 'inherit' });
 
 console.log('Zipping library…');
+rmSync(OUT, { force: true });
 execSync(
     `zip -rD "${OUT}" H5P.BottomExercise-1.0 -x "*.DS_Store" -x "*/.gitignore"`,
     { cwd: H5P_DIR, stdio: 'inherit' }
