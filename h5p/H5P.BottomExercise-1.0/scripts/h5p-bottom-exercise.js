@@ -1,33 +1,34 @@
 /**
  * H5P wrapper for <bottom-exercise>.
  *
- * Implements the H5P Question Type contract:
- *   registerDomElements()  — mount the web component via H5P.Question.setContent()
- *   showSolutions()       — reveal solution (delegated to bottom-exercise)
- *   resetTask()           — reset editor and score state
- *   getScore()            — passed test count (0 if no tests)
- *   getMaxScore()         — total test count (1 if no tests: completion-only)
- *   getAnswerGiven()      — true once the student has run the code
+ * Extends H5P.EventDispatcher (not H5P.Question) so the library has no
+ * preloadedDependencies and installs standalone on any H5P platform.
+ * createXAPIEventTemplate / setScoredResult come from h5p-x-api.js which
+ * is part of the H5P core and always present.
  *
- * H5P.Question sets this.attach as an own instance property in its constructor,
- * which would shadow any prototype attach we define. The correct extension point
- * is registerDomElements(), which H5P.Question's own attach() calls after
- * building its wrapper DOM.
+ * Implements the H5P Question Type contract:
+ *   attach()            — mount the web component into the H5P container
+ *   showSolutions()     — reveal solution (delegated to bottom-exercise)
+ *   resetTask()         — reset editor and score state
+ *   getScore()          — passed test count (0 if no tests)
+ *   getMaxScore()       — total test count (1 if no tests: completion-only)
+ *   getAnswerGiven()    — true once the student has run the code
+ *   getCurrentState()   — returns undefined (no persistent state)
  *
  * Scoring:
  *   With test assertions  → scored (passed/total); xAPI 'answered' on test-result
  *   Without test code     → completion-only; xAPI 'completed' on first run,
- *                           score 1/1 (the LMS treats it as pass/fail by attempt)
+ *                           score 1/1
  *
  * The bottom-exercise IIFE bundle (bottom-exercise.iife.js) must be listed
  * before this file in library.json so that <bottom-exercise> is registered
- * when registerDomElements() runs.
+ * when attach() runs.
  */
 (function (H5P) {
     'use strict';
 
     H5P.BottomExercise = function (params, contentId, extras) {
-        H5P.Question.call(this, 'bottom-exercise');
+        H5P.EventDispatcher.call(this);
         this.contentId  = contentId;
         this._p         = (params.exercise  || {});
         this._behaviour = (params.behaviour || {});
@@ -37,13 +38,10 @@
         this._element   = null;
     };
 
-    H5P.BottomExercise.prototype = Object.create(H5P.Question.prototype);
+    H5P.BottomExercise.prototype = Object.create(H5P.EventDispatcher.prototype);
     H5P.BottomExercise.prototype.constructor = H5P.BottomExercise;
 
-    // H5P.Question.prototype.attach() calls this method after building its
-    // wrapper DOM. We inject <bottom-exercise> via setContent() so it lands
-    // inside H5P.Question's content section.
-    H5P.BottomExercise.prototype.registerDomElements = function () {
+    H5P.BottomExercise.prototype.attach = function ($container) {
         var p    = this._p;
         var b    = this._behaviour;
         var self = this;
@@ -104,11 +102,8 @@
         var ro = new ResizeObserver(function () { self.trigger('resize'); });
         ro.observe(ex);
 
+        $container[0].appendChild(ex);
         self._element = ex;
-
-        // setContent() expects a jQuery object; raw DOM elements go through
-        // jQuery's .html() which would serialize the element instead of appending it.
-        self.setContent(H5P.jQuery(ex));
     };
 
     // ── H5P Question Type contract ────────────────────────────────────────────

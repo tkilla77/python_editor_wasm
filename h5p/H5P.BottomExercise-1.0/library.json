@@ -14,7 +14,5 @@
         {"path": "scripts/h5p-bottom-exercise.js"}
     ],
     "preloadedCss": [],
-    "preloadedDependencies": [
-        {"machineName": "H5P.Question", "majorVersion": 1, "minorVersion": 5}
-    ]
+    "preloadedDependencies": []
 }
