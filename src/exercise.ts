@@ -193,7 +193,8 @@ export class BottomExercise extends LitElement {
         return this.solution;
     }
 
-    private _showSolution() {
+    /** Show the solution immediately, bypassing the confirmation dialog. */
+    showSolution() {
         const code = this._resolvedSolution();
         if (!code || !this._editor) return;
         this._editor.sourceCode = code;
@@ -202,6 +203,8 @@ export class BottomExercise extends LitElement {
         this._testReport = undefined;
         this._editor.saveNow();
     }
+
+    private _showSolution() { this.showSolution(); }
 
     // ── Sharing ────────────────────────────────────────────────────────────────
 

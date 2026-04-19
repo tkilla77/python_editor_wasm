@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Minimal H5P IIFE test: simulates what H5P does without the full runtime -->
+<title>H5P IIFE Test</title>
+<style>
+    body { font-family: system-ui; padding: 1rem; }
+    #container { border: 2px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; min-height: 10rem; }
+</style>
+<body>
+<h2>H5P IIFE standalone test</h2>
+<p>Open DevTools console to see errors. The exercise below should render.</p>
+<div id="container"></div>
+<script src="h5p/H5P.BottomExercise-1.0/scripts/bottom-exercise.iife.js"></script>
+<script>
+    console.log('bottom-exercise defined:', !!customElements.get('bottom-exercise'));
+    console.log('bottom-editor defined:',   !!customElements.get('bottom-editor'));
+
+    const ex = document.createElement('bottom-exercise');
+
+    // Prompt
+    const prompt = document.createElement('div');
+    prompt.slot = 'prompt';
+    prompt.innerHTML = '<p>Write a function <code>greet(name)</code> that returns <code>\'Hello, name!\'</code>.</p>';
+    ex.appendChild(prompt);
+
+    // Starter code
+    const starter = document.createElement('template');
+    starter.dataset.type = 'starter';
+    starter.content.textContent = 'def greet(name):\n    pass';
+    ex.appendChild(starter);
+
+    // Test code
+    const test = document.createElement('template');
+    test.dataset.type = 'test';
+    test.content.textContent = "assert greet('World') == 'Hello, World!'";
+    ex.appendChild(test);
+
+    document.getElementById('container').appendChild(ex);
+</script>
+</body>
