@@ -40,6 +40,10 @@ export default defineConfig({
                 // self-contained and the LMS doesn't need to serve worker files
                 // at a predictable path.
                 inlineDynamicImports: true,
+                // Guard against double-execution (H5P may run the script in
+                // multiple instances or Lumi may reuse a frame). Makes all
+                // customElements.define() calls idempotent.
+                banner: `(function(){var _d=customElements.define.bind(customElements);customElements.define=function(n,c,o){if(!customElements.get(n))_d(n,c,o);};})();`,
             },
         },
     },
