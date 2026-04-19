@@ -63,8 +63,9 @@ execSync(`cp -r "${LIB_DIR}" "${join(STAGE, 'H5P.BottomExercise-1.0')}"`);
 // ── 3. Zip staging dir → .h5p ────────────────────────────────────────────────
 console.log('Zipping…');
 rmSync(OUT, { force: true });
+// -D: no directory entries — the H5P validator rejects them (no file extension).
 execSync(
-    `zip -r "${OUT}" . -x "*.DS_Store" -x "*/.gitignore"`,
+    `zip -rD "${OUT}" . -x "*.DS_Store" -x "*/.gitignore"`,
     { cwd: STAGE, stdio: 'inherit' }
 );
 

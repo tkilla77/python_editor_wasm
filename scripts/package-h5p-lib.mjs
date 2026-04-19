@@ -18,6 +18,9 @@ console.log('Building IIFE bundle…');
 execSync('npm run build:h5p', { cwd: ROOT, stdio: 'inherit' });
 
 console.log('Zipping library…');
-execSync(`zip -r "${OUT}" H5P.BottomExercise-1.0 -x "*.DS_Store"`, { cwd: H5P_DIR, stdio: 'inherit' });
+execSync(
+    `zip -rD "${OUT}" H5P.BottomExercise-1.0 -x "*.DS_Store" -x "*/.gitignore"`,
+    { cwd: H5P_DIR, stdio: 'inherit' }
+);
 
 console.log(`\nLibrary package written to: ${OUT}`);
