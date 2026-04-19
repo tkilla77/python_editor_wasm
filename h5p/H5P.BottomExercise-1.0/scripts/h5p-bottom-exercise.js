@@ -2,7 +2,7 @@
  * H5P wrapper for <bottom-exercise>.
  *
  * Implements the H5P Question Type contract:
- *   registerDomElements() — mount the web component via H5P.Question.setContent()
+ *   registerDomElements()  — mount the web component via H5P.Question.setContent()
  *   showSolutions()       — reveal solution (delegated to bottom-exercise)
  *   resetTask()           — reset editor and score state
  *   getScore()            — passed test count (0 if no tests)
@@ -131,13 +131,13 @@
     // ── xAPI helpers ──────────────────────────────────────────────────────────
 
     H5P.BottomExercise.prototype._triggerXAPIAnswered = function (passed) {
-        var ev = this.createXAPIEvent('answered');
+        var ev = this.createXAPIEventTemplate('answered');
         ev.setScoredResult(this._score, this._maxScore, this, true, passed);
         this.trigger(ev);
     };
 
     H5P.BottomExercise.prototype._triggerXAPICompleted = function () {
-        var ev = this.createXAPIEvent('completed');
+        var ev = this.createXAPIEventTemplate('completed');
         ev.setScoredResult(1, 1, this, true, true);
         this.trigger(ev);
     };
