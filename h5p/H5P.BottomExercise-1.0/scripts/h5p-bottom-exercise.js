@@ -41,6 +41,14 @@
     H5P.BottomExercise.prototype = Object.create(H5P.EventDispatcher.prototype);
     H5P.BottomExercise.prototype.constructor = H5P.BottomExercise;
 
+    // H5P text fields are HTML-encoded on save ('→&#039;). Decode via textarea
+    // which uses the browser's native HTML parser without executing scripts.
+    function decodeHtml(str) {
+        var ta = document.createElement('textarea');
+        ta.innerHTML = str;
+        return ta.value;
+    }
+
     H5P.BottomExercise.prototype.attach = function ($container) {
         var p    = this._p;
         var b    = this._behaviour;
@@ -59,21 +67,21 @@
         if (p.starterCode) {
             var tStarter = document.createElement('template');
             tStarter.dataset.type = 'starter';
-            tStarter.content.textContent = p.starterCode;
+            tStarter.content.textContent = decodeHtml(p.starterCode);
             ex.appendChild(tStarter);
         }
 
         if (p.testCode) {
             var tTest = document.createElement('template');
             tTest.dataset.type = 'test';
-            tTest.content.textContent = p.testCode;
+            tTest.content.textContent = decodeHtml(p.testCode);
             ex.appendChild(tTest);
         }
 
         if (p.solutionCode && b.enableSolutionsButton !== false) {
             var tSolution = document.createElement('template');
             tSolution.dataset.type = 'solution';
-            tSolution.content.textContent = p.solutionCode;
+            tSolution.content.textContent = decodeHtml(p.solutionCode);
             ex.appendChild(tSolution);
         }
 
