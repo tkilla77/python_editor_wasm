@@ -8,10 +8,11 @@ import { defineConfig } from 'vite'
 export default defineConfig({
     publicDir: false,
     define: {
-        // Polyfill import.meta.url for IIFE. Uses the <script> element's own
-        // src URL so relative asset loads (Pyodide, oauth-callback) resolve
-        // against the H5P library's scripts/ directory rather than throwing.
-        'import.meta.url': 'document.currentScript?.src ?? location.href',
+        // Polyfill import.meta.url for IIFE. H5P evals scripts into an
+        // about:blank iframe so location.href is invalid at module init time;
+        // filter for http(s) before using it to avoid URL() throwing.
+        // OAuth is unused in H5P context so the fallback placeholder is fine.
+        'import.meta.url': '(document.currentScript?.src || (/^https?:/.test(location.href) ? location.href : "http://localhost/"))',
     },
     worker: {
         format: 'iife',
