@@ -37,8 +37,9 @@ writeFileSync(join(STAGE, 'h5p.json'), JSON.stringify({
     mainLibrary: 'H5P.BottomExercise',
     embedTypes: ['iframe'],
     license: 'U',
+    defaultLanguage: 'en',
     preloadedDependencies: [
-        { machineName: 'H5P.BottomExercise', majorVersion: 1, minorVersion: 0 },
+        { machineName: 'H5P.BottomExercise', majorVersion: '1', minorVersion: '0' },
     ],
 }, null, 2));
 
