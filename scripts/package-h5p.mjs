@@ -38,6 +38,7 @@ writeFileSync(join(STAGE, 'h5p.json'), JSON.stringify({
     embedTypes: ['iframe'],
     license: 'U',
     preloadedDependencies: [
+        { machineName: 'H5P.Question',       majorVersion: 1, minorVersion: 5 },
         { machineName: 'H5P.BottomExercise', majorVersion: 1, minorVersion: 0 },
     ],
 }, null, 2));

@@ -22,7 +22,7 @@
     'use strict';
 
     H5P.BottomExercise = function (params, contentId, extras) {
-        H5P.EventDispatcher.call(this);
+        H5P.Question.call(this, 'bottom-exercise');
         this._p         = (params.exercise  || {});
         this._behaviour = (params.behaviour || {});
         this._score     = 0;
@@ -31,7 +31,7 @@
         this._element   = null;
     };
 
-    H5P.BottomExercise.prototype = Object.create(H5P.EventDispatcher.prototype);
+    H5P.BottomExercise.prototype = Object.create(H5P.Question.prototype);
     H5P.BottomExercise.prototype.constructor = H5P.BottomExercise;
 
     H5P.BottomExercise.prototype.attach = function ($container) {

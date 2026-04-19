@@ -3,7 +3,7 @@
     "description": "Interactive Python programming exercise powered by Pyodide. Supports auto-graded test assertions, turtle graphics canvas, and optional solution reveal.",
     "majorVersion": 1,
     "minorVersion": 0,
-    "patchVersion": 0,
+    "patchVersion": 1,
     "machineName": "H5P.BottomExercise",
     "author": "bottom.ch",
     "license": "MIT",
@@ -13,5 +13,8 @@
         {"path": "scripts/bottom-exercise.iife.js"},
         {"path": "scripts/h5p-bottom-exercise.js"}
     ],
-    "preloadedCss": []
+    "preloadedCss": [],
+    "preloadedDependencies": [
+        {"machineName": "H5P.Question", "majorVersion": 1, "minorVersion": 5}
+    ]
 }
