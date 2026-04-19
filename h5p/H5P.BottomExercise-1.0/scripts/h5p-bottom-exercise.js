@@ -23,6 +23,7 @@
 
     H5P.BottomExercise = function (params, contentId, extras) {
         H5P.Question.call(this, 'bottom-exercise');
+        this.contentId  = contentId;
         this._p         = (params.exercise  || {});
         this._behaviour = (params.behaviour || {});
         this._score     = 0;
