@@ -106,6 +106,9 @@
             }, { once: true });
         }
 
+        // Stable localStorage key derived from the H5P content ID.
+        ex.id = 'h5p-bottom-exercise-' + self.contentId;
+
         // Keep H5P iframe height in sync with component size
         var ro = new ResizeObserver(function () { self.trigger('resize'); });
         ro.observe(ex);
