@@ -110,8 +110,9 @@
         // Restore H5P server-side state (takes priority over localStorage).
         if (self._extras.previousState) ex.setState(self._extras.previousState);
 
-        // Stable localStorage key derived from the H5P content ID.
-        ex.id = 'h5p-bottom-exercise-' + self.contentId;
+        // Stable localStorage key derived from the H5P content ID (guard against
+        // null/undefined contentId in preview mode, which would collide across exercises).
+        if (self.contentId != null) ex.id = 'h5p-bottom-exercise-' + self.contentId;
 
         // Keep H5P iframe height in sync with component size
         var ro = new ResizeObserver(function () { self.trigger('resize'); });
