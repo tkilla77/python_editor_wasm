@@ -4,6 +4,14 @@ import './editor.js' // side-effect: registers <bottom-editor>
 import type { BottomEditor } from './editor.js'
 import type { TestReport } from './pyodide-runtime.js'
 import { type ExerciseStatus } from './exercise-state.js'
+
+/** Serialisable state for H5P server-side persistence (getCurrentState / previousState). */
+export interface ExerciseH5PState {
+    code:       string;
+    status?:    ExerciseStatus;
+    attempts?:  number;
+    solvedAt?:  number;
+}
 import { getPageId } from './page-id.js'
 import { encodeExercise } from './exercise-permalink.js'
 
@@ -71,6 +79,7 @@ export class BottomExercise extends LitElement {
     private _solutionCode: string = '';
     private _attempts: number = 0;
     private _solvedAt?: number;
+    private _pendingState?: ExerciseH5PState;
 
     @state() private _confirmingSolution = false;
 
@@ -92,6 +101,9 @@ export class BottomExercise extends LitElement {
         const solutionScript   = this.querySelector('script[type="text/x-solution"]') as HTMLScriptElement | null;
         const solutionText = solutionTemplate?.content.textContent ?? solutionScript?.textContent ?? '';
         if (solutionText) this._solutionCode = BottomExercise.dedent(solutionText);
+
+        // H5P server state injected before DOM attachment takes priority over starter code
+        if (this._pendingState) this.code = this._pendingState.code;
     }
 
     /** The key used for persistence. Requires an explicit `id` attribute; null means no persistence. */
@@ -114,8 +126,18 @@ export class BottomExercise extends LitElement {
     /**
      * Called by the editor when state is loaded (localStorage or cloud).
      * Restores exercise metadata from the saved state object.
+     * If H5P server state was injected via setState(), it takes priority.
      */
     private _stateLoader = (saved: Record<string, unknown>) => {
+        if (this._pendingState) {
+            const ps = this._pendingState;
+            this._pendingState = undefined;
+            this._status   = ps.status   ?? 'pristine';
+            this._attempts = ps.attempts ?? 0;
+            this._solvedAt = ps.solvedAt;
+            if (this._editor) this._editor.sourceCode = ps.code;
+            return;
+        }
         this._status   = (saved.status   as ExerciseStatus) ?? 'pristine';
         this._attempts = (saved.attempts as number)         ?? 0;
         this._solvedAt =  saved.solvedAt as number | undefined;
@@ -205,6 +227,27 @@ export class BottomExercise extends LitElement {
     }
 
     private _showSolution() { this.showSolution(); }
+
+    // ── H5P server-side state protocol ────────────────────────────────────────
+
+    /** Returns the current exercise state for H5P getCurrentState(). */
+    getState(): ExerciseH5PState | undefined {
+        if (!this._editor) return undefined;
+        return {
+            code:     this._editor.sourceCode,
+            status:   this._status,
+            attempts: this._attempts,
+            solvedAt: this._solvedAt,
+        };
+    }
+
+    /**
+     * Injects H5P server-side state (previousState from extras).
+     * Must be called before the element is appended to the DOM.
+     */
+    setState(state: ExerciseH5PState) {
+        this._pendingState = state;
+    }
 
     // ── Sharing ────────────────────────────────────────────────────────────────
 

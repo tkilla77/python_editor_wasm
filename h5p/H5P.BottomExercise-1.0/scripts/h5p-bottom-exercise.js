@@ -30,6 +30,7 @@
     H5P.BottomExercise = function (params, contentId, extras) {
         H5P.EventDispatcher.call(this);
         this.contentId  = contentId;
+        this._extras    = extras || {};
         this._p         = (params.exercise  || {});
         this._behaviour = (params.behaviour || {});
         this._score     = 0;
@@ -106,6 +107,9 @@
             }, { once: true });
         }
 
+        // Restore H5P server-side state (takes priority over localStorage).
+        if (self._extras.previousState) ex.setState(self._extras.previousState);
+
         // Stable localStorage key derived from the H5P content ID.
         ex.id = 'h5p-bottom-exercise-' + self.contentId;
 
@@ -132,7 +136,9 @@
     H5P.BottomExercise.prototype.getScore        = function () { return this._score; };
     H5P.BottomExercise.prototype.getMaxScore     = function () { return this._maxScore || 1; };
     H5P.BottomExercise.prototype.getAnswerGiven  = function () { return this._answered; };
-    H5P.BottomExercise.prototype.getCurrentState = function () { return undefined; };
+    H5P.BottomExercise.prototype.getCurrentState = function () {
+        return this._element ? this._element.getState() : undefined;
+    };
 
     // ── xAPI helpers ──────────────────────────────────────────────────────────
 
