@@ -27,6 +27,10 @@
 (function (H5P) {
     'use strict';
 
+    // Disable cloud storage backends — H5P manages persistence via getCurrentState/previousState.
+    window.BottomEditorConfig = window.BottomEditorConfig || {};
+    window.BottomEditorConfig.storageBackends = [];
+
     H5P.BottomExercise = function (params, contentId, extras) {
         H5P.EventDispatcher.call(this);
         this.contentId  = contentId;
