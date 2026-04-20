@@ -1,7 +1,7 @@
 # H5P.BottomExercise — Python Exercise
 
 An H5P content type that embeds an interactive Python coding exercise powered by
-[bottom.ch](https://bottom.ch) — a browser-based Python editor that runs entirely
+[bottom.ch/editor](https://bottom.ch/editor) — a browser-based Python editor that runs entirely
 client-side via Pyodide (WebAssembly), with no server required for code execution.
 
 ## Features
@@ -22,4 +22,4 @@ the browser and receive instant feedback.
 
 Source: <https://github.com/tkilla77/python_editor_wasm>  
 License: MIT  
-Powered by [bottom.ch](https://bottom.ch)
+Powered by [bottom.ch](https://bottom.ch/editor)
