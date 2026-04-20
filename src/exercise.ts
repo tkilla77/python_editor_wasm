@@ -103,7 +103,7 @@ export class BottomExercise extends LitElement {
         if (solutionText) this._solutionCode = BottomExercise.dedent(solutionText);
 
         // H5P server state injected before DOM attachment takes priority over starter code
-        if (this._pendingState) this.code = this._pendingState.code;
+        if (this._pendingState?.code) this.code = this._pendingState.code;
     }
 
     /** The key used for persistence. Requires an explicit `id` attribute; null means no persistence. */
@@ -135,7 +135,7 @@ export class BottomExercise extends LitElement {
             this._status   = ps.status   ?? 'pristine';
             this._attempts = ps.attempts ?? 0;
             this._solvedAt = ps.solvedAt;
-            if (this._editor) this._editor.sourceCode = ps.code;
+            if (ps.code && this._editor) this._editor.sourceCode = ps.code;
             return;
         }
         this._status   = (saved.status   as ExerciseStatus) ?? 'pristine';
@@ -233,8 +233,10 @@ export class BottomExercise extends LitElement {
     /** Returns the current exercise state for H5P getCurrentState(). */
     getState(): ExerciseH5PState | undefined {
         if (!this._editor) return undefined;
+        const code = this._editor.sourceCode;
+        if (!code) return undefined; // CodeMirror not ready yet
         return {
-            code:     this._editor.sourceCode,
+            code,
             status:   this._status,
             attempts: this._attempts,
             solvedAt: this._solvedAt,
