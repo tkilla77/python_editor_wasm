@@ -3,10 +3,11 @@
     "machineName": "H5P.BottomExercise",
     "majorVersion": 1,
     "minorVersion": 0,
-    "patchVersion": 13,
+    "patchVersion": 14,
     "runnable": 1,
     "license": "MIT",
     "author": "bottom.ch",
+    "icon": "icon.png",
     "embedTypes": ["iframe"],
     "preloadedJs": [
         {"path": "scripts/bottom-exercise.iife.js"},
