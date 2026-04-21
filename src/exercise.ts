@@ -287,7 +287,8 @@ export class BottomExercise extends LitElement {
             prompt:   this._getPromptHtml()     || undefined,
             layout:   this.layout  !== 'console' ? this.layout  : undefined,
             zip:      this.zip                  || undefined,
-            timeout:  this.timeout !== '30'     ? this.timeout : undefined,
+            timeout:      this.timeout !== '30'     ? this.timeout : undefined,
+            showswitcher: this.showswitcher         || undefined,
         });
         const url = new URL('https://bottom.ch/editor/stable/exercise-view.html');
         url.searchParams.set('x', encoded);

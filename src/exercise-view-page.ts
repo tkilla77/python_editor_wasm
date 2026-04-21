@@ -11,9 +11,10 @@ async function main() {
         const ex = document.createElement('bottom-exercise') as BottomExercise;
 
         // Attributes forwarded from permalink state
-        if (state.layout)  ex.setAttribute('layout',  state.layout);
-        if (state.zip)     ex.setAttribute('zip',     state.zip);
-        if (state.timeout) ex.setAttribute('timeout', state.timeout);
+        if (state.layout)      ex.setAttribute('layout',      state.layout);
+        if (state.zip)         ex.setAttribute('zip',         state.zip);
+        if (state.timeout)     ex.setAttribute('timeout',     state.timeout);
+        if (state.showswitcher) ex.setAttribute('showswitcher', '');
         // Student's code (may differ from starter; becomes initial editor content)
         if (state.code) ex.code = state.code;
 

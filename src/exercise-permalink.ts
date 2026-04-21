@@ -7,6 +7,7 @@ export interface ExercisePermalinkState {
     layout?: string;
     zip?: string;
     timeout?: string;
+    showswitcher?: boolean;
 }
 
 export async function encodeExercise(state: ExercisePermalinkState): Promise<string> {
