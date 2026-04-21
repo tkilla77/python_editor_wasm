@@ -174,6 +174,9 @@ export class BottomEditor extends LitElement {
     @query('bottom-editor-buttons')
     private _buttons?: BottomEditorButtons;
 
+    private _buttonColHeight = 0;
+    private _buttonRO?: ResizeObserver;
+
     private getSourceCode(): string {
         return Array.from(this.childNodes)
             .filter(n => n.nodeType === Node.TEXT_NODE)
@@ -305,6 +308,33 @@ export class BottomEditor extends LitElement {
         if (key) this._saveState(); // overwrite saved state with initial code
     }
 
+    // ── Button orientation ─────────────────────────────────────────────────────
+
+    private _measureButtonColHeight(): number {
+        if (!this._buttons) return 0;
+        // Force column via inline style (overrides shadow :host, bypasses container
+        // query) so the measurement is correct regardless of current container width.
+        this._buttons.style.flexDirection = 'column';
+        const h = this._buttons.scrollHeight;
+        this._buttons.style.flexDirection = '';
+        return h;
+    }
+
+    private _setupButtonOrientation(): void {
+        this._buttonRO?.disconnect();
+        if (!this._buttons) return;
+        this._buttonColHeight = this._measureButtonColHeight();
+        const cmContent = this.renderRoot.querySelector('.cm-content') as HTMLElement | null;
+        if (!cmContent) return;
+        const sync = () => {
+            if (!this._buttons) return;
+            this._buttons.vertical = cmContent.getBoundingClientRect().height >= this._buttonColHeight;
+        };
+        this._buttonRO = new ResizeObserver(sync);
+        this._buttonRO.observe(cmContent);
+        sync();
+    }
+
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
     async firstUpdated() {
@@ -326,7 +356,7 @@ export class BottomEditor extends LitElement {
                 this._saveState();
             },
         );
-        if (this._buttons) this._buttons.vertical = text.split('\n', 6).length >= 4;
+        this._setupButtonOrientation();
 
         // ── Cloud sync init ───────────────────────────────────────────────────
         this._syncBackend = StorageManager.instance.backend;
@@ -403,6 +433,7 @@ export class BottomEditor extends LitElement {
         }
         window.removeEventListener('bottom-storage-change', this._onStorageChange);
         clearTimeout(this._cloudSaveTimer);
+        this._buttonRO?.disconnect();
     }
 
     // ── Public API ─────────────────────────────────────────────────────────────
