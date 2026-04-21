@@ -74,10 +74,10 @@ export class BottomExercise extends LitElement {
      */
     @property() solution: string = '';
 
-    /** When present, the "Show solution" button is rendered and the solution
-     *  is included in shared permalinks. Omit to hide the affordance entirely,
-     *  e.g. until a lesson releases the solution to students. */
-    @property({ type: Boolean }) showsolution: boolean = false;
+    /** When present, the "Show solution" button is hidden and the solution is
+     *  excluded from shared permalinks. Remove the attribute to release the
+     *  solution to students, e.g. after a lesson. */
+    @property({ type: Boolean }) hidesolution: boolean = false;
 
     private _starterCode: string = '';
     private _testCode: string = '';
@@ -282,7 +282,7 @@ export class BottomExercise extends LitElement {
             code:     this._editor?.sourceCode ?? '',
             starter:  this._starterCode         || undefined,
             tests:    this._testCode            || undefined,
-            solution: this.showsolution ? (this._resolvedSolution() || undefined) : undefined,
+            solution: this.hidesolution ? undefined : (this._resolvedSolution() || undefined),
             prompt:   this._getPromptHtml()     || undefined,
             layout:   this.layout  !== 'console' ? this.layout  : undefined,
             zip:      this.zip                  || undefined,
@@ -335,7 +335,7 @@ export class BottomExercise extends LitElement {
     }
 
     private _renderSolution() {
-        if (!this.showsolution || !this._resolvedSolution()) return nothing;
+        if (this.hidesolution || !this._resolvedSolution()) return nothing;
         if (this._confirmingSolution) {
             return html`
                 <exercise-solution-confirm>
