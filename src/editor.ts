@@ -100,6 +100,9 @@ export class BottomEditor extends LitElement {
     // back to `layout` via updated() so CSS grid rules and copyPermalink work.
     @state() private _swCanvas  = true;
     @state() private _swConsole = true;
+    @state() private _swCanvasHasNew  = false;
+    @state() private _swConsoleHasNew = false;
+    private _pyReady = false;
 
     /** Code prepended before the editor contents at run time (not shown in editor). */
     /**
@@ -398,10 +401,14 @@ export class BottomEditor extends LitElement {
 
         this._memberCallbacks = {
             onLog:   (data) => this._output?.addLog(data),
-            onError: (data) => this._output?.addOutput(data),
+            onError: (data) => {
+                this._output?.addOutput(data);
+                if (this._pyReady && !this._swConsole) this._swConsoleHasNew = true;
+            },
             onReady: async () => {
                 this._output?.clearOutput();
                 this._output?.addLog('Python Ready!');
+                this._pyReady = true;
                 this._readyResolve();
                 if (canvasEl) {
                     this._offscreenCanvas = canvasEl.transferToOffscreen();
@@ -463,7 +470,10 @@ export class BottomEditor extends LitElement {
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         try {
-            await this.runtime.run(code, (data: string) => this._output?.addOutput(data));
+            await this.runtime.run(code, (data: string) => {
+                this._output?.addOutput(data);
+                if (!this._swConsole) this._swConsoleHasNew = true;
+            });
             if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
             let msg = err?.toString() ?? String(err);
@@ -472,8 +482,10 @@ export class BottomEditor extends LitElement {
             if (lastNewline > 0 && msg.includes('  File "<exec>"'))
                 msg = msg.substring(lastNewline + 1).trim();
             this._output?.addOutput(msg);
+            if (!this._swConsole) this._swConsoleHasNew = true;
         } finally {
             if (this._buttons) this._buttons.running = false;
+            if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
         }
     }
 
@@ -491,16 +503,21 @@ export class BottomEditor extends LitElement {
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         try {
-            return await this.runtime.runWithTests(code, tests, (data: string) => this._output?.addOutput(data));
+            return await this.runtime.runWithTests(code, tests, (data: string) => {
+                this._output?.addOutput(data);
+                if (!this._swConsole) this._swConsoleHasNew = true;
+            });
         } catch (err: any) {
             let msg = err?.toString() ?? String(err);
             const lastNewline = msg.lastIndexOf('\n', msg.length - 2);
             if (lastNewline > 0 && msg.includes('  File "<exec>"'))
                 msg = msg.substring(lastNewline + 1).trim();
             this._output?.addOutput(msg);
+            if (!this._swConsole) this._swConsoleHasNew = true;
             return { passed: false, results: [{ passed: false, test: '<user code>', message: msg }] };
         } finally {
             if (this._buttons) this._buttons.running = false;
+            if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
         }
     }
 
@@ -556,13 +573,15 @@ export class BottomEditor extends LitElement {
     }
 
     private _toggleSwCanvas() {
-        if (this._swCanvas && !this._swConsole) { this._swConsole = true; return; }
+        if (this._swCanvas && !this._swConsole) { this._swConsole = true; this._swConsoleHasNew = false; return; }
         this._swCanvas = !this._swCanvas;
+        if (this._swCanvas) this._swCanvasHasNew = false;
     }
 
     private _toggleSwConsole() {
-        if (this._swConsole && !this._swCanvas) { this._swCanvas = true; return; }
+        if (this._swConsole && !this._swCanvas) { this._swCanvas = true; this._swCanvasHasNew = false; return; }
         this._swConsole = !this._swConsole;
+        if (this._swConsole) this._swConsoleHasNew = false;
     }
 
     // ── Render ─────────────────────────────────────────────────────────────────
@@ -583,9 +602,9 @@ export class BottomEditor extends LitElement {
                         @bottom-fit="${this._handleFitRequest}">
                     </bottom-editor-canvas>
                     <div class="sw-rail">
-                        <button class="sw-tab ${this._swCanvas ? 'open' : 'closed'}"
+                        <button class="sw-tab ${this._swCanvas ? 'open' : 'closed'} ${!this._swCanvas && this._swCanvasHasNew ? 'has-new' : ''}"
                                 @click="${this._toggleSwCanvas}">▲ Canvas</button>
-                        <button class="sw-tab ${this._swConsole ? 'open' : 'closed'}"
+                        <button class="sw-tab ${this._swConsole ? 'open' : 'closed'} ${!this._swConsole && this._swConsoleHasNew ? 'has-new' : ''}"
                                 @click="${this._toggleSwConsole}">Console ▼</button>
                     </div>
                     <bottom-editor-output

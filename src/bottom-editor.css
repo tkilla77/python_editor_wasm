@@ -73,6 +73,13 @@ bottom-code {
 .sw-tab.open   { background: #e2e8f0; }
 .sw-tab.closed { background: #cbd5e1; }
 .sw-tab:hover  { background: #f8fafc; }
+.sw-tab.has-new::after {
+    content: '●';
+    font-size: 0.6em;
+    color: #3b82f6;
+    vertical-align: super;
+    margin-left: 0.25em;
+}
 /* ---- /switcher ---- */
 @container (min-width: 768px) {
     :host(:not([orientation="vertical"])) bottom-editorarea {
