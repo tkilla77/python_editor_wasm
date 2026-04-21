@@ -391,9 +391,11 @@ assert output().strip() == &quot;42&quot;             # ignore trailing newline
 </code></pre>
 <h3>Solutions</h3>
 <p>Add a <code>&lt;template data-type=&quot;solution&quot;&gt;</code> (or <code>&lt;script type=&quot;text/x-solution&quot;&gt;</code>) to
-provide a model solution. A <strong>Show solution</strong> button appears and requires a
-confirmation click before replacing the editor contents.</p>
-<pre><code class="language-html">&lt;bottom-exercise&gt;
+provide a model solution. Add the <code>showsolution</code> boolean attribute to make the
+<strong>Show solution</strong> button visible; it requires a confirmation click before replacing
+the editor contents. Without <code>showsolution</code> the solution is stored but never
+surfaced to the student, and is excluded from shared permalinks.</p>
+<pre><code class="language-html">&lt;bottom-exercise showsolution&gt;
   ...
   &lt;template data-type=&quot;solution&quot;&gt;
 def sum_to(n):
@@ -401,8 +403,14 @@ def sum_to(n):
   &lt;/template&gt;
 &lt;/bottom-exercise&gt;
 </code></pre>
+<p>This lets a lesson page incrementally release solutions by toggling a single
+attribute — e.g. after class, an instructor edits the page to add
+<code>showsolution</code>, and all exercises on the page expose their solutions immediately.
+The attribute can also be toggled at runtime:</p>
+<pre><code class="language-js">document.querySelector('bottom-exercise').showsolution = true;
+</code></pre>
 
-<bottom-exercise>
+<bottom-exercise showsolution>
 <div slot="prompt">
 <p>Write a function <code>sum_to(n)</code> that returns 1 + 2 + … + n.
 Return 0 for n ≤ 0.</p>
@@ -494,6 +502,11 @@ for _ in range(4):
 <td><code>zip</code></td>
 <td>—</td>
 <td>Zip archive to pre-load into the virtual filesystem</td>
+</tr>
+<tr>
+<td><code>showsolution</code></td>
+<td>off</td>
+<td>Show the <strong>Show solution</strong> button and include the solution in shared permalinks. When absent the solution is stored but never exposed to the student.</td>
 </tr>
 </tbody></table>
 <h3>Persistence</h3>
