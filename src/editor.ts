@@ -320,9 +320,12 @@ export class BottomEditor extends LitElement {
         return h;
     }
 
-    private _setupButtonOrientation(): void {
+    private async _setupButtonOrientation(): Promise<void> {
         this._buttonRO?.disconnect();
         if (!this._buttons) return;
+        // Child LitElement shadow DOM renders in a microtask after the parent's
+        // firstUpdated(). Wait for it before measuring, otherwise scrollHeight = 0.
+        await this._buttons.updateComplete;
         this._buttonColHeight = this._measureButtonColHeight();
         const cmContent = this.renderRoot.querySelector('.cm-content') as HTMLElement | null;
         if (!cmContent) return;
