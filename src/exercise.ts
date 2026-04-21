@@ -53,6 +53,7 @@ export class BottomExercise extends LitElement {
     @property() orientation: string = 'auto';
     @property() timeout: string = '30';
     @property() zip: string = '';
+    @property({ type: Boolean }) showswitcher: boolean = false;
 
     /** Initial code shown in the editor — overrides starter code if set.
      *  Used by the exercise-view landing page to show the student's submission. */
@@ -314,6 +315,7 @@ export class BottomExercise extends LitElement {
                 orientation=${this.orientation}
                 timeout=${this.timeout}
                 zip=${this.zip}
+                ?showswitcher=${this.showswitcher}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-clear="${this.resetCode}"
             >${this.code || this._starterCode}</bottom-editor>
