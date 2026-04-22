@@ -23,6 +23,8 @@ export class GoogleDriveAdapter implements StateAdapter {
     private _config: OAuthConfig;
     /** Cached Drive file id for bottom-state.json (null = not found yet). */
     private _fileId: string | null | undefined = undefined; // undefined = not looked up yet
+    /** Shared in-flight read — deduplicates concurrent load() calls. */
+    private _readAllInFlight: Promise<Record<string, ExerciseState>> | null = null;
 
     constructor(tokens: GoogleTokens, config: OAuthConfig) {
         this._tokens = tokens;
@@ -72,7 +74,16 @@ export class GoogleDriveAdapter implements StateAdapter {
     }
 
     /** Read the full state map from Drive, or empty map if no file. */
-    private async _readAll(): Promise<Record<string, ExerciseState>> {
+    private _readAll(): Promise<Record<string, ExerciseState>> {
+        if (!this._readAllInFlight) {
+            this._readAllInFlight = this._fetchAll().finally(() => {
+                this._readAllInFlight = null;
+            });
+        }
+        return this._readAllInFlight;
+    }
+
+    private async _fetchAll(): Promise<Record<string, ExerciseState>> {
         const id = await this._findFile();
         if (!id) return {};
         const res = await fetch(

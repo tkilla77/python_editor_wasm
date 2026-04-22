@@ -21,6 +21,8 @@ export interface MicrosoftTokens {
 export class OneDriveAdapter implements StateAdapter {
     private _tokens: MicrosoftTokens;
     private _config: OAuthConfig;
+    /** Shared in-flight read — deduplicates concurrent load() calls. */
+    private _readAllInFlight: Promise<Record<string, ExerciseState>> | null = null;
 
     constructor(tokens: MicrosoftTokens, config: OAuthConfig) {
         this._tokens = tokens;
@@ -57,7 +59,16 @@ export class OneDriveAdapter implements StateAdapter {
     }
 
     /** Read the full state map, or empty map if file not found. */
-    private async _readAll(): Promise<Record<string, ExerciseState>> {
+    private _readAll(): Promise<Record<string, ExerciseState>> {
+        if (!this._readAllInFlight) {
+            this._readAllInFlight = this._fetchAll().finally(() => {
+                this._readAllInFlight = null;
+            });
+        }
+        return this._readAllInFlight;
+    }
+
+    private async _fetchAll(): Promise<Record<string, ExerciseState>> {
         const res = await fetch(this._fileUrl, { headers: await this._headers() });
         if (res.status === 404 || res.status === 400) return {}; // 400 = approot not yet initialised
         if (!res.ok) throw new Error(`OneDrive read failed: ${res.status}`);

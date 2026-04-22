@@ -22,6 +22,8 @@ export interface OAuthConfig {
     clientSecret?: string;
     /** Defaults to OAUTH_CALLBACK_URL (the hosted relay page). */
     redirectUri?: string;
+    /** Defaults to 'select_account'. Use 'select_account consent' to force refresh token issuance. */
+    prompt?: string;
 }
 
 export interface TokenResponse {
@@ -88,7 +90,7 @@ export function buildAuthUrl(
         code_challenge:        challenge,
         code_challenge_method: 'S256',
         access_type:           'offline',  // Google: request refresh token
-        prompt:                'select_account',
+        prompt:                config.prompt ?? 'select_account',
     });
     return `${config.authUrl}?${p}`;
 }

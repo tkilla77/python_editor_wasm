@@ -43,6 +43,8 @@ const GOOGLE_CONFIG: OAuthConfig = {
     clientId:     GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
     scope:        'https://www.googleapis.com/auth/drive.appdata',
+    // 'consent' forces Google to always issue a refresh token, even on re-auth.
+    prompt:       'select_account consent',
 };
 
 const MICROSOFT_CONFIG: OAuthConfig = {
