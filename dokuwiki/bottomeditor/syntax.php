@@ -18,6 +18,8 @@ if (!defined('DOKU_INC')) die();
 
 class syntax_plugin_bottomeditor extends DokuWiki_Syntax_Plugin {
 
+    const ELEMENT_PATTERN = '<(bottom-editor|bottom-exercise|kara-editor)\b[^>]*>[\s\S]*?<\/\1>';
+
     public function getType() {
         // 'substition': single-pattern match; the whole element is one token.
         return 'substition';
@@ -32,17 +34,7 @@ class syntax_plugin_bottomeditor extends DokuWiki_Syntax_Plugin {
     }
 
     public function connectTo($mode) {
-        // Match the entire element — opening tag through closing tag — in one
-        // pass. [\s\S]*? is a cross-newline lazy wildcard that doesn't require
-        // the DOTALL flag, so multi-line code content is captured correctly.
-        // Capture the element name so the closing tag must match the opening tag.
-        // [\s\S]*? is intentionally lazy: greedy would consume from the first
-        // opening tag to the last closing tag on the page.
-        $this->Lexer->addSpecialPattern(
-            '<(bottom-editor|bottom-exercise|kara-editor)\b[^>]*>[\s\S]*?</\1>',
-            $mode,
-            'plugin_bottomeditor'
-        );
+        $this->Lexer->addSpecialPattern(self::ELEMENT_PATTERN, $mode, 'plugin_bottomeditor');
     }
 
     /**

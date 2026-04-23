@@ -2,9 +2,22 @@
 /**
  * Standalone regex tests for the bottomeditor syntax plugin.
  * Run with: php test.php
+ *
+ * Stubs the DokuWiki base class so syntax.php can be loaded without the
+ * full framework. The pattern under test is read directly from the
+ * production class constant.
  */
 
-const PATTERN = '/<(bottom-editor|bottom-exercise|kara-editor)\b[^>]*>[\s\S]*?<\/\1>/';
+// Minimal stub — just enough for syntax.php to parse without errors.
+if (!class_exists('DokuWiki_Syntax_Plugin')) {
+    class DokuWiki_Syntax_Plugin {}
+}
+
+require __DIR__ . '/syntax.php';
+
+$pattern = '/' . syntax_plugin_bottomeditor::ELEMENT_PATTERN . '/';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 $pass = 0;
 $fail = 0;
@@ -21,7 +34,8 @@ function check(string $desc, bool $ok): void {
 }
 
 function matches(string $input): array {
-    preg_match_all(PATTERN, $input, $m);
+    global $pattern;
+    preg_match_all($pattern, $input, $m);
     return $m[0];
 }
 
