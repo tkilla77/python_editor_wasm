@@ -23,17 +23,17 @@ class mod_bottomeditor_mod_form extends moodleform_mod {
         $mform->addHelpButton('prompt_editor', 'prompt', 'mod_bottomeditor');
 
         $mform->addElement('textarea', 'startercode', get_string('startercode', 'mod_bottomeditor'),
-            ['rows' => 8, 'cols' => 70, 'class' => 'bottomeditor-code']);
+            ['rows' => 8, 'cols' => 70, 'class' => 'bottomeditor-code', 'style' => 'font-family: monospace;']);
         $mform->setType('startercode', PARAM_RAW);
         $mform->addHelpButton('startercode', 'startercode', 'mod_bottomeditor');
 
         $mform->addElement('textarea', 'testcode', get_string('testcode', 'mod_bottomeditor'),
-            ['rows' => 6, 'cols' => 70, 'class' => 'bottomeditor-code']);
+            ['rows' => 6, 'cols' => 70, 'class' => 'bottomeditor-code', 'style' => 'font-family: monospace;']);
         $mform->setType('testcode', PARAM_RAW);
         $mform->addHelpButton('testcode', 'testcode', 'mod_bottomeditor');
 
         $mform->addElement('textarea', 'solutioncode', get_string('solutioncode', 'mod_bottomeditor'),
-            ['rows' => 6, 'cols' => 70, 'class' => 'bottomeditor-code']);
+            ['rows' => 6, 'cols' => 70, 'class' => 'bottomeditor-code', 'style' => 'font-family: monospace;']);
         $mform->setType('solutioncode', PARAM_RAW);
         $mform->addHelpButton('solutioncode', 'solutioncode', 'mod_bottomeditor');
 

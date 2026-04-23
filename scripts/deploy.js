@@ -32,6 +32,8 @@ if (!noBuild) {
     run('npm run build -- --mode prod')
     console.log('\nPackaging DokuWiki plugin...')
     run('npm run build:dokuwiki')
+    console.log('\nPackaging Moodle plugin...')
+    run('npm run build:moodle')
 }
 
 // --- deploy versioned dir ---

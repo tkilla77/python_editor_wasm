@@ -21,6 +21,7 @@
     "package:h5p": "node scripts/package-h5p.mjs",
     "package:h5p-lib": "node scripts/package-h5p-lib.mjs",
     "build:dokuwiki": "node scripts/package-dokuwiki.mjs",
+    "build:moodle": "node scripts/package-moodle.mjs",
     "push": "node scripts/deploy.js",
     "release": "node scripts/deploy.js --stable",
     "test": "vitest run",
