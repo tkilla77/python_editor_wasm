@@ -2,7 +2,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
-    'mod/pythoneditor:view' => [
+    'mod/bottomeditor:view' => [
         'captype'      => 'read',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes'   => [
@@ -12,14 +12,14 @@ $capabilities = [
             'manager'        => CAP_ALLOW,
         ],
     ],
-    'mod/pythoneditor:submit' => [
+    'mod/bottomeditor:submit' => [
         'captype'      => 'write',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes'   => [
             'student' => CAP_ALLOW,
         ],
     ],
-    'mod/pythoneditor:grade' => [
+    'mod/bottomeditor:grade' => [
         'captype'      => 'write',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes'   => [

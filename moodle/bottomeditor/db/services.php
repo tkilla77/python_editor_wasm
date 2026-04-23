@@ -2,8 +2,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $functions = [
-    'mod_pythoneditor_submit_attempt' => [
-        'classname'     => 'mod_pythoneditor\external\submit_attempt',
+    'mod_bottomeditor_submit_attempt' => [
+        'classname'     => 'mod_bottomeditor\external\submit_attempt',
         'methodname'    => 'execute',
         'description'   => 'Record the result of a test run and update the gradebook.',
         'type'          => 'write',

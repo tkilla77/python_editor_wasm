@@ -1,10 +1,10 @@
 <?php
-namespace mod_pythoneditor\external;
+namespace mod_bottomeditor\external;
 
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
-require_once($CFG->dirroot . '/mod/pythoneditor/lib.php');
+require_once($CFG->dirroot . '/mod/bottomeditor/lib.php');
 
 use external_api;
 use external_function_parameters;
@@ -33,18 +33,18 @@ class submit_attempt extends external_api {
         ['cmid' => $cmid, 'score' => $score] =
             self::validate_parameters(self::execute_parameters(), compact('cmid', 'score'));
 
-        $cm      = get_coursemodule_from_id('pythoneditor', $cmid, 0, false, MUST_EXIST);
+        $cm      = get_coursemodule_from_id('bottomeditor', $cmid, 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
         self::validate_context($context);
-        require_capability('mod/pythoneditor:submit', $context);
+        require_capability('mod/bottomeditor:submit', $context);
 
-        $record = $DB->get_record('pythoneditor', ['id' => $cm->instance], '*', MUST_EXIST);
+        $record = $DB->get_record('bottomeditor', ['id' => $cm->instance], '*', MUST_EXIST);
 
         $grade = (object)[
             'userid'   => $USER->id,
             'rawgrade' => max(0, min(100, $score)),
         ];
-        pythoneditor_grade_item_update($record, [$USER->id => $grade]);
+        bottomeditor_grade_item_update($record, [$USER->id => $grade]);
 
         return ['success' => true];
     }

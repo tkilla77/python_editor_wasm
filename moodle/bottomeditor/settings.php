@@ -3,9 +3,9 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext(
-        'mod_pythoneditor/scriptbaseurl',
-        get_string('scriptbaseurl',      'mod_pythoneditor'),
-        get_string('scriptbaseurl_desc', 'mod_pythoneditor'),
+        'mod_bottomeditor/scriptbaseurl',
+        get_string('scriptbaseurl',      'mod_bottomeditor'),
+        get_string('scriptbaseurl_desc', 'mod_bottomeditor'),
         'https://bottom.ch/editor/stable',
         PARAM_URL
     ));

@@ -26,6 +26,6 @@ $string['scriptbaseurl']      = 'Script base URL';
 $string['scriptbaseurl_desc'] = 'Base URL for the bottom-exercise.js bundle (no trailing slash). Change to use a self-hosted copy.';
 
 // Capabilities
-$string['pythoneditor:view']   = 'View Python exercise';
-$string['pythoneditor:submit'] = 'Submit attempt';
-$string['pythoneditor:grade']  = 'Grade attempts';
+$string['bottomeditor:view']   = 'View Python exercise';
+$string['bottomeditor:submit'] = 'Submit attempt';
+$string['bottomeditor:grade']  = 'Grade attempts';

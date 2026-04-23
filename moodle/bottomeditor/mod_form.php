@@ -2,7 +2,7 @@
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/course/moodleform_mod.php');
 
-class mod_pythoneditor_mod_form extends moodleform_mod {
+class mod_bottomeditor_mod_form extends moodleform_mod {
 
     public function definition(): void {
         $mform = $this->_form;
@@ -15,40 +15,40 @@ class mod_pythoneditor_mod_form extends moodleform_mod {
         $this->standard_intro_elements();
 
         // ── Exercise content ─────────────────────────────────────────────────
-        $mform->addElement('header', 'exercisehdr', get_string('modulename', 'mod_pythoneditor'));
+        $mform->addElement('header', 'exercisehdr', get_string('modulename', 'mod_bottomeditor'));
 
-        $mform->addElement('editor', 'prompt_editor', get_string('prompt', 'mod_pythoneditor'),
+        $mform->addElement('editor', 'prompt_editor', get_string('prompt', 'mod_bottomeditor'),
             ['rows' => 6], ['maxfiles' => 0, 'noclean' => false]);
         $mform->setType('prompt_editor', PARAM_RAW);
-        $mform->addHelpButton('prompt_editor', 'prompt', 'mod_pythoneditor');
+        $mform->addHelpButton('prompt_editor', 'prompt', 'mod_bottomeditor');
 
-        $mform->addElement('textarea', 'startercode', get_string('startercode', 'mod_pythoneditor'),
-            ['rows' => 8, 'cols' => 70, 'class' => 'pythoneditor-code']);
+        $mform->addElement('textarea', 'startercode', get_string('startercode', 'mod_bottomeditor'),
+            ['rows' => 8, 'cols' => 70, 'class' => 'bottomeditor-code']);
         $mform->setType('startercode', PARAM_RAW);
-        $mform->addHelpButton('startercode', 'startercode', 'mod_pythoneditor');
+        $mform->addHelpButton('startercode', 'startercode', 'mod_bottomeditor');
 
-        $mform->addElement('textarea', 'testcode', get_string('testcode', 'mod_pythoneditor'),
-            ['rows' => 6, 'cols' => 70, 'class' => 'pythoneditor-code']);
+        $mform->addElement('textarea', 'testcode', get_string('testcode', 'mod_bottomeditor'),
+            ['rows' => 6, 'cols' => 70, 'class' => 'bottomeditor-code']);
         $mform->setType('testcode', PARAM_RAW);
-        $mform->addHelpButton('testcode', 'testcode', 'mod_pythoneditor');
+        $mform->addHelpButton('testcode', 'testcode', 'mod_bottomeditor');
 
-        $mform->addElement('textarea', 'solutioncode', get_string('solutioncode', 'mod_pythoneditor'),
-            ['rows' => 6, 'cols' => 70, 'class' => 'pythoneditor-code']);
+        $mform->addElement('textarea', 'solutioncode', get_string('solutioncode', 'mod_bottomeditor'),
+            ['rows' => 6, 'cols' => 70, 'class' => 'bottomeditor-code']);
         $mform->setType('solutioncode', PARAM_RAW);
-        $mform->addHelpButton('solutioncode', 'solutioncode', 'mod_pythoneditor');
+        $mform->addHelpButton('solutioncode', 'solutioncode', 'mod_bottomeditor');
 
         // ── Appearance / behaviour ────────────────────────────────────────────
-        $mform->addElement('select', 'layout', get_string('layout', 'mod_pythoneditor'), [
-            'console' => get_string('layout_console', 'mod_pythoneditor'),
-            'canvas'  => get_string('layout_canvas',  'mod_pythoneditor'),
-            'split'   => get_string('layout_split',   'mod_pythoneditor'),
+        $mform->addElement('select', 'layout', get_string('layout', 'mod_bottomeditor'), [
+            'console' => get_string('layout_console', 'mod_bottomeditor'),
+            'canvas'  => get_string('layout_canvas',  'mod_bottomeditor'),
+            'split'   => get_string('layout_split',   'mod_bottomeditor'),
         ]);
         $mform->setDefault('layout', 'console');
 
         $mform->addElement('advcheckbox', 'enablesolution',
-            get_string('enablesolution', 'mod_pythoneditor'));
+            get_string('enablesolution', 'mod_bottomeditor'));
         $mform->setDefault('enablesolution', 1);
-        $mform->addHelpButton('enablesolution', 'enablesolution', 'mod_pythoneditor');
+        $mform->addHelpButton('enablesolution', 'enablesolution', 'mod_bottomeditor');
 
         // ── Standard grading / completion elements ────────────────────────────
         $this->standard_grading_coursemodule_elements();

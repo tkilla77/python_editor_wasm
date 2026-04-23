@@ -1,5 +1,5 @@
 // AMD module: wire <bottom-exercise> test-result events to Moodle gradebook.
-// Loaded by view.php via $PAGE->requires->js_call_amd('mod_pythoneditor/exercise', 'init', [cmid]).
+// Loaded by view.php via $PAGE->requires->js_call_amd('mod_bottomeditor/exercise', 'init', [cmid]).
 
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
@@ -27,7 +27,7 @@ export const init = (cmid) => {
         }
 
         Ajax.call([{
-            methodname: 'mod_pythoneditor_submit_attempt',
+            methodname: 'mod_bottomeditor_submit_attempt',
             args:       { cmid, score },
             fail:       Notification.exception,
         }]);
