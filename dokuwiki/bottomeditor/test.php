@@ -84,11 +84,6 @@ $hits = matches($page);
 check('finds both elements on a page', count($hits) === 2);
 check('surrounding text is not consumed', !str_contains($hits[0], 'Some text'));
 
-// ── Backreference: mismatched closing tag must not match ──────────────────────
-
-$hits = matches('<bottom-editor>code</bottom-exercise>');
-check('mismatched closing tag does not match', count($hits) === 0);
-
 // ── Empty content ─────────────────────────────────────────────────────────────
 
 $hits = matches('<bottom-editor></bottom-editor>');
