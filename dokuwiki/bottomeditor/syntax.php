@@ -35,8 +35,11 @@ class syntax_plugin_bottomeditor extends DokuWiki_Syntax_Plugin {
         // Match the entire element — opening tag through closing tag — in one
         // pass. [\s\S]*? is a cross-newline lazy wildcard that doesn't require
         // the DOTALL flag, so multi-line code content is captured correctly.
+        // Capture the element name so the closing tag must match the opening tag.
+        // [\s\S]*? is intentionally lazy: greedy would consume from the first
+        // opening tag to the last closing tag on the page.
         $this->Lexer->addSpecialPattern(
-            '<(?:bottom-editor|bottom-exercise|kara-editor)\b[^>]*>[\s\S]*?</(?:bottom-editor|bottom-exercise|kara-editor)>',
+            '<(bottom-editor|bottom-exercise|kara-editor)\b[^>]*>[\s\S]*?</\1>',
             $mode,
             'plugin_bottomeditor'
         );
