@@ -7,6 +7,7 @@ function bottomeditor_supports(string $feature): ?bool {
         FEATURE_BACKUP_MOODLE2    => true,
         FEATURE_MOD_INTRO         => true,
         FEATURE_SHOW_DESCRIPTION  => true,
+        FEATURE_MOD_PURPOSE       => MOD_PURPOSE_ASSESSMENT,
         default                   => null,
     };
 }
