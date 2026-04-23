@@ -1,0 +1,7 @@
+base    bottomeditor
+author  Tom Hofmann
+email   tom+bottom@scheidweg.net
+date    2026-04-22
+name    Bottom Python Editor
+desc    Embed Python code editors and exercises using <bottom-editor>, <bottom-exercise>, and <kara-editor> HTML tags.
+url     https://bottom.ch/editor/
