@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit'
+import { LitElement, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import './editor.js'
 import karaShimSrc from './kara-shim.py?raw'
@@ -29,6 +29,7 @@ export class KaraEditor extends LitElement {
     @property({ type: Number }) step     = 200;
     @property({ type: Boolean }) autorun = false;
     @property() timeout                  = '30';
+    @property() storage                  = '';
 
     // Each instance gets its own isolated Pyodide runtime.
     private readonly _sessionId = `kara-${crypto.randomUUID()}`;
@@ -101,6 +102,8 @@ export class KaraEditor extends LitElement {
                 ?autofit=${true}
                 session=${this._sessionId}
                 timeout=${this.timeout}
+                id=${this.id || nothing}
+                storage=${this.storage || nothing}
                 showclear
                 resetmode
             ></bottom-editor>`;
