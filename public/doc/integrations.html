@@ -1,0 +1,194 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bottom-editor — Platform Integrations</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 1.5rem 4rem;
+    color: #1e293b;
+    background: #fafafa;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.875rem; font-weight: 800; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.25rem; font-weight: 700; margin: 2.5rem 0 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.25rem; }
+  p  { margin: 0.5rem 0; color: #334155; }
+  a  { color: #2563eb; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0; }
+  pre {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.4em;
+    padding: 0.8em 1em;
+    overflow-x: auto;
+    font-size: 0.85em;
+    margin: 0.75rem 0;
+  }
+  code { font-family: ui-monospace, monospace; font-size: 0.875em; }
+  p code, li code { background: #f1f5f9; padding: 0.1em 0.3em; border-radius: 0.25em; }
+  blockquote { margin: 0.75rem 0; padding: 0.6em 1em; background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 0 0.4em 0.4em 0; }
+  blockquote p { color: #78350f; margin: 0; }
+  ol, ul { padding-left: 1.5em; color: #334155; }
+  li { margin: 0.25rem 0; }
+</style>
+<body>
+<h1>bottom-editor — Platform Integrations</h1>
+<p>How to embed <code>&lt;bottom-editor&gt;</code>, <code>&lt;bottom-exercise&gt;</code>, and <code>&lt;kara-editor&gt;</code>
+inside common authoring platforms.</p>
+<p><strong>← </strong><a href="index.html">Back to Embedding Guide</a></p>
+<hr>
+
+<h2>DokuWiki</h2>
+<p>The <strong>bottomeditor</strong> DokuWiki plugin passes <code>&lt;bottom-editor&gt;</code>,
+<code>&lt;bottom-exercise&gt;</code>, and <code>&lt;kara-editor&gt;</code> elements straight through the
+renderer and injects the required JavaScript on any page that contains them.
+No shortcode or special syntax is needed — authors write the elements directly
+in the page source using DokuWiki's HTML mode.</p>
+
+<h3>Installation</h3>
+<p>The easiest way is the DokuWiki plugin manager:</p>
+<ol>
+  <li>Go to <strong>Admin → Extension Manager → Search and Install</strong></li>
+  <li>Search for <strong>bottomeditor</strong> or paste the plugin URL:<br>
+      <a href="https://www.dokuwiki.org/plugin:bottomeditor">https://www.dokuwiki.org/plugin:bottomeditor</a></li>
+  <li>Click <strong>Install</strong>.</li>
+</ol>
+<p>Alternatively, download <a href="../bottomeditor.zip"><code>bottomeditor.zip</code></a> and extract it
+into <code>lib/plugins/</code> so the result is <code>lib/plugins/bottomeditor/plugin.info.txt</code>.</p>
+
+<h3>Configuration</h3>
+<p>Go to <strong>Admin → Configuration Settings → bottomeditor</strong>. The only setting is
+<strong>base_url</strong>, which defaults to <code>https://bottom.ch/editor/stable</code>. Change it to
+<code>https://bottom.ch/editor/latest</code> to track the latest build, or to a self-hosted URL.</p>
+
+<h3>Usage</h3>
+<p>Open a page in DokuWiki's source editor (not the WYSIWYG toolbar) and write
+elements directly:</p>
+<pre><code>&lt;bottom-editor&gt;
+print("Hello from DokuWiki!")
+&lt;/bottom-editor&gt;
+
+&lt;bottom-exercise&gt;
+  Write a function sum_to(n).
+  &lt;script type="text/x-starter"&gt;
+def sum_to(n):
+    pass
+  &lt;/script&gt;
+  &lt;script type="text/x-test"&gt;
+assert sum_to(5) == 15
+  &lt;/script&gt;
+&lt;/bottom-exercise&gt;</code></pre>
+<blockquote><p><strong>Note:</strong> Use the <code>&lt;script type="text/x-starter"&gt;</code> / <code>&lt;script type="text/x-test"&gt;</code>
+syntax for exercise code blocks rather than <code>&lt;template&gt;</code> elements, as DokuWiki's
+HTML renderer may reformat <code>&lt;template&gt;</code> content.</p></blockquote>
+
+<hr>
+
+<h2>H5P</h2>
+<p>An H5P content type is available for embedding exercises inside any H5P-enabled
+platform (Moodle, DokuWiki with H5P plugin, standalone H5P.org, etc.). It wraps
+<code>&lt;bottom-exercise&gt;</code> as a self-contained H5P activity that can be reused across
+your content library.</p>
+
+<h3>Installation</h3>
+<ol>
+  <li>Download <a href="../H5P.BottomExercise-1.0.h5p"><code>H5P.BottomExercise-1.0.h5p</code></a>.</li>
+  <li>In Moodle: <strong>Site admin → H5P → Manage H5P content types → Upload</strong>.</li>
+  <li>In DokuWiki with the H5P plugin: <strong>Admin → H5P → Libraries → Upload library</strong>.</li>
+</ol>
+
+<h3>Creating an exercise</h3>
+<p>Once installed, add an H5P activity to your course or page, choose
+<strong>Bottom Exercise</strong> as the content type, then fill in the prompt, starter code,
+test code, and solution directly in the form — no HTML required.</p>
+
+<blockquote><p><strong>Note:</strong> The H5P Hub (the public content type registry) is not currently
+supported. The content type must be installed by uploading the <code>.h5p</code> file
+directly, as described above.</p></blockquote>
+
+<hr>
+
+<h2>Moodle</h2>
+<p>Two complementary Moodle plugins are available.</p>
+
+<h3>Activity module — <code>mod_bottomeditor</code></h3>
+<p>Adds a <strong>Python Exercise</strong> activity to the course activity chooser. Each instance
+is a single graded exercise on its own page. Student submissions are recorded in
+the Moodle gradebook.</p>
+
+<h4>Installation</h4>
+<ol>
+  <li>Download <a href="../mod_bottomeditor.zip"><code>mod_bottomeditor.zip</code></a>.</li>
+  <li><strong>Site admin → Plugins → Install plugins</strong> → upload the zip, or extract it
+      manually into the <code>mod/</code> directory of your Moodle installation.</li>
+  <li>Follow the on-screen upgrade steps.</li>
+</ol>
+
+<h4>Usage</h4>
+<p>In a course, <strong>Add activity → Python Exercise</strong>. Fill in the prompt, starter
+code, test code, optional solution, and grading settings. The exercise is
+rendered using the component loaded from the configured base URL
+(<code>https://bottom.ch/editor/stable</code> by default — change it in the plugin
+settings).</p>
+
+<h3>Filter plugin — <code>filter_bottomeditor</code></h3>
+<p>Enables embedding exercises directly inside <strong>Page resources</strong>, <strong>Book chapters</strong>,
+<strong>Labels</strong>, course descriptions, and any other place Moodle renders HTML.
+Authors write <code>&lt;bottom-editor&gt;</code>, <code>&lt;bottom-exercise&gt;</code>, or <code>&lt;kara-editor&gt;</code> elements
+directly in the HTML source; the filter injects the required scripts automatically.</p>
+
+<h4>Installation</h4>
+<ol>
+  <li>Download <a href="../filter_bottomeditor.zip"><code>filter_bottomeditor.zip</code></a>.</li>
+  <li>Extract it into <code>filter/</code> so the result is <code>filter/bottomeditor/filter.php</code>
+      (the Moodle web interface may not have write access to this directory;
+      use SSH/SFTP if needed).</li>
+  <li>Visit <strong>Site admin</strong> — Moodle will detect the new plugin and run the upgrade.</li>
+  <li>Go to <strong>Site admin → Plugins → Filters → Manage filters</strong> and set
+      <strong>Bottom Editor</strong> to <strong>On</strong>.</li>
+</ol>
+
+<h4>Authoring requirement — Trusted content</h4>
+<p>Moodle's HTML Purifier strips unknown custom elements when content is saved.
+To preserve <code>&lt;bottom-exercise&gt;</code> etc., the author must have the
+<strong>Trusted content</strong> capability (<code>moodle/site:trustcontent</code>):</p>
+<ol>
+  <li><strong>Site admin → Users → Permissions → Define roles</strong> — add
+      <code>moodle/site:trustcontent</code> to the roles held by content authors
+      (e.g. Teacher, Manager).</li>
+  <li>In the text editor, switch to <strong>plain text / source</strong> mode to paste the
+      element markup — the WYSIWYG editor may otherwise re-sanitize the HTML
+      on the client side.</li>
+</ol>
+<blockquote><p><strong>Without <code>trust:content</code></strong>, the custom element tags are stripped on save and
+the filter has nothing to work with. The filter only handles script injection;
+it does not bypass the save-time HTML Purifier.</p></blockquote>
+
+<h4>Usage</h4>
+<p>Inside a Page resource or Book chapter, switch to the HTML source view and write
+elements directly:</p>
+<pre><code>&lt;bottom-editor id="hello"&gt;
+print("Hello from Moodle!")
+&lt;/bottom-editor&gt;
+
+&lt;bottom-exercise id="ex1"&gt;
+  Write a function sum_to(n).
+  &lt;script type="text/x-starter"&gt;
+def sum_to(n):
+    pass
+  &lt;/script&gt;
+  &lt;script type="text/x-test"&gt;
+assert sum_to(5) == 15
+  &lt;/script&gt;
+&lt;/bottom-exercise&gt;</code></pre>
+<p>The filter detects the elements and injects <code>bottom-exercise.js</code> and
+<code>kara-editor-page.js</code> from the configured base URL once per page load.
+If the same page already has an explicit <code>&lt;script&gt;</code> tag loading the component
+(e.g. a different version), the filter's injection is suppressed to avoid a
+double-registration error.</p>
+
+</body>
