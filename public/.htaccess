@@ -1,3 +1,5 @@
+AddType application/zip .h5p
+
 # Enable SharedArrayBuffer access with proper COOP/COEP headers
 <IfModule mod_headers.c>
     # Allow access from everywhere (we are a static site):
