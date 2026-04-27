@@ -19,7 +19,8 @@ const ROOT    = new URL('..', import.meta.url).pathname;
 const H5P_DIR = join(ROOT, 'h5p');
 const LIB_DIR = join(H5P_DIR, 'H5P.BottomExercise-1.0');
 const STAGE   = join(H5P_DIR, '.stage');          // temporary assembly dir
-const OUT     = join(H5P_DIR, 'H5P.BottomExercise-1.0.h5p');
+const DIST    = join(ROOT, 'dist');
+const OUT     = join(DIST, 'H5P.BottomExercise-1.0.h5p');
 
 // ── 1. Build IIFE ────────────────────────────────────────────────────────────
 console.log('Building IIFE bundle…');
@@ -27,6 +28,7 @@ execSync('npm run build:h5p', { cwd: ROOT, stdio: 'inherit' });
 
 // ── 2. Assemble staging directory ────────────────────────────────────────────
 console.log('Assembling package…');
+mkdirSync(DIST, { recursive: true });
 rmSync(STAGE, { recursive: true, force: true });
 mkdirSync(join(STAGE, 'content'), { recursive: true });
 

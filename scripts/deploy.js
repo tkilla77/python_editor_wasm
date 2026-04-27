@@ -30,6 +30,8 @@ const run = cmd => execSync(cmd, { stdio: 'inherit', cwd: root })
 if (!noBuild) {
     console.log('\nBuilding (--mode prod)...')
     run('npm run build -- --mode prod')
+    console.log('\nPackaging H5P content type...')
+    run('npm run package:h5p')
     console.log('\nPackaging DokuWiki plugin...')
     run('npm run build:dokuwiki')
     console.log('\nPackaging Moodle plugin...')
