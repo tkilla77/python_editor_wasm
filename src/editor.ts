@@ -1,6 +1,7 @@
 import { LitElement, html, nothing, unsafeCSS } from 'lit'
 import { customElement, property, state, query } from 'lit/decorators.js'
 import { EditorView } from "@codemirror/view"
+import { setDiagnostics, type Diagnostic } from '@codemirror/lint'
 import PyodideWorker from './pyodide-worker.ts?worker&inline';
 import { joinSession, leaveSession, type MemberCallbacks, EditorHandle } from './session-registry.js';
 import type { TestReport, TestResult } from './pyodide-runtime.js';
@@ -462,9 +463,42 @@ export class BottomEditor extends LitElement {
         return this.runtime.samplePixel(x, y);
     }
 
+    private _parseErrorLine(traceback: string): number | null {
+        const matches = [...traceback.matchAll(/File "<exec>", line (\d+)/g)];
+        return matches.length ? parseInt(matches[matches.length - 1][1]) : null;
+    }
+
+    private _clearEditorDiagnostics() {
+        if (!this._editor) return;
+        this._editor.dispatch(setDiagnostics(this._editor.state, []));
+    }
+
+    private _setEditorDiagnostic(userLine: number, message: string) {
+        if (!this._editor) return;
+        const doc = this._editor.state.doc;
+        if (userLine < 1 || userLine > doc.lines) return;
+        const line = doc.line(userLine);
+        const diag: Diagnostic = { from: line.from, to: line.to, severity: 'error', message };
+        this._editor.dispatch(setDiagnostics(this._editor.state, [diag]));
+    }
+
+    private _formatError(fullMsg: string): { display: string; userLine: number | null } {
+        const prefixLines = (this.codePrefix.match(/\n/g) ?? []).length;
+        const rawLine = this._parseErrorLine(fullMsg);
+        const userLine = rawLine !== null ? rawLine - prefixLines : null;
+        const lastNewline = fullMsg.lastIndexOf('\n', fullMsg.length - 2);
+        const exceptionLine = lastNewline > 0 && fullMsg.includes('  File "<exec>"')
+            ? fullMsg.substring(lastNewline + 1).trim()
+            : fullMsg.trim();
+        const docLines = this._editor?.state.doc.lines ?? 0;
+        const validLine = userLine !== null && userLine >= 1 && userLine <= docLines ? userLine : null;
+        return { display: validLine ? `Line ${validLine}: ${exceptionLine}` : exceptionLine, userLine: validLine };
+    }
+
     async evaluatePython() {
         if (!this._editor) return;
         this._output?.clearOutput();
+        this._clearEditorDiagnostics();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
         const raw  = this.codePrefix + this._editor.state.doc.toString();
         const code = this.transformCode ? this.transformCode(raw) : raw;
@@ -476,12 +510,9 @@ export class BottomEditor extends LitElement {
             });
             if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
-            let msg = err?.toString() ?? String(err);
-            // Strip traceback — keep only the last exception line.
-            const lastNewline = msg.lastIndexOf('\n', msg.length - 2);
-            if (lastNewline > 0 && msg.includes('  File "<exec>"'))
-                msg = msg.substring(lastNewline + 1).trim();
-            this._output?.addOutput(msg);
+            const { display, userLine } = this._formatError(err?.toString() ?? String(err));
+            this._output?.addOutput(display);
+            if (userLine !== null) this._setEditorDiagnostic(userLine, display);
             if (!this._swConsole) this._swConsoleHasNew = true;
         } finally {
             if (this._buttons) this._buttons.running = false;
@@ -498,6 +529,7 @@ export class BottomEditor extends LitElement {
             return { passed: false, results: [{ passed: false, test: '<error>', message: 'Editor not initialized' }] };
         }
         this._output?.clearOutput();
+        this._clearEditorDiagnostics();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
         const raw  = this.codePrefix + this._editor.state.doc.toString();
         const code = this.transformCode ? this.transformCode(raw) : raw;
@@ -508,13 +540,11 @@ export class BottomEditor extends LitElement {
                 if (!this._swConsole) this._swConsoleHasNew = true;
             });
         } catch (err: any) {
-            let msg = err?.toString() ?? String(err);
-            const lastNewline = msg.lastIndexOf('\n', msg.length - 2);
-            if (lastNewline > 0 && msg.includes('  File "<exec>"'))
-                msg = msg.substring(lastNewline + 1).trim();
-            this._output?.addOutput(msg);
+            const { display, userLine } = this._formatError(err?.toString() ?? String(err));
+            this._output?.addOutput(display);
+            if (userLine !== null) this._setEditorDiagnostic(userLine, display);
             if (!this._swConsole) this._swConsoleHasNew = true;
-            return { passed: false, results: [{ passed: false, test: '<user code>', message: msg }] };
+            return { passed: false, results: [{ passed: false, test: '<user code>', message: display }] };
         } finally {
             if (this._buttons) this._buttons.running = false;
             if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
@@ -550,6 +580,7 @@ export class BottomEditor extends LitElement {
 
     private async clearAll() {
         this._output?.clearOutput();
+        this._clearEditorDiagnostics();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
         if (this.resetmode && this.readyCode) {
             await this.runtime.run(this.readyCode, () => {});

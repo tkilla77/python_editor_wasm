@@ -4,6 +4,7 @@ import { EditorView, keymap, gutter, lineNumbers } from "@codemirror/view"
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit, bracketMatching } from "@codemirror/language"
 import { python } from "@codemirror/lang-python"
+import { lintGutter } from "@codemirror/lint"
 
 /** Creates a CodeMirror Python editor mounted into `parent`. */
 export function createPythonEditor(
@@ -29,6 +30,7 @@ export function createPythonEditor(
             lineNumbers(),
             bracketMatching(),
             gutter({ class: "cm-mygutter" }),
+            lintGutter(),
             ...(onChange ? [EditorView.updateListener.of(u => { if (u.docChanged) onChange(); })] : []),
         ],
     });
