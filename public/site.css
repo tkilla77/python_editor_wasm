@@ -8,28 +8,31 @@ body {
     color: #1e293b;
 }
 
-.page-h1 {
+main {
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+}
+
+h1 {
     font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
     padding: 0.5rem 0 0.25rem;
-    color: #1e293b;
 }
 
-.page-footer {
-    flex-shrink: 0;
+footer {
     font-size: 0.75rem;
     color: #94a3b8;
     padding: 0.35rem 0;
-    border-top: 1px solid #e2e8f0;
 }
 
-.page-footer a {
+footer a {
     color: #64748b;
     text-decoration: none;
 }
 
-.page-footer a:hover {
+footer a:hover {
     color: #2563eb;
     text-decoration: underline;
 }
