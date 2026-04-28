@@ -55,6 +55,7 @@ export class KaraEditorPage extends LitElement {
             flex-direction: column;
             flex: 1;
             min-height: 0;
+            overflow: hidden;
         }
         kara-editor {
             flex: 1;

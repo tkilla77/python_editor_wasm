@@ -6,10 +6,21 @@
 <title>Python im Browser</title>
 <style>
     main {
-        padding-block: 0.5rem 2rem;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
-    footer {
-        margin-top: 2rem;
+    #container {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        --be-editor-flex: 1;
+    }
+    #container > * {
+        flex: 1;
+        min-height: 0;
     }
     #error {
         margin-top: 4rem;
@@ -21,10 +32,11 @@
 <body>
     <main>
         <h1>Python im Browser</h1>
-        <div id="container"></div>
-        <div id="error" hidden>
-            <p>No exercise found. Use a shared exercise link to open an exercise here.</p>
-            <p><a href="index.html">Go to the Python editor →</a></p>
+        <div id="container">
+            <div id="error" hidden>
+                <p>No exercise found. Use a shared exercise link to open an exercise here.</p>
+                <p><a href="index.html">Go to the Python editor →</a></p>
+            </div>
         </div>
         <footer>
             <a href="index.html">Python editor</a>

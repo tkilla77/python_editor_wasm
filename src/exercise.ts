@@ -384,12 +384,14 @@ export class BottomExercise extends LitElement {
             flex-direction: column;
             gap: 0.5em;
             font-family: system-ui, sans-serif;
+            overflow-y: auto;
         }
         exercise-prompt {
             display: block;
         }
         bottom-editor {
-            max-height: initial;
+            flex: var(--be-editor-flex, 0 1 auto);
+            max-height: var(--be-editor-max-height, initial);
         }
 
         /* Status badge */

@@ -72,6 +72,7 @@ class BottomEditorPage extends LitElement {
             flex-direction: row;
             flex: 1;
             min-height: 0;
+            overflow: hidden;
         }
         bottom-editor {
             max-height: initial;
