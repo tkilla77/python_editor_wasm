@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    min-height: var(--be-output-min-height, 5lh);
+    min-height: var(--be-output-min-height, 3lh);
     position: relative;
 }
 @container (min-width: 768px) {
