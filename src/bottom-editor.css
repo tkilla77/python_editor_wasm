@@ -3,7 +3,6 @@
     flex-direction: column;
     overflow: hidden;
     min-height: calc(2lh + 2em);
-    max-height: 25lh;
     font-family: system-ui;
     container-type: inline-size;
     /* Theming tokens — set on this element, any ancestor, or :root */
@@ -14,7 +13,7 @@
 bottom-editorarea {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: 2fr 1fr auto;
+    grid-template-rows: auto auto auto;
     gap: 0.5em;
     flex: 1;
     min-height: 0;
@@ -33,6 +32,7 @@ bottom-code {
     border: var(--be-border, 1px solid #d4d4d4);
     border-radius: var(--be-border-radius, 0.5em);
     overflow: hidden;
+    max-height: 20lh;
 }
 /* ---- switcher: flex-column wrapper for canvas + rail + output ---- */
 .split-col {
@@ -87,6 +87,7 @@ bottom-code {
         grid-template-columns: 2fr auto 1fr;
         grid-template-rows: 1fr;
     }
+    :host(:not([orientation="vertical"])) bottom-code { max-height: initial; }
     :host(:not([orientation="vertical"])) bottom-editor-output  { grid-column: 3/4; }
     :host(:not([orientation="vertical"])) bottom-editor-canvas  { grid-column: 3/4; }
     :host(:not([orientation="vertical"])) bottom-editor-buttons { grid-column: 2/3; grid-row: 1/2; }
@@ -105,6 +106,7 @@ bottom-code {
 }
 
 /* Force horizontal regardless of container width */
+:host([orientation="horizontal"]) bottom-code { max-height: initial; }
 :host([orientation="horizontal"]) bottom-editorarea {
     grid-template-columns: 2fr auto 1fr;
     grid-template-rows: 1fr;
