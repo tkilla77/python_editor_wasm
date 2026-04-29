@@ -13,7 +13,7 @@
 bottom-editorarea {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: var(--be-grid-rows, auto auto auto);
     gap: 0.5em;
     flex: 1;
     min-height: 0;
@@ -32,16 +32,16 @@ bottom-code {
     border: var(--be-border, 1px solid #d4d4d4);
     border-radius: var(--be-border-radius, 0.5em);
     overflow: hidden;
-    max-height: 20lh;
+    max-height: var(--be-code-max-height, 20lh);
 }
 bottom-editor-canvas {
-    max-height: 10lh;
+    max-height: var(--be-canvas-max-height, 10lh);
 }
 /* ---- switcher: flex-column wrapper for canvas + rail + output ---- */
 .split-col {
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: 10lh;
     overflow: hidden;
 }
 .split-col bottom-editor-canvas { flex: 2; min-height: 0; }

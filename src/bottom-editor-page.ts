@@ -80,6 +80,9 @@ class BottomEditorPage extends LitElement {
             min-width: 0;
             min-height: 0;
             container-type: inline-size;
+            --be-grid-rows: minmax(auto, 1fr) auto auto;
+            --be-code-max-height: none;
+            --be-canvas-max-height: none;
         }
         @container (min-width: 768px) {
             bottom-editor::part(buttons) {

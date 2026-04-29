@@ -61,6 +61,8 @@ export class KaraEditorPage extends LitElement {
             flex: 1;
             min-height: 0;
             container-type: inline-size;
+            --be-code-max-height: none;
+            --be-canvas-max-height: none;
         }
     `;
 }
