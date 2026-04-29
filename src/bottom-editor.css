@@ -34,6 +34,9 @@ bottom-code {
     overflow: hidden;
     max-height: 20lh;
 }
+bottom-editor-canvas {
+    max-height: 10lh;
+}
 /* ---- switcher: flex-column wrapper for canvas + rail + output ---- */
 .split-col {
     display: flex;
@@ -88,6 +91,7 @@ bottom-code {
         grid-template-rows: 1fr;
     }
     :host(:not([orientation="vertical"])) bottom-code { max-height: initial; }
+    :host(:not([orientation="vertical"])) bottom-editor-canvas { max-height: initial; }
     :host(:not([orientation="vertical"])) bottom-editor-output  { grid-column: 3/4; }
     :host(:not([orientation="vertical"])) bottom-editor-canvas  { grid-column: 3/4; }
     :host(:not([orientation="vertical"])) bottom-editor-buttons { grid-column: 2/3; grid-row: 1/2; }
@@ -107,6 +111,7 @@ bottom-code {
 
 /* Force horizontal regardless of container width */
 :host([orientation="horizontal"]) bottom-code { max-height: initial; }
+:host([orientation="horizontal"]) bottom-editor-canvas { max-height: initial; }
 :host([orientation="horizontal"]) bottom-editorarea {
     grid-template-columns: 2fr auto 1fr;
     grid-template-rows: 1fr;
