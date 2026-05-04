@@ -240,6 +240,7 @@ builtins.input = _input
         await py.runPython(`__init_globals__ = frozenset(globals()) | {'__init_globals__'}`);
         post('ready');
     } catch (err: any) {
+        console.error('[pyodide-worker] init failed:', err);
         post('error', { error: String(err) });
     }
 }

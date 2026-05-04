@@ -26,6 +26,7 @@ export type RuntimeCallbacks = {
 export class PyodideRuntime {
     private worker?: Worker;
     private ready?: Promise<void>;
+    private _readyReject?: (err: Error) => void;
     private runIdCounter = 1;
     private pendingRuns = new Map<number, {
         resolve: (value?: any) => void;
@@ -204,6 +205,12 @@ export class PyodideRuntime {
 
     /** Terminate the worker and reject any pending runs. */
     terminate(): void {
+        // Reject a pending spawnWorker() so any doRun() awaiting this.ready
+        // fails fast rather than hanging forever.
+        if (this._readyReject) {
+            this._readyReject(new Error('Worker terminated'));
+            this._readyReject = undefined;
+        }
         if (this.worker) {
             try { this.worker.terminate(); } catch { }
             this.worker = undefined;
@@ -220,11 +227,18 @@ export class PyodideRuntime {
         if (this.worker) return;
         this.worker = this.workerFactory();
         this.worker.onmessage = (ev: MessageEvent) => this.handleMessage(ev.data);
+        this.worker.onerror = (ev: ErrorEvent) => {
+            const msg = `Worker failed to load: ${ev.message} (${ev.filename}:${ev.lineno})`;
+            console.error('[bottom-editor]', msg);
+            this.callbacks.onError(msg);
+        };
         this.worker.postMessage({ type: 'init', baseURL: import.meta.url, indexURL: this.indexURL });
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
+            this._readyReject = reject;
             const onReady = (ev: MessageEvent) => {
                 if (ev.data?.type === 'ready') {
                     this.worker?.removeEventListener('message', onReady as any);
+                    this._readyReject = undefined;
                     resolve();
                 }
             };
