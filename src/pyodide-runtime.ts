@@ -59,18 +59,19 @@ export class PyodideRuntime {
         return this.runAs(code, onStdout, this.editorId);
     }
 
-    runAs(code: string, onStdout: (data: string) => void, editorId: string): Promise<void> {
+    runAs(code: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number): Promise<void> {
+        const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async () => {
             await this.ready;
             const runId = this.runIdCounter++;
             return new Promise<void>((resolve, reject) => {
-                const timeout = this.RUN_TIMEOUT_MS === Infinity ? undefined : setTimeout(() => {
-                    const secs = (this.RUN_TIMEOUT_MS / 1000).toFixed(0);
+                const timeout = tms === Infinity ? undefined : setTimeout(() => {
+                    const secs = (tms / 1000).toFixed(0);
                     // Remove from map first so terminate() doesn't double-reject.
                     this.pendingRuns.delete(runId);
                     this.terminateAndRespawn();
                     reject(new Error(`Execution timed out after ${secs}s`));
-                }, this.RUN_TIMEOUT_MS);
+                }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
                 this.worker?.postMessage({ type: 'run', code, runId, editorId });
             });
@@ -88,17 +89,18 @@ export class PyodideRuntime {
         return this.runWithTestsAs(code, tests, onStdout, this.editorId);
     }
 
-    runWithTestsAs(code: string, tests: string, onStdout: (data: string) => void, editorId: string): Promise<TestReport> {
+    runWithTestsAs(code: string, tests: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number): Promise<TestReport> {
+        const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async (): Promise<TestReport> => {
             await this.ready;
             const runId = this.runIdCounter++;
             return new Promise<TestReport>((resolve, reject) => {
-                const timeout = this.RUN_TIMEOUT_MS === Infinity ? undefined : setTimeout(() => {
-                    const secs = (this.RUN_TIMEOUT_MS / 1000).toFixed(0);
+                const timeout = tms === Infinity ? undefined : setTimeout(() => {
+                    const secs = (tms / 1000).toFixed(0);
                     this.pendingRuns.delete(runId);
                     this.terminateAndRespawn();
                     reject(new Error(`Execution timed out after ${secs}s`));
-                }, this.RUN_TIMEOUT_MS);
+                }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
                 this.worker?.postMessage({ type: 'runWithTests', code, tests, runId, editorId });
             });

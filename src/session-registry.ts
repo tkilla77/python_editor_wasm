@@ -20,18 +20,20 @@ const sessions = new Map<string, SessionEntry>();
  */
 export class EditorHandle {
     readonly editorId: string;
-    constructor(private readonly _runtime: PyodideRuntime, editorId?: string) {
+    private readonly _timeoutMs: number;
+    constructor(private readonly _runtime: PyodideRuntime, timeoutMs?: number, editorId?: string) {
         this.editorId = editorId ?? crypto.randomUUID();
+        this._timeoutMs = timeoutMs ?? 30_000;
     }
 
     get ready(): Promise<void> { return this._runtime['ready'] as Promise<void>; }
     start() { /* managed by session */ }
 
     run(code: string, onStdout: (data: string) => void) {
-        return this._runtime.runAs(code, onStdout, this.editorId);
+        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs);
     }
     runWithTests(code: string, tests: string, onStdout: (data: string) => void): Promise<TestReport> {
-        return this._runtime.runWithTestsAs(code, tests, onStdout, this.editorId);
+        return this._runtime.runWithTestsAs(code, tests, onStdout, this.editorId, this._timeoutMs);
     }
     loadZip(url: string) { return this._runtime.loadZip(url); }
     setCanvas(canvas: OffscreenCanvas) { return this._runtime.setCanvasFor(canvas, this.editorId); }
@@ -73,7 +75,7 @@ export function joinSession(
     if (entry.ready) {
         queueMicrotask(() => member.onReady());
     }
-    return new EditorHandle(entry.runtime);
+    return new EditorHandle(entry.runtime, timeoutMs);
 }
 
 /**
