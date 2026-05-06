@@ -30,7 +30,7 @@ bottom-editorarea {
 bottom-code {
     background-color: var(--be-editor-bg, white);
     border: var(--be-border, 1px solid #d4d4d4);
-    border-radius: var(--be-border-radius, 0.5em);
+    border-radius: var(--be-border-radius, 4px);
     overflow: hidden;
     max-height: var(--be-code-max-height, 20lh);
 }
