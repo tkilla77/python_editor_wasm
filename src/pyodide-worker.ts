@@ -423,7 +423,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     flushStdout();
                     syncRun = false;
                     currentRunId = undefined;
-                    post('error', { runId, error: String(err) });
+                    const errStr = String(err);
+                    const errorMsg = errStr.includes("'await' expression outside")
+                        ? "SyntaxError: input() is only supported in top-level code, not inside functions."
+                        : errStr;
+                    post('error', { runId, error: errorMsg });
                 }
             } catch (err: any) {
                 if (flushTimer !== null) {
@@ -433,7 +437,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 flushStdout();
                 syncRun = false;
                 currentRunId = undefined;
-                post('error', { runId, error: String(err) });
+                const errStr = String(err);
+                const errorMsg = errStr.includes("'await' expression outside")
+                    ? "SyntaxError: input() is only supported in top-level code, not inside functions."
+                    : errStr;
+                post('error', { runId, error: errorMsg });
             }
             return;
         }
@@ -486,7 +494,10 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     flushStdout();
                     syncRun = false;
                     try { py.runPython(CAPTURE_RESTORE); } catch {}
-                    throw userErr;
+                    const userErrStr = String(userErr);
+                    throw userErrStr.includes("'await' expression outside")
+                        ? new Error("SyntaxError: input() is only supported in top-level code, not inside functions.")
+                        : userErr;
                 }
 
                 // Phase 2: inject output helpers, then run test harness
