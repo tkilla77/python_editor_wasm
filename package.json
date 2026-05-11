@@ -11,9 +11,9 @@
     "isomorphic-fetch": "^3.0.0",
     "lit": "^3.3.2",
     "node-fetch": "^3.3.2",
-    "pyodide": "^0.29.3",
+    "pyodide": "^0.29.4",
     "thememirror": "^2.0.1",
-    "vite": "^8.0.10"
+    "vite": "^8.0.12"
   },
   "scripts": {
     "build": "vite build",
