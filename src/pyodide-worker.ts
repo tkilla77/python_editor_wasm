@@ -424,7 +424,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     syncRun = false;
                     currentRunId = undefined;
                     const errStr = String(err);
-                    const errorMsg = errStr.includes("'await' expression outside")
+                    const errorMsg = errStr.includes("'await' outside async function")
                         ? "SyntaxError: input() is only supported in top-level code, not inside functions."
                         : errStr;
                     post('error', { runId, error: errorMsg });
@@ -438,7 +438,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 syncRun = false;
                 currentRunId = undefined;
                 const errStr = String(err);
-                const errorMsg = errStr.includes("'await' expression outside")
+                const errorMsg = errStr.includes("'await' outside async function")
                     ? "SyntaxError: input() is only supported in top-level code, not inside functions."
                     : errStr;
                 post('error', { runId, error: errorMsg });
@@ -495,8 +495,8 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     syncRun = false;
                     try { py.runPython(CAPTURE_RESTORE); } catch {}
                     const userErrStr = String(userErr);
-                    throw userErrStr.includes("'await' expression outside")
-                        ? new Error("SyntaxError: input() is only supported in top-level code, not inside functions.")
+                    throw userErrStr.includes("'await' outside async function")
+                        ? "SyntaxError: input() is only supported in top-level code, not inside functions."
                         : userErr;
                 }
 
