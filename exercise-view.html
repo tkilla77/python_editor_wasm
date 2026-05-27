@@ -6,24 +6,18 @@
 <title>Python im Browser</title>
 <style>
     main {
-        height: 100dvh;
+        min-height: 100dvh;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
     }
     #container {
         flex: 1;
-        min-height: 0;
         display: flex;
         flex-direction: column;
-        --be-editor-flex: 1;
-        --be-grid-rows: minmax(auto, 1fr) auto auto;
-        --be-code-max-height: none;
         --be-canvas-max-height: none;
     }
-    #container > * {
-        flex: 1;
-        min-height: 0;
+    bottom-exercise {
+        overflow-y: visible;
     }
     #error {
         margin-top: 4rem;
