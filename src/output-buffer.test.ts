@@ -36,6 +36,28 @@ describe('appendOutput', () => {
         expect(count).toBeLessThanOrEqual(1);
     });
 
+    it('accumulates trimmed line count across incremental appends', () => {
+        // Simulates the sync-run case: each print() flushes one line at a time.
+        // The bug was that every increment reset the notice to "1 lines".
+        let buf = '';
+        for (let i = 0; i < MAX_OUTPUT_LINES + 100; i++) {
+            buf = appendOutput(buf, `line${i}\n`);
+        }
+        const count = (buf.match(/\.\.\.\[output trimmed:/g) ?? []).length;
+        expect(count).toBe(1);
+        // Each "lineN\n" creates a trailing-empty element on split, so the first
+        // trim fires one step earlier: 200 appends → 101 lines dropped (not 100).
+        const match = buf.match(/output trimmed: (\d+) lines/);
+        expect(match).not.toBeNull();
+        expect(parseInt(match![1], 10)).toBeGreaterThan(50);
+    });
+
+    it('preserves previous trimmed count even when no new trimming occurs', () => {
+        const withNotice = '...[output trimmed: 50 lines]...\nsome content\n';
+        const result = appendOutput(withNotice, 'one more\n');
+        expect(result).toContain('50 lines');
+    });
+
     it('includes both line and char trim reasons when both limits are exceeded', () => {
         const manyLines = Array.from({ length: MAX_OUTPUT_LINES + 5 }, () => 'x'.repeat(50)).join('\n');
         const result = appendOutput('', manyLines);
