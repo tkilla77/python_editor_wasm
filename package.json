@@ -13,7 +13,7 @@
     "node-fetch": "^3.3.2",
     "pyodide": "^0.29.4",
     "thememirror": "^2.0.1",
-    "vite": "^8.0.14"
+    "vite": "^8.0.16"
   },
   "scripts": {
     "build": "vite build",
@@ -35,6 +35,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.8"
   }
 }
