@@ -36,5 +36,9 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "vitest": "^4.1.8"
+  },
+  "allowScripts": {
+    "npm view fsevents scripts@2.3.2": true,
+    "fsevents@2.3.3": true
   }
 }
