@@ -10,6 +10,7 @@ if (!customElements.get('kara-world')) {
 }
 
 import { dedentWorld } from './kara-world.js'
+import { transformKaraCode } from './kara-transform.js'
 
 const DEFAULT_WORLD = `
 ###########
@@ -68,12 +69,7 @@ export class KaraEditor extends LitElement {
     private readonly _transform = (editorCode: string): string => {
         const world = this._worldStr.replace(/"""/g, "'''");
         const prefix = karaShimSrc + `\n_kara_setup("""${world}""", ${this.step})\n`;
-        // Auto-insert `await` before kara action calls so novices don't need it.
-        const userCode = editorCode.replace(
-            /\b(kara\.(move|turnLeft|turnRight|putLeaf|removeLeaf))\s*\(/g,
-            'await $1('
-        );
-        return prefix + userCode;
+        return prefix + transformKaraCode(editorCode);
     };
 
     private get _readyCode(): string {
