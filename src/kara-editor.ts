@@ -80,7 +80,9 @@ export class KaraEditor extends LitElement {
     private readonly _permalink = () => {
         const url = new URL(PERMALINK_BASE);
         url.searchParams.set('world', this._worldStr);
-        if (this._userCode.trim()) url.searchParams.set('code', this._userCode);
+        // Read live editor content rather than the stale initial value.
+        const currentCode = (this.renderRoot?.querySelector('bottom-editor') as any)?.sourceCode ?? this._userCode;
+        if (currentCode.trim()) url.searchParams.set('code', currentCode);
         if (this.step !== 200)    url.searchParams.set('step', String(this.step));
         if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
         navigator.clipboard.writeText(url.href);
