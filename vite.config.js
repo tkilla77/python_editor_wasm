@@ -53,8 +53,13 @@ function stableLibEntriesPlugin(entries) {
 export default defineConfig({
   base: '',
   worker: {
-    format: 'iife',
+    format: 'es',
     rollupOptions: {
+      output: {
+        // Force everything (incl. CJS-interop helper chunks) into the single
+        // blob — relative chunk imports can't resolve from a blob: URL.
+        codeSplitting: false,
+      },
       external: [
         "node-fetch",
         "node:crypto",
