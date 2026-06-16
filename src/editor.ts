@@ -124,6 +124,14 @@ export class BottomEditor extends LitElement {
     transformCode?: (code: string) => string;
 
     /**
+     * Extra lines prepended by transformCode beyond codePrefix itself (e.g. a
+     * runtime shim injected before the user's code). Added to codePrefix's
+     * line count when mapping traceback line numbers back to the editor.
+     */
+    @property({ attribute: false })
+    transformLineOffset: number = 0;
+
+    /**
      * Override the default permalink behaviour. If set, this function is called
      * instead of copyPermalink()'s built-in URL builder.
      */
@@ -483,7 +491,7 @@ export class BottomEditor extends LitElement {
     }
 
     private _formatError(fullMsg: string): { display: string; userLine: number | null } {
-        const prefixLines = (this.codePrefix.match(/\n/g) ?? []).length;
+        const prefixLines = (this.codePrefix.match(/\n/g) ?? []).length + this.transformLineOffset;
         const rawLine = this._parseErrorLine(fullMsg);
         const userLine = rawLine !== null ? rawLine - prefixLines : null;
         const lastNewline = fullMsg.lastIndexOf('\n', fullMsg.length - 2);

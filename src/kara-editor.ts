@@ -65,16 +65,22 @@ export class KaraEditor extends LitElement {
     set code(c: string)  { this._userCode = c; }
     get code()           { return this._userCode; }
 
+    private get _prefix(): string {
+        const world = this._worldStr.replace(/"""/g, "'''");
+        return karaShimSrc + `\n_kara_setup("""${world}""", ${this.step})\n`;
+    }
+
+    private get _prefixLineCount(): number {
+        return (this._prefix.match(/\n/g) ?? []).length;
+    }
+
     // Stable reference — Lit won't diff-update bottom-editor on every render.
     private readonly _transform = (editorCode: string): string => {
-        const world = this._worldStr.replace(/"""/g, "'''");
-        const prefix = karaShimSrc + `\n_kara_setup("""${world}""", ${this.step})\n`;
-        return prefix + transformKaraCode(editorCode);
+        return this._prefix + transformKaraCode(editorCode);
     };
 
     private get _readyCode(): string {
-        const world = this._worldStr.replace(/"""/g, "'''");
-        return karaShimSrc + `\n_kara_setup("""${world}""", ${this.step})\n`;
+        return this._prefix;
     }
 
     private readonly _permalink = () => {
@@ -94,6 +100,7 @@ export class KaraEditor extends LitElement {
                 layout="split"
                 .sourceCode=${this._userCode}
                 .transformCode=${this._transform}
+                .transformLineOffset=${this._prefixLineCount}
                 .readyCode=${this._readyCode}
                 .permalinkCallback=${this._permalink}
                 ?autorun=${this.autorun}
