@@ -15,8 +15,13 @@ export default defineConfig({
         'import.meta.url': '(document.currentScript?.src || (/^https?:/.test(location.href) ? location.href : "http://localhost/"))',
     },
     worker: {
-        format: 'iife',
+        format: 'es',
         rollupOptions: {
+            output: {
+                // Prevent CJS-interop helper chunks from being split out —
+                // relative imports can't resolve from a blob: URL.
+                codeSplitting: false,
+            },
             external: [
                 'node-fetch', 'node:crypto', 'node:url', 'node:fs',
                 'node:fs/promises', 'node:vm', 'node:path', 'node:child_process',
@@ -39,7 +44,7 @@ export default defineConfig({
                 // Inline web workers as data URIs so the single JS file is
                 // self-contained and the LMS doesn't need to serve worker files
                 // at a predictable path.
-                inlineDynamicImports: true,
+                codeSplitting: false,
                 // Guard against double-execution (H5P may run the script in
                 // multiple instances or Lumi may reuse a frame). Makes all
                 // customElements.define() calls idempotent.
