@@ -35,7 +35,7 @@ export class PyodideRuntime {
         onStdout: (data: string) => void;
     }>();
     private interruptBuffer?: Uint8Array;
-    private _queue: Promise<void> = Promise.resolve();
+    private _queue: Promise<void|TestReport> = Promise.resolve();
     private _fitCallback?: (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null) => void;
 
     constructor(
