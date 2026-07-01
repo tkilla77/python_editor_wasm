@@ -11,9 +11,9 @@
     "isomorphic-fetch": "^3.0.0",
     "lit": "^3.3.3",
     "node-fetch": "^3.3.2",
-    "pyodide": "^314.0.0",
+    "pyodide": "^314.0.2",
     "thememirror": "^2.0.1",
-    "vite": "^8.0.16"
+    "vite": "^8.1.2"
   },
   "scripts": {
     "build": "vite build",
@@ -34,7 +34,7 @@
     }
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.0",
+    "@playwright/test": "^1.61.1",
     "vitest": "^4.1.9"
   },
   "allowScripts": {
