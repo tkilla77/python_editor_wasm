@@ -13,7 +13,7 @@
     "node-fetch": "^3.3.2",
     "pyodide": "^314.0.2",
     "thememirror": "^2.0.1",
-    "vite": "^8.1.2"
+    "vite": "^8.1.4"
   },
   "scripts": {
     "build": "vite build",
@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
     "fsevents@2.3.3": true,
