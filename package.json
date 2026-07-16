@@ -13,7 +13,7 @@
     "node-fetch": "^3.3.2",
     "pyodide": "^314.0.2",
     "thememirror": "^2.0.1",
-    "vite": "^8.1.4"
+    "vite": "^8.1.5"
   },
   "scripts": {
     "build": "vite build",
