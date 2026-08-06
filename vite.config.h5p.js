@@ -32,7 +32,7 @@ export default defineConfig({
         outDir: 'h5p/H5P.BottomExercise-1.0/scripts',
         emptyOutDir: false,
         lib: {
-            entry: resolve(__dirname, 'src/exercise.ts'),
+            entry: resolve(import.meta.dirname, 'src/exercise.ts'),
             name: 'BottomExercise',
             formats: ['iife'],
             fileName: () => 'bottom-exercise.iife.js',

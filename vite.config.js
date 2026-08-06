@@ -15,7 +15,7 @@ function stableLibEntriesPlugin(entries) {
         name: 'stable-lib-entries',
         generateBundle(_, bundle) {
             for (const [name, srcPath] of Object.entries(entries)) {
-                const rel = resolve(__dirname, srcPath);
+                const rel = resolve(import.meta.dirname, srcPath);
                 // Prefer exact facadeModuleId match; fall back to the chunk
                 // with fewest modules (avoids matching large HTML page bundles).
                 const chunks = Object.values(bundle).filter(
@@ -101,21 +101,21 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        'bottom-editor':   resolve(__dirname, 'src/editor.ts'),
-        'bottom-exercise': resolve(__dirname, 'src/exercise.ts'),
-        'kara-editor':     resolve(__dirname, 'src/kara-editor.ts'),
+        'bottom-editor':   resolve(import.meta.dirname, 'src/editor.ts'),
+        'bottom-exercise': resolve(import.meta.dirname, 'src/exercise.ts'),
+        'kara-editor':     resolve(import.meta.dirname, 'src/kara-editor.ts'),
       },
       formats: ['es'],
     },
     rollupOptions: {
       input: {
-        index:             resolve(__dirname, 'index.html'),
-        embed:             resolve(__dirname, 'embed.html'),
-        exercise:          resolve(__dirname, 'exercise.html'),
-        'exercise-view':   resolve(__dirname, 'exercise-view.html'),
-        kara:              resolve(__dirname, 'kara.html'),
-        'kara-demo':       resolve(__dirname, 'kara-demo.html'),
-        'oauth-callback':  resolve(__dirname, 'oauth-callback.html'),
+        index:             resolve(import.meta.dirname, 'index.html'),
+        embed:             resolve(import.meta.dirname, 'embed.html'),
+        exercise:          resolve(import.meta.dirname, 'exercise.html'),
+        'exercise-view':   resolve(import.meta.dirname, 'exercise-view.html'),
+        kara:              resolve(import.meta.dirname, 'kara.html'),
+        'kara-demo':       resolve(import.meta.dirname, 'kara-demo.html'),
+        'oauth-callback':  resolve(import.meta.dirname, 'oauth-callback.html'),
       },
       output: {
         entryFileNames: '[name]-[hash].js',
