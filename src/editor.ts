@@ -188,6 +188,7 @@ export class BottomEditor extends LitElement {
 
     private _buttonColHeight = 0;
     private _buttonRO?: ResizeObserver;
+    private _leaveSessionTimer?: ReturnType<typeof setTimeout>;
 
     private getSourceCode(): string {
         return Array.from(this.childNodes)
@@ -445,14 +446,32 @@ export class BottomEditor extends LitElement {
         );
     }
 
+    override connectedCallback() {
+        super.connectedCallback();
+        // If the element was temporarily detached (e.g. by jQuery wrapAll during a
+        // DokuWiki page-edit form submission), cancel the deferred leaveSession so
+        // the Pyodide runtime survives the DOM move.
+        if (this._leaveSessionTimer !== undefined) {
+            clearTimeout(this._leaveSessionTimer);
+            this._leaveSessionTimer = undefined;
+            window.addEventListener('bottom-storage-change', this._onStorageChange);
+        }
+    }
+
     override disconnectedCallback() {
         super.disconnectedCallback();
-        if (this._memberCallbacks) {
-            leaveSession(this.session || '__default__', this._memberCallbacks);
-        }
         window.removeEventListener('bottom-storage-change', this._onStorageChange);
         clearTimeout(this._cloudSaveTimer);
         this._buttonRO?.disconnect();
+        // Defer runtime teardown by one task. Synchronous DOM moves (jQuery wrapAll
+        // etc.) fire disconnectedCallback + connectedCallback in the same task;
+        // connectedCallback cancels this timer so the runtime is never touched.
+        this._leaveSessionTimer = setTimeout(() => {
+            this._leaveSessionTimer = undefined;
+            if (this._memberCallbacks) {
+                leaveSession(this.session || '__default__', this._memberCallbacks);
+            }
+        }, 0);
     }
 
     // ── Public API ─────────────────────────────────────────────────────────────
