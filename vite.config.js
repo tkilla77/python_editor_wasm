@@ -117,6 +117,10 @@ export default defineConfig({
         'exercise-view':   resolve(import.meta.dirname, 'exercise-view.html'),
         kara:              resolve(import.meta.dirname, 'kara.html'),
         'oauth-callback':  resolve(import.meta.dirname, 'oauth-callback.html'),
+        // kara-exercise.ts has no HTML page importing it; add directly so
+        // Rollup preserves it as an entry and stableLibEntriesPlugin can emit
+        // the stable kara-exercise.js stub.
+        'kara-exercise':   resolve(import.meta.dirname, 'src/kara-exercise.ts'),
       },
       output: {
         entryFileNames: '[name]-[hash].js',
