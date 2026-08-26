@@ -334,18 +334,12 @@ world state after the student's code runs.</p>
 <kara-exercise id="doc-ex-walk">
 <kara-world>
 #######
-#>.#.L#
+#>...L#
 #######
 </kara-world>
 <kara-solution>
-kara.move()
-kara.turnRight()
-kara.turnRight()
-kara.turnRight()
-kara.move()
-kara.move()
-kara.move()
-kara.move()
+while not kara.treeFront():
+    kara.move()
 </kara-solution>
 <kara-tests>
 assert kara.x == 5, f"Expected x=5, got {kara.x}"
@@ -390,6 +384,7 @@ assert kara.onLeaf(), "Kara should be standing on the leaf"
 <tr><td><code>kara.mushroomFront()</code></td><td><code>bool</code></td><td><code>True</code> if there is a mushroom directly ahead</td></tr>
 <tr><td><code>world_leaf_at(x, y)</code></td><td><code>bool</code></td><td><code>True</code> if there is a leaf at column <em>x</em>, row <em>y</em></td></tr>
 <tr><td><code>world_mushroom_at(x, y)</code></td><td><code>bool</code></td><td><code>True</code> if there is a mushroom at column <em>x</em>, row <em>y</em></td></tr>
+<tr><td><code>kara.world_leaves()</code></td><td><code>int</code></td><td>Number of leaves currently in the world (useful for "remove all" or "plant exactly N" tasks)</td></tr>
 </tbody>
 </table>
 
@@ -434,6 +429,31 @@ kara.putLeaf()
 <kara-tests>
 assert world_leaf_at(4, 1), f"Expected a leaf at (4,1)"
 assert kara.x == 4, f"Expected kara at x=4, got {kara.x}"
+</kara-tests>
+</kara-exercise>
+
+<h3>Counting leaves with <code>kara.world_leaves()</code></h3>
+<p>Useful for "remove all leaves" or "plant exactly N leaves" tasks:</p>
+
+<pre><code class="language-html">&lt;kara-tests&gt;
+assert kara.world_leaves() == 0, f"All leaves should be gone, {kara.world_leaves()} remain"
+&lt;/kara-tests&gt;
+</code></pre>
+
+<kara-exercise id="doc-ex-remove-leaves">
+<kara-world>
+##########
+#>L.L.L.T#
+##########
+</kara-world>
+<kara-solution>
+while not kara.treeFront():
+    kara.move()
+    if kara.onLeaf():
+        kara.removeLeaf()
+</kara-solution>
+<kara-tests>
+assert kara.world_leaves() == 0, f"All leaves should be removed, {kara.world_leaves()} remain"
 </kara-tests>
 </kara-exercise>
 
