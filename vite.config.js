@@ -78,6 +78,7 @@ export default defineConfig({
         'bottom-exercise':    'src/exercise.ts',
         'kara-editor':        'src/kara-editor.ts',
         'kara-editor-page':   'src/kara-editor-page.ts',
+        'kara-exercise':      'src/kara-exercise.ts',
     }),
     {
       // Plugin to set COOP/COEP headers for SharedArrayBuffer support in dev/preview
@@ -104,6 +105,7 @@ export default defineConfig({
         'bottom-editor':   resolve(import.meta.dirname, 'src/editor.ts'),
         'bottom-exercise': resolve(import.meta.dirname, 'src/exercise.ts'),
         'kara-editor':     resolve(import.meta.dirname, 'src/kara-editor.ts'),
+        'kara-exercise':   resolve(import.meta.dirname, 'src/kara-exercise.ts'),
       },
       formats: ['es'],
     },

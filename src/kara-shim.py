@@ -118,6 +118,23 @@ class _Kara:
         g = self._g
         return g.cells[g.kara_y][g.kara_x] == _LEAF
 
+    # ------------------------------------------------------------------ state
+
+    @property
+    def x(self):
+        """0-indexed column of Kara's current position."""
+        return self._g.kara_x
+
+    @property
+    def y(self):
+        """0-indexed row of Kara's current position."""
+        return self._g.kara_y
+
+    @property
+    def direction(self):
+        """Kara's current facing: 'right', 'down', 'left', or 'up'."""
+        return ('right', 'down', 'left', 'up')[self._g.kara_dir]
+
     # ---------------------------------------------------------------- internals
 
     async def _step(self):
@@ -139,6 +156,16 @@ def _kara_setup(world_str, step_ms):
     _kara_grid = _Grid(world_str)
     kara       = _Kara(_kara_grid, step_ms)
     _kara_draw()
+
+
+def world_leaf_at(x, y):
+    """Return True if there is a leaf at cell (x, y) in the current world."""
+    return _kara_grid.cells[y][x] == _LEAF
+
+
+def world_mushroom_at(x, y):
+    """Return True if there is a mushroom at cell (x, y) in the current world."""
+    return _kara_grid.cells[y][x] == _MUSH
 
 
 # ---------------------------------------------------------------------------

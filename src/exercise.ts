@@ -80,6 +80,29 @@ export class BottomExercise extends LitElement {
      *  solution to students, e.g. after a lesson. */
     @property({ type: Boolean }) hidesolution: boolean = false;
 
+    // ── Kara / custom-transform pass-throughs ─────────────────────────────────
+
+    /** Optional code transform forwarded to the inner <bottom-editor>. */
+    @property({ attribute: false }) transformCode?: (code: string) => string;
+    /** Extra prefix lines added by transformCode for error-line mapping. */
+    @property({ attribute: false }) transformLineOffset: number = 0;
+    /** Code run once when Pyodide is ready (before user code). */
+    @property({ attribute: false }) readyCode?: string;
+    /** Canvas auto-fit forwarded to <bottom-editor>. */
+    @property({ type: Boolean }) autofit: boolean = false;
+
+    /**
+     * Test assertions as a plain Python string. Fallback when no
+     * <template data-type="test"> child is present. Used by <kara-exercise>.
+     */
+    @property({ attribute: false }) tests: string = '';
+
+    /**
+     * Override the permalink/share action. When set, replaces the built-in
+     * shareExercise() call. Used by <kara-exercise> to generate a kara.html URL.
+     */
+    @property({ attribute: false }) permalinkOverride?: () => Promise<void> | void;
+
     private _starterCode: string = '';
     private _testCode: string = '';
     private _solutionCode: string = '';
@@ -152,7 +175,7 @@ export class BottomExercise extends LitElement {
     // ── Code change ────────────────────────────────────────────────────────────
 
     private _onCodeChange() {
-        if (this._status === 'pristine' && this._editor?.sourceCode !== this._starterCode) {
+        if (this._status === 'pristine' && this._editor?.sourceCode !== this._effectiveStarterCode) {
             this._status = 'started';
         }
         // The editor already saves on every change. saveNow() ensures the updated
@@ -177,11 +200,21 @@ export class BottomExercise extends LitElement {
         return lines.map(l => l.slice(indent)).join('\n');
     }
 
+    /** The active test code — from a child template or the `tests` property. */
+    private get _effectiveTestCode(): string { return this._testCode || this.tests; }
+
+    /** The initial code to reset to — from a child template or the `code` property. */
+    private get _effectiveStarterCode(): string { return this._starterCode || this.code; }
+
+    /** Live source code of the inner editor. */
+    get sourceCode(): string { return this._editor?.sourceCode ?? ''; }
+
     async runTests() {
         if (!this._editor) return;
-        if (!this._testCode) return this._editor.evaluatePython();
+        const testCode = this._effectiveTestCode;
+        if (!testCode) return this._editor.evaluatePython();
         this._testReport = undefined;
-        this._testReport = await this._editor.evaluateWithTests(this._testCode);
+        this._testReport = await this._editor.evaluateWithTests(testCode);
         // Advance state machine
         if (this._testReport.passed) {
             if (this._status !== 'solved' && this._status !== 'viewed-solution') {
@@ -202,7 +235,7 @@ export class BottomExercise extends LitElement {
 
     resetCode() {
         if (this._editor) {
-            this._editor.sourceCode = this._starterCode;
+            this._editor.sourceCode = this._effectiveStarterCode;
             this._testReport = undefined;
             this._status   = 'pristine';
             this._attempts = 0;
@@ -306,8 +339,11 @@ export class BottomExercise extends LitElement {
                 showclear
                 resetmode
                 norevert
-                .permalinkCallback=${() => this.shareExercise()}
+                .permalinkCallback=${this.permalinkOverride ?? (() => this.shareExercise())}
                 .onRun=${() => this.runTests()}
+                .transformCode=${this.transformCode}
+                .transformLineOffset=${this.transformLineOffset}
+                .readyCode=${this.readyCode}
                 .storageKey=${this._effectiveId() ?? ''}
                 .stateSaver=${this._stateSaver}
                 .stateLoader=${this._stateLoader}
@@ -317,6 +353,7 @@ export class BottomExercise extends LitElement {
                 timeout=${this.timeout}
                 zip=${this.zip}
                 ?showswitcher=${this.showswitcher}
+                ?autofit=${this.autofit}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-clear="${this.resetCode}"
             >${this.code || this._starterCode}</bottom-editor>
