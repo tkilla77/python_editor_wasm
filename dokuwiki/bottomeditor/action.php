@@ -2,7 +2,8 @@
 /**
  * DokuWiki Plugin bottomeditor — Action Component
  *
- * Injects the bottom-exercise.js and kara-editor-page.js script bundles into
+ * Injects the bottom-exercise.js, kara-editor-page.js, and kara-exercise.js
+ * script bundles into
  * every page head. Both are ES modules loaded from bottom.ch/editor/stable
  * (configurable). Loading the stub scripts is cheap; the heavy editor bundle
  * is only fetched by the browser when a matching custom element is found on
@@ -31,6 +32,11 @@ class action_plugin_bottomeditor extends DokuWiki_Action_Plugin {
         $event->data['script'][] = [
             'type'  => 'module',
             'src'   => $base . '/kara-editor-page.js',
+            '_data' => '',
+        ];
+        $event->data['script'][] = [
+            'type'  => 'module',
+            'src'   => $base . '/kara-exercise.js',
             '_data' => '',
         ];
     }

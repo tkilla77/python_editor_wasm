@@ -6,7 +6,7 @@ class filter_bottomeditor extends moodle_text_filter {
     // Injected once per page request across all filter() calls.
     private static bool $injected = false;
 
-    private const TAGS = ['bottom-exercise', 'bottom-editor', 'kara-editor'];
+    private const TAGS = ['bottom-exercise', 'bottom-editor', 'kara-editor', 'kara-exercise'];
 
     public function filter($text, array $options = []): string {
         if (self::$injected || !is_string($text)) {
@@ -28,6 +28,7 @@ class filter_bottomeditor extends moodle_text_filter {
         );
         $ex = json_encode($base . '/bottom-exercise.js');
         $ka = json_encode($base . '/kara-editor-page.js');
+        $ke = json_encode($base . '/kara-exercise.js');
         // window.__bottomEditorLoaded guards against a second load when the
         // author also added an explicit <script> tag (e.g. a different version).
         return <<<HTML
@@ -36,7 +37,7 @@ class filter_bottomeditor extends moodle_text_filter {
 (function () {
     if (window.__bottomEditorLoaded) return;
     window.__bottomEditorLoaded = true;
-    [{$ex}, {$ka}].forEach(function (src) {
+    [{$ex}, {$ka}, {$ke}].forEach(function (src) {
         var s = document.createElement('script');
         s.type = 'module';
         s.src  = src;
