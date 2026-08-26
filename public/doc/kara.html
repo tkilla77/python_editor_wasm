@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kara — Grid World Guide</title>
 <script type="module" src="../kara-editor.js"></script>
+<script type="module" src="../kara-exercise.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body {
@@ -272,6 +273,24 @@ while not kara.onLeaf():
 </kara-editor>
 
 <hr>
+<h2>User-defined functions</h2>
+<p>Regular Python <code>def</code> functions work as expected — the editor automatically
+makes them <code>async</code> and inserts <code>await</code> before Kara commands, so you never need
+to write those yourself.</p>
+<pre><code class="language-python">def go_and_return(steps):
+    for i in range(steps):
+        kara.move()
+    kara.turnLeft()
+    kara.turnLeft()
+    for i in range(steps):
+        kara.move()
+    kara.turnLeft()
+    kara.turnLeft()
+
+go_and_return(3)
+</code></pre>
+
+<hr>
 <h2>Exceptions</h2>
 <p>When Kara cannot execute a command, a <code>KaraException</code> is raised:</p>
 <ul>
@@ -281,5 +300,141 @@ while not kara.onLeaf():
 <li><code>No leaf here!</code> — <code>kara.removeLeaf()</code> on an empty cell</li>
 </ul>
 <p>The exception message is shown in the console panel below the world.</p>
+
+<hr>
+<h2>Exercises (<code>&lt;kara-exercise&gt;</code>)</h2>
+<p><code>&lt;kara-exercise&gt;</code> extends <code>&lt;kara-editor&gt;</code> with exercise semantics: an optional
+reference solution and optional automated test assertions that check the final
+world state after the student's code runs.</p>
+
+<h3>Quick start</h3>
+<pre><code class="language-html">&lt;script type=&quot;module&quot; src=&quot;https://bottom.ch/editor/stable/kara-exercise.js&quot;&gt;&lt;/script&gt;
+
+&lt;kara-exercise id=&quot;ex-walk&quot;&gt;
+  &lt;kara-world&gt;
+  #######
+  #&gt;...L#
+  #######
+  &lt;/kara-world&gt;
+
+  &lt;!-- starter code: plain text nodes --&gt;
+
+  &lt;kara-solution&gt;
+  while not kara.treeFront():
+      kara.move()
+  &lt;/kara-solution&gt;
+
+  &lt;kara-tests&gt;
+  assert kara.x == 5, f&quot;Expected x=5, got {kara.x}&quot;
+  assert kara.onLeaf(), &quot;Kara should be standing on the leaf&quot;
+  &lt;/kara-tests&gt;
+&lt;/kara-exercise&gt;
+</code></pre>
+
+<kara-exercise id="doc-ex-walk">
+<kara-world>
+#######
+#>.#.L#
+#######
+</kara-world>
+<kara-solution>
+kara.move()
+kara.turnRight()
+kara.turnRight()
+kara.turnRight()
+kara.move()
+kara.move()
+kara.move()
+kara.move()
+</kara-solution>
+<kara-tests>
+assert kara.x == 5, f"Expected x=5, got {kara.x}"
+assert kara.y == 1
+assert kara.direction == 'right'
+assert kara.onLeaf(), "Kara should be standing on the leaf"
+</kara-tests>
+</kara-exercise>
+
+<h3>Child elements</h3>
+<table>
+<thead><tr><th>Element</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>&lt;kara-world&gt;</code></td><td>Grid world definition (same format as in <code>&lt;kara-editor&gt;</code>)</td></tr>
+<tr><td>Text nodes</td><td>Starter code shown in the editor</td></tr>
+<tr><td><code>&lt;kara-solution&gt;</code></td><td>Reference solution revealed when the student clicks "Show solution"</td></tr>
+<tr><td><code>&lt;kara-tests&gt;</code></td><td>Python assertions run after the student's code; <code>kara</code> and world helpers are in scope</td></tr>
+</tbody>
+</table>
+
+<h3>Attributes</h3>
+<table>
+<thead><tr><th>Attribute</th><th>Default</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>id</code></td><td>—</td><td>Enables localStorage persistence of the student's code and exercise status</td></tr>
+<tr><td><code>step</code></td><td><code>200</code></td><td>Animation delay in milliseconds</td></tr>
+<tr><td><code>timeout</code></td><td><code>30</code></td><td>Maximum run time in seconds</td></tr>
+<tr><td><code>hidesolution</code></td><td>off</td><td>Hides the "Show solution" button (remove the attribute to release the solution to students)</td></tr>
+</tbody>
+</table>
+
+<h3>Test API</h3>
+<p>Test assertions are plain Python code. The following names are available in scope:</p>
+<table>
+<thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>kara.x</code></td><td><code>int</code></td><td>Kara's current column (0-indexed from the left)</td></tr>
+<tr><td><code>kara.y</code></td><td><code>int</code></td><td>Kara's current row (0-indexed from the top)</td></tr>
+<tr><td><code>kara.direction</code></td><td><code>str</code></td><td><code>'right'</code>, <code>'down'</code>, <code>'left'</code>, or <code>'up'</code></td></tr>
+<tr><td><code>kara.onLeaf()</code></td><td><code>bool</code></td><td><code>True</code> if Kara is standing on a leaf</td></tr>
+<tr><td><code>kara.treeFront()</code></td><td><code>bool</code></td><td><code>True</code> if there is a tree directly ahead</td></tr>
+<tr><td><code>kara.mushroomFront()</code></td><td><code>bool</code></td><td><code>True</code> if there is a mushroom directly ahead</td></tr>
+<tr><td><code>world_leaf_at(x, y)</code></td><td><code>bool</code></td><td><code>True</code> if there is a leaf at column <em>x</em>, row <em>y</em></td></tr>
+<tr><td><code>world_mushroom_at(x, y)</code></td><td><code>bool</code></td><td><code>True</code> if there is a mushroom at column <em>x</em>, row <em>y</em></td></tr>
+</tbody>
+</table>
+
+<blockquote><p>All commands and sensors from the commands and sensors tables above are also
+available in test assertions — useful for checking final sensor state after the
+program ends.</p></blockquote>
+
+<h3>Exercise with world-state tests</h3>
+<p>This exercise checks that Kara placed a leaf on a specific cell:</p>
+
+<pre><code class="language-html">&lt;kara-exercise id=&quot;ex-leaf&quot;&gt;
+  &lt;kara-world&gt;
+  ########
+  #&gt;.....#
+  ########
+  &lt;/kara-world&gt;
+  &lt;kara-solution&gt;
+  kara.move()
+  kara.move()
+  kara.move()
+  kara.putLeaf()
+  &lt;/kara-solution&gt;
+  &lt;kara-tests&gt;
+  assert world_leaf_at(4, 1), f&quot;Expected a leaf at (4,1)&quot;
+  assert kara.x == 4
+  &lt;/kara-tests&gt;
+&lt;/kara-exercise&gt;
+</code></pre>
+
+<kara-exercise id="doc-ex-leaf">
+<kara-world>
+########
+#>.....#
+########
+</kara-world>
+<kara-solution>
+kara.move()
+kara.move()
+kara.move()
+kara.putLeaf()
+</kara-solution>
+<kara-tests>
+assert world_leaf_at(4, 1), f"Expected a leaf at (4,1)"
+assert kara.x == 4, f"Expected kara at x=4, got {kara.x}"
+</kara-tests>
+</kara-exercise>
 
 </body>

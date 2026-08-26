@@ -116,7 +116,6 @@ export default defineConfig({
         exercise:          resolve(import.meta.dirname, 'exercise.html'),
         'exercise-view':   resolve(import.meta.dirname, 'exercise-view.html'),
         kara:              resolve(import.meta.dirname, 'kara.html'),
-        'kara-demo':       resolve(import.meta.dirname, 'kara-demo.html'),
         'oauth-callback':  resolve(import.meta.dirname, 'oauth-callback.html'),
       },
       output: {
