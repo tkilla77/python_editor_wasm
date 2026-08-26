@@ -22,7 +22,7 @@ class syntax_plugin_bottomeditor extends DokuWiki_Syntax_Plugin {
     // into one combined regex, which shifts subpattern numbers and breaks \1.
     // Repeating the alternation in the closing tag is safe in practice since
     // mismatched tags (<bottom-editor>...</bottom-exercise>) won't appear.
-    const ELEMENT_PATTERN = '<(?:bottom-editor|bottom-exercise|kara-editor|kara-exercise)\b[^>]*>[\s\S]*?</(?:bottom-editor|bottom-exercise|kara-editor)>';
+    const ELEMENT_PATTERN = '<(?:bottom-editor|bottom-exercise|kara-editor|kara-exercise)\b[^>]*>[\s\S]*?</(?:bottom-editor|bottom-exercise|kara-editor|kara-exercise)>';
 
     public function getType() {
         // 'substition': single-pattern match; the whole element is one token.
