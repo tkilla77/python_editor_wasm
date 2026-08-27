@@ -4,6 +4,7 @@ import './exercise.js'
 import karaShimSrc from './kara-shim.py?raw'
 import { dedentWorld } from './kara-world.js'
 import { transformKaraCode } from './kara-transform.js'
+import { encodeExercise } from './exercise-permalink.js'
 
 // Minimal custom elements so the browser doesn't treat them as unknown inline.
 for (const tag of ['kara-world', 'kara-solution', 'kara-tests']) {
@@ -83,10 +84,17 @@ export class KaraExercise extends LitElement {
 
     private readonly _sessionId = `kara-${crypto.randomUUID()}`;
 
-    private _worldStr    = DEFAULT_WORLD;
-    private _userCode    = '';
+    private _worldStr     = DEFAULT_WORLD;
+    private _userCode     = '';
     private _solutionCode = '';
-    private _testCode    = '';
+    private _testCode     = '';
+
+    /** Programmatic overrides used by kara-editor-page when loading from a permalink.
+     *  Empty string is a no-op so Lit bindings with a missing field don't clobber defaults. */
+    set world(w: string)    { if (w) { this._worldStr = w;     this.requestUpdate(); } }
+    set code(c: string)     { if (c) { this._userCode = c;     this.requestUpdate(); } }
+    set solution(s: string) { if (s) { this._solutionCode = s; this.requestUpdate(); } }
+    set testCode(t: string) { if (t) { this._testCode = t;     this.requestUpdate(); } }
 
     connectedCallback() {
         super.connectedCallback();
@@ -127,15 +135,20 @@ export class KaraExercise extends LitElement {
 
     private get _readyCode(): string { return this._prefix; }
 
-    private readonly _permalink = () => {
-        const url = new URL(PERMALINK_BASE);
-        url.searchParams.set('world', this._worldStr);
-        // Access the live editor via bottom-exercise's public sourceCode getter.
+    private readonly _permalink = async () => {
         const exercise = this.renderRoot?.querySelector('bottom-exercise') as any;
-        const currentCode = exercise?.sourceCode ?? this._userCode;
-        if (currentCode.trim()) url.searchParams.set('code', currentCode);
-        if (this.step !== 200)      url.searchParams.set('step',    String(this.step));
-        if (this.timeout !== '30')  url.searchParams.set('timeout', this.timeout);
+        const currentCode = (exercise?.sourceCode ?? this._userCode).trim();
+        const encoded = await encodeExercise({
+            world:    this._worldStr,
+            code:     currentCode                || undefined,
+            // Omit solution when hidesolution — absence IS the obfuscation.
+            solution: this.hidesolution ? undefined : (this._solutionCode.trim() || undefined),
+            tests:    this._testCode.trim()      || undefined,
+            step:     this.step !== 200          ? this.step    : undefined,
+            timeout:  this.timeout !== '30'      ? this.timeout : undefined,
+        });
+        const url = new URL(PERMALINK_BASE);
+        url.searchParams.set('x', encoded);
         navigator.clipboard.writeText(url.href);
     };
 

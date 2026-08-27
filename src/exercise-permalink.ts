@@ -8,6 +8,9 @@ export interface ExercisePermalinkState {
     zip?: string;
     timeout?: string;
     showswitcher?: boolean;
+    // Kara-specific (present only in kara-exercise permalinks)
+    world?: string;
+    step?: number;
 }
 
 export async function encodeExercise(state: ExercisePermalinkState): Promise<string> {
