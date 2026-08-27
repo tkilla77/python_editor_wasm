@@ -58,11 +58,11 @@ export class KaraEditor extends LitElement {
     }
 
     /** Set world programmatically (overrides <kara-world> child). */
-    set world(w: string) { this._worldStr = w; }
+    set world(w: string) { this._worldStr = w; this.requestUpdate(); }
     get world()          { return this._worldStr; }
 
     /** Set user code programmatically (overrides text-node children). */
-    set code(c: string)  { this._userCode = c; }
+    set code(c: string)  { this._userCode = c; this.requestUpdate(); }
     get code()           { return this._userCode; }
 
     private get _prefix(): string {
