@@ -3,7 +3,7 @@ import { customElement, state } from 'lit/decorators.js'
 import './kara-editor.js'
 import './kara-exercise.js'
 import type { KaraEditor } from './kara-editor.js'
-import { decodeExercise, type ExercisePermalinkState } from './exercise-permalink.js'
+import { decodeExercise, sanitizeHtml, type ExercisePermalinkState } from './exercise-permalink.js'
 
 @customElement('kara-editor-page')
 export class KaraEditorPage extends LitElement {
@@ -80,6 +80,7 @@ export class KaraEditorPage extends LitElement {
                     step=${s.step ?? 200}
                     timeout=${s.timeout ?? '30'}
                     .world=${s.world ?? ''}
+                    .promptHtml=${s.prompt ? sanitizeHtml(s.prompt) : ''}
                     .code=${s.code ?? ''}
                     .solution=${s.solution ?? ''}
                     .testCode=${s.tests ?? ''}

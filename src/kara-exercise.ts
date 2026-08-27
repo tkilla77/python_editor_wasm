@@ -1,5 +1,6 @@
 import { LitElement, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
+import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import './exercise.js'
 import karaShimSrc from './kara-shim.py?raw'
 import { dedentWorld } from './kara-world.js'
@@ -7,7 +8,7 @@ import { transformKaraCode } from './kara-transform.js'
 import { encodeExercise } from './exercise-permalink.js'
 
 // Minimal custom elements so the browser doesn't treat them as unknown inline.
-for (const tag of ['kara-world', 'kara-solution', 'kara-tests']) {
+for (const tag of ['kara-world', 'kara-prompt', 'kara-solution', 'kara-tests']) {
     if (!customElements.get(tag)) customElements.define(tag, class extends HTMLElement {});
 }
 
@@ -36,7 +37,7 @@ function dedent(text: string): string {
  * <kara-exercise> — a Kara world editor with exercise semantics.
  *
  * Wraps <bottom-exercise> with the Kara shim, world parsing, and optional
- * solution / test-assertion support.
+ * prompt, solution, and test-assertion support.
  *
  * Usage:
  *   <kara-exercise id="ex1" step="200">
@@ -46,7 +47,9 @@ function dedent(text: string): string {
  *       ###########
  *     </kara-world>
  *
- *     <!-- starter code (plain text nodes between <kara-world> and siblings) -->
+ *     <kara-prompt><p>Move Kara to the leaf.</p></kara-prompt>
+ *
+ *     <!-- starter code (plain text nodes between child elements) -->
  *     kara.move()
  *
  *     <kara-solution>
@@ -62,7 +65,8 @@ function dedent(text: string): string {
  *   </kara-exercise>
  *
  * Test assertions run after user code in the same Pyodide context, so `kara`,
- * `world_leaf_at(x, y)`, and `world_mushroom_at(x, y)` are all in scope.
+ * `world_leaf_at(x, y)`, `world_mushroom_at(x, y)`, and `world_leaves()` are
+ * all in scope.
  *
  * Coordinates are 0-indexed (column, row) from the top-left corner.
  * kara.direction is one of: 'right', 'down', 'left', 'up'.
@@ -85,16 +89,18 @@ export class KaraExercise extends LitElement {
     private readonly _sessionId = `kara-${crypto.randomUUID()}`;
 
     private _worldStr     = DEFAULT_WORLD;
+    private _promptHtml   = '';
     private _userCode     = '';
     private _solutionCode = '';
     private _testCode     = '';
 
     /** Programmatic overrides used by kara-editor-page when loading from a permalink.
      *  Empty string is a no-op so Lit bindings with a missing field don't clobber defaults. */
-    set world(w: string)    { if (w) { this._worldStr = w;     this.requestUpdate(); } }
-    set code(c: string)     { if (c) { this._userCode = c;     this.requestUpdate(); } }
-    set solution(s: string) { if (s) { this._solutionCode = s; this.requestUpdate(); } }
-    set testCode(t: string) { if (t) { this._testCode = t;     this.requestUpdate(); } }
+    set world(w: string)      { if (w) { this._worldStr   = w; this.requestUpdate(); } }
+    set promptHtml(h: string) { if (h) { this._promptHtml = h; this.requestUpdate(); } }
+    set code(c: string)       { if (c) { this._userCode   = c; this.requestUpdate(); } }
+    set solution(s: string)   { if (s) { this._solutionCode = s; this.requestUpdate(); } }
+    set testCode(t: string)   { if (t) { this._testCode   = t; this.requestUpdate(); } }
 
     connectedCallback() {
         super.connectedCallback();
@@ -107,7 +113,10 @@ export class KaraExercise extends LitElement {
             this._worldStr = dedentWorld(worldEl.textContent ?? '') || DEFAULT_WORLD;
         }
 
-        // Starter code = direct text-node children (outside <kara-world> etc.)
+        const promptEl = this.querySelector('kara-prompt');
+        if (promptEl) this._promptHtml = promptEl.innerHTML.trim();
+
+        // Starter code = direct text-node children (outside named child elements)
         this._userCode = Array.from(this.childNodes)
             .filter(n => n.nodeType === Node.TEXT_NODE)
             .map(n => n.textContent ?? '')
@@ -141,6 +150,7 @@ export class KaraExercise extends LitElement {
         const encoded = await encodeExercise({
             world:    this._worldStr,
             code:     currentCode                || undefined,
+            prompt:   this._promptHtml           || undefined,
             // Omit solution when hidesolution — absence IS the obfuscation.
             solution: this.hidesolution ? undefined : (this._solutionCode.trim() || undefined),
             tests:    this._testCode.trim()      || undefined,
@@ -169,7 +179,7 @@ export class KaraExercise extends LitElement {
                 timeout=${this.timeout}
                 id=${this.id || nothing}
                 storage=${this.storage || nothing}
-            ></bottom-exercise>`;
+            >${this._promptHtml ? html`<div slot="prompt">${unsafeHTML(this._promptHtml)}</div>` : nothing}</bottom-exercise>`;
     }
 
     static styles = css`

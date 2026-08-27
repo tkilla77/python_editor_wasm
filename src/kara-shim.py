@@ -135,10 +135,6 @@ class _Kara:
         """Kara's current facing: 'right', 'down', 'left', or 'up'."""
         return ('right', 'down', 'left', 'up')[self._g.kara_dir]
 
-    def world_leaves(self):
-        """Count the total number of leaves currently in the world."""
-        return sum(cell == _LEAF for row in self._g.cells for cell in row)
-
     # ---------------------------------------------------------------- internals
 
     async def _step(self):
@@ -170,6 +166,11 @@ def world_leaf_at(x, y):
 def world_mushroom_at(x, y):
     """Return True if there is a mushroom at cell (x, y) in the current world."""
     return _kara_grid.cells[y][x] == _MUSH
+
+
+def world_leaves():
+    """Count the total number of leaves currently in the world."""
+    return sum(cell == _LEAF for row in _kara_grid.cells for cell in row)
 
 
 # ---------------------------------------------------------------------------
