@@ -2,7 +2,6 @@ import { LitElement, css, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import './kara-editor.js'
 import './kara-exercise.js'
-import type { KaraEditor } from './kara-editor.js'
 import { decodeExercise, sanitizeHtml, type ExercisePermalinkState } from './exercise-permalink.js'
 
 @customElement('kara-editor-page')
@@ -58,16 +57,10 @@ export class KaraEditorPage extends LitElement {
         return uri.searchParams;
     }
 
-    override firstUpdated() {
-        // Only needed in plain editor mode — in exercise mode the decoded state
-        // is passed via Lit property bindings directly in render().
-        if (!this._decoded && !this._decoding) {
-            const el = this.renderRoot.querySelector('kara-editor') as KaraEditor | null;
-            if (el) {
-                if (this._world) el.world = this._world;
-                if (this._code)  el.code  = this._code;
-            }
-        }
+    /** Returns the current editor source code. Useful for embedding and testing. */
+    get code(): string {
+        const el = this.renderRoot?.querySelector('kara-editor') as any;
+        return el?.code ?? this._code;
     }
 
     override render() {
@@ -92,6 +85,8 @@ export class KaraEditorPage extends LitElement {
                 step=${this._step}
                 timeout=${this._timeout}
                 ?autorun=${this._autorun}
+                .world=${this._world}
+                .code=${this._code}
             ></kara-editor>`;
     }
 

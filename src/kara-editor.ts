@@ -50,19 +50,22 @@ export class KaraEditor extends LitElement {
         }
 
         // User code = direct text-node children (outside <kara-world>).
-        this._userCode = Array.from(this.childNodes)
+        // Guard: don't overwrite a value already set programmatically (e.g. via
+        // Lit's .code binding, which fires before connectedCallback).
+        const domCode = Array.from(this.childNodes)
             .filter(n => n.nodeType === Node.TEXT_NODE)
             .map(n => n.textContent ?? '')
             .join('')
             .replace(/^\s*\n/, '');
+        if (domCode.trim()) this._userCode = domCode;
     }
 
     /** Set world programmatically (overrides <kara-world> child). */
-    set world(w: string) { this._worldStr = w; this.requestUpdate(); }
+    set world(w: string) { if (w) { this._worldStr = w; this.requestUpdate(); } }
     get world()          { return this._worldStr; }
 
     /** Set user code programmatically (overrides text-node children). */
-    set code(c: string)  { this._userCode = c; this.requestUpdate(); }
+    set code(c: string)  { if (c) { this._userCode = c; this.requestUpdate(); } }
     get code()           { return this._userCode; }
 
     private get _prefix(): string {

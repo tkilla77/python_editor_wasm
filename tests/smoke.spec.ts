@@ -88,6 +88,28 @@ test.describe('basic print smoke', () => {
     });
 });
 
+test.describe('kara-editor permalink', () => {
+    test.beforeEach(async ({ page }) => {
+        page.on('pageerror', err => { throw err; });
+    });
+
+    test('restores code from ?code= URL param', async ({ page }) => {
+        const world = encodeURIComponent('###########\n#>........#\n###########');
+        const code  = encodeURIComponent('kara.move()');
+        await page.goto(`/kara.html?world=${world}&code=${code}`);
+
+        // Wait for the custom element to be registered and rendered.
+        await page.waitForFunction(() => customElements.get('kara-editor-page') !== undefined);
+        // Flush Lit's microtask render queue.
+        await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
+
+        const restored = await page.evaluate(() =>
+            (document.querySelector('kara-editor-page') as any)?.code
+        );
+        expect(restored).toBe('kara.move()');
+    });
+});
+
 test.describe('turtle canvas smoke', () => {
     test.beforeEach(async ({ page }) => {
         page.on('pageerror', err => { throw err; });

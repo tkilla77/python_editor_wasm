@@ -116,12 +116,15 @@ export class KaraExercise extends LitElement {
         const promptEl = this.querySelector('kara-prompt');
         if (promptEl) this._promptHtml = promptEl.innerHTML.trim();
 
-        // Starter code = direct text-node children (outside named child elements)
-        this._userCode = Array.from(this.childNodes)
+        // Starter code = direct text-node children (outside named child elements).
+        // Guard: don't overwrite a value already set programmatically (e.g. via
+        // Lit's .code binding, which fires before connectedCallback).
+        const domCode = Array.from(this.childNodes)
             .filter(n => n.nodeType === Node.TEXT_NODE)
             .map(n => n.textContent ?? '')
             .join('')
             .replace(/^\s*\n/, '');
+        if (domCode.trim()) this._userCode = domCode;
 
         const solutionEl = this.querySelector('kara-solution');
         if (solutionEl) this._solutionCode = dedent(solutionEl.textContent ?? '');
