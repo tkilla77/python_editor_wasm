@@ -24,7 +24,9 @@ class KaraException(Exception):
 
 class _Grid:
     def __init__(self, s):
-        lines = [l.rstrip() for l in s.strip().splitlines() if l.strip()]
+        lines = [l.rstrip() for l in s.strip().splitlines()]
+        while lines and not lines[0]:  lines.pop(0)
+        while lines and not lines[-1]: lines.pop()
         self.height = len(lines)
         self.width   = max(len(l) for l in lines) if lines else 1
         self.cells   = [[_EMPTY] * self.width for _ in range(self.height)]
