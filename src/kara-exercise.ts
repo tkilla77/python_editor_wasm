@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js'
 import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import './exercise.js'
 import karaShimSrc from './kara-shim.py?raw'
-import { dedentWorld } from './kara-world.js'
+import { dedentWorld, renderKaraWorld } from './kara-world.js'
 import { transformKaraCode } from './kara-transform.js'
 import { encodeExercise } from './exercise-permalink.js'
 
@@ -88,11 +88,13 @@ export class KaraExercise extends LitElement {
 
     private readonly _sessionId = `kara-${crypto.randomUUID()}`;
 
-    private _worldStr     = DEFAULT_WORLD;
-    private _promptHtml   = '';
-    private _userCode     = '';
-    private _solutionCode = '';
-    private _testCode     = '';
+    private _worldStr        = DEFAULT_WORLD;
+    private _promptHtml      = '';
+    private _userCode        = '';
+    private _solutionCode    = '';
+    private _testCode        = '';
+    private _expectedWorldStr = '';   // target world for visual diff on failure
+    private _showExpected    = false;
 
     /** Programmatic overrides used by kara-editor-page when loading from a permalink.
      *  Empty string is a no-op so Lit bindings with a missing field don't clobber defaults. */
@@ -145,6 +147,7 @@ export class KaraExercise extends LitElement {
             let testCode = '';
             if (targetWorldEl) {
                 const worldStr = dedentWorld(targetWorldEl.textContent ?? '').replace(/"""/g, "'''");
+                this._expectedWorldStr = worldStr;
                 testCode = `_world_matches("""\n${worldStr}\n""")\n`;
             }
             testCode += dedent(plainText);
@@ -165,6 +168,18 @@ export class KaraExercise extends LitElement {
         this._prefix + transformKaraCode(editorCode);
 
     private get _readyCode(): string { return this._prefix; }
+
+    private readonly _onTestResult = (e: Event) => {
+        const report = (e as CustomEvent).detail as { passed: boolean };
+        this._showExpected = !report.passed && !!this._expectedWorldStr;
+        if (this._showExpected) {
+            this.updateComplete.then(() => {
+                const canvas = this.renderRoot?.querySelector('.expected-canvas') as HTMLCanvasElement | null;
+                if (canvas) renderKaraWorld(canvas, this._expectedWorldStr);
+            });
+        }
+        this.requestUpdate();
+    };
 
     private readonly _permalink = async () => {
         const exercise = this.renderRoot?.querySelector('bottom-exercise') as any;
@@ -201,7 +216,13 @@ export class KaraExercise extends LitElement {
                 timeout=${this.timeout}
                 id=${this.id || nothing}
                 storage=${this.storage || nothing}
-            >${this._promptHtml ? html`<div slot="prompt">${unsafeHTML(this._promptHtml)}</div>` : nothing}</bottom-exercise>`;
+                @test-result=${this._onTestResult}
+            >${this._promptHtml ? html`<div slot="prompt">${unsafeHTML(this._promptHtml)}</div>` : nothing}</bottom-exercise>
+            ${this._showExpected ? html`
+                <div class="expected-world">
+                    <span class="expected-label">Expected world</span>
+                    <canvas class="expected-canvas" width="2000" height="2000"></canvas>
+                </div>` : nothing}`;
     }
 
     static styles = css`
@@ -209,6 +230,27 @@ export class KaraExercise extends LitElement {
         bottom-exercise {
             --be-output-row: calc(2lh + 1em + 4px);
             --be-output-min-height: calc(2lh + 1em + 4px);
+        }
+        .expected-world {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25em;
+            margin-top: 0.75em;
+        }
+        .expected-label {
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #dc2626;
+            font-family: system-ui, sans-serif;
+        }
+        .expected-canvas {
+            display: block;
+            width: min(100%, 280px);
+            height: auto;
+            aspect-ratio: 1;
+            border: 1px solid #fca5a5;
+            border-radius: 4px;
         }
     `;
 }

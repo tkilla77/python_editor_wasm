@@ -180,24 +180,6 @@ def world_leaves():
     return sum(cell == _LEAF for row in _kara_grid.cells for cell in row)
 
 
-def _world_text(grid, include_kara=True):
-    """Return the grid as a list of strings using world-format characters."""
-    _KARA_CHARS = '>vb^'
-    rows = []
-    for y in range(grid.height):
-        row = ''
-        for x in range(grid.width):
-            cell = grid.cells[y][x]
-            if include_kara and x == grid.kara_x and y == grid.kara_y:
-                row += _KARA_CHARS[grid.kara_dir]
-            elif cell == _TREE: row += 'T'
-            elif cell == _LEAF: row += 'L'
-            elif cell == _MUSH: row += 'M'
-            else:               row += '.'
-        rows.append(row)
-    return rows
-
-
 def _world_matches(expected_str):
     """Assert that the current world matches the expected world string.
 
@@ -242,11 +224,9 @@ def _world_matches(expected_str):
             )
 
     if errors:
-        exp_lines = _world_text(expected, include_kara=has_kara)
-        world_block = '\n'.join('  ' + r for r in exp_lines)
         raise AssertionError(
-            'World does not match expected:\n  ' + '\n  '.join(errors)
-            + '\n\nExpected world:\n' + world_block
+            'World does not match expected (see canvas below):\n  '
+            + '\n  '.join(errors)
         )
     return True
 
