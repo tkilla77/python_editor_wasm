@@ -180,21 +180,40 @@ def world_leaves():
     return sum(cell == _LEAF for row in _kara_grid.cells for cell in row)
 
 
+def _world_text(grid, include_kara=True):
+    """Return the grid as a list of strings using world-format characters."""
+    _KARA_CHARS = '>vb^'
+    rows = []
+    for y in range(grid.height):
+        row = ''
+        for x in range(grid.width):
+            cell = grid.cells[y][x]
+            if include_kara and x == grid.kara_x and y == grid.kara_y:
+                row += _KARA_CHARS[grid.kara_dir]
+            elif cell == _TREE: row += 'T'
+            elif cell == _LEAF: row += 'L'
+            elif cell == _MUSH: row += 'M'
+            else:               row += '.'
+        rows.append(row)
+    return rows
+
+
 def _world_matches(expected_str):
     """Assert that the current world matches the expected world string.
 
     Cell contents (empty, leaf, mushroom, tree) are always compared.
     Kara's position and direction are compared only when the expected string
-    contains a direction character (>, v, <, ^, e, s, w, n).
-    Raises AssertionError with a diff on mismatch.
+    contains a direction character (>, v, b, ^, e, s, w, n).
+    On failure, renders the expected world to the canvas and raises AssertionError.
     """
     expected = _Grid(expected_str)
     _NAMES = {_EMPTY: 'empty', _TREE: 'tree', _LEAF: 'leaf', _MUSH: 'mushroom'}
     errors = []
 
-    if expected.width != _kara_grid.width or expected.height != _kara_grid.height:
+    size_ok = expected.width == _kara_grid.width and expected.height == _kara_grid.height
+    if not size_ok:
         errors.append(
-            f'  size: expected {expected.width}×{expected.height}, '
+            f'size: expected {expected.width}×{expected.height}, '
             f'got {_kara_grid.width}×{_kara_grid.height}'
         )
     else:
@@ -204,25 +223,31 @@ def _world_matches(expected_str):
                 got = _kara_grid.cells[y][x]
                 if exp != got:
                     errors.append(
-                        f'  ({x},{y}): expected {_NAMES[exp]}, got {_NAMES[got]}'
+                        f'({x},{y}): expected {_NAMES[exp]}, got {_NAMES[got]}'
                     )
 
     _DIR_CHARS = set('>vb^<eswn')
-    if any(ch in _DIR_CHARS for row in expected_str.splitlines() for ch in row):
+    has_kara = any(ch in _DIR_CHARS for row in expected_str.splitlines() for ch in row)
+    if has_kara and size_ok:
         if _kara_grid.kara_x != expected.kara_x or _kara_grid.kara_y != expected.kara_y:
             errors.append(
-                f'  Kara position: expected ({expected.kara_x},{expected.kara_y}), '
+                f'Kara position: expected ({expected.kara_x},{expected.kara_y}), '
                 f'got ({_kara_grid.kara_x},{_kara_grid.kara_y})'
             )
         if _kara_grid.kara_dir != expected.kara_dir:
             _DIRS_N = ('right', 'down', 'left', 'up')
             errors.append(
-                f'  Kara direction: expected {_DIRS_N[expected.kara_dir]}, '
+                f'Kara direction: expected {_DIRS_N[expected.kara_dir]}, '
                 f'got {_DIRS_N[_kara_grid.kara_dir]}'
             )
 
     if errors:
-        raise AssertionError('World does not match expected:\n' + '\n'.join(errors))
+        exp_lines = _world_text(expected, include_kara=has_kara)
+        world_block = '\n'.join('  ' + r for r in exp_lines)
+        raise AssertionError(
+            'World does not match expected:\n  ' + '\n  '.join(errors)
+            + '\n\nExpected world:\n' + world_block
+        )
     return True
 
 
