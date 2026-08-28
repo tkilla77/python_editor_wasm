@@ -130,7 +130,20 @@ export class KaraExercise extends LitElement {
         if (solutionEl) this._solutionCode = dedent(solutionEl.textContent ?? '');
 
         const testsEl = this.querySelector('kara-tests');
-        if (testsEl) this._testCode = dedent(testsEl.textContent ?? '');
+        if (testsEl) {
+            const targetWorldEl = testsEl.querySelector('kara-world');
+            const plainText = Array.from(testsEl.childNodes)
+                .filter(n => n.nodeType === Node.TEXT_NODE)
+                .map(n => n.textContent ?? '')
+                .join('');
+            let testCode = '';
+            if (targetWorldEl) {
+                const worldStr = dedentWorld(targetWorldEl.textContent ?? '').replace(/"""/g, "'''");
+                testCode = `_world_matches("""\n${worldStr}\n""")\n`;
+            }
+            testCode += dedent(plainText);
+            this._testCode = testCode.trim();
+        }
     }
 
     private get _prefix(): string {
