@@ -108,6 +108,10 @@ kara.turnLeft()
 <td>Kara facing down</td>
 </tr>
 <tr>
+<td><code>e</code> / <code>s</code> / <code>w</code> / <code>n</code></td>
+<td>Kara on a <strong>leaf</strong>, facing right / down / left / up (compass mnemonic)</td>
+</tr>
+<tr>
 <td><code>L</code></td>
 <td>Leaf</td>
 </tr>
@@ -121,6 +125,19 @@ kara.turnLeft()
 </tr>
 </tbody></table>
 <p>If no <code>&lt;kara-world&gt;</code> is given, a default empty grid is used.</p>
+<p>Lowercase compass chars (<code>e</code>/<code>s</code>/<code>w</code>/<code>n</code>) let Kara start on a leaf —
+useful when the goal is to leave the leaf behind or pick it up immediately:</p>
+<kara-editor step="200">
+<kara-world>
+#########
+#..e....#
+#########
+</kara-world>
+kara.removeLeaf()
+kara.move()
+kara.move()
+kara.putLeaf()
+</kara-editor>
 <hr>
 <h2>Commands</h2>
 <table>
@@ -356,7 +373,7 @@ assert kara.onLeaf(), "Kara should be standing on the leaf"
 <tr><td><code>&lt;kara-world&gt;</code></td><td>Grid world definition (same format as in <code>&lt;kara-editor&gt;</code>)</td></tr>
 <tr><td>Text nodes</td><td>Starter code shown in the editor</td></tr>
 <tr><td><code>&lt;kara-solution&gt;</code></td><td>Reference solution revealed when the student clicks "Show solution"</td></tr>
-<tr><td><code>&lt;kara-tests&gt;</code></td><td>Python assertions run after the student's code; <code>kara</code> and world helpers are in scope</td></tr>
+<tr><td><code>&lt;kara-tests&gt;</code></td><td>Python assertions run after the student's code; <code>kara</code> and world helpers are in scope. May contain a <code>&lt;kara-world&gt;</code> child to specify an expected final world state (see below).</td></tr>
 </tbody>
 </table>
 
@@ -454,6 +471,71 @@ while not kara.treeFront():
 </kara-solution>
 <kara-tests>
 assert world_leaves() == 0, f"All leaves should be removed, {world_leaves()} remain"
+</kara-tests>
+</kara-exercise>
+
+<h3>Target-world assertions</h3>
+<p>Place a <code>&lt;kara-world&gt;</code> <em>inside</em> <code>&lt;kara-tests&gt;</code> to describe the expected final
+world state. Every cell is compared (leaf / mushroom / tree / empty). If the
+expected world includes a Kara direction character, her final position and
+direction are also checked; omit Kara from the target world to skip that check.</p>
+
+<pre><code class="language-html">&lt;kara-tests&gt;
+  &lt;kara-world&gt;
+  #######
+  #....>#
+  #######
+  &lt;/kara-world&gt;
+&lt;/kara-tests&gt;
+</code></pre>
+
+<p>Plain assertions can follow the <code>&lt;kara-world&gt;</code> element and run after the world
+check. On failure the error lists each mismatched cell and, if applicable,
+Kara's expected vs. actual position and direction.</p>
+<p>The next exercise asks the student to move Kara to the right wall — the target
+world includes Kara's final position and direction:</p>
+
+<kara-exercise id="doc-ex-world-match">
+<kara-world>
+#######
+#>....#
+#######
+</kara-world>
+<kara-solution>
+while not kara.treeFront():
+    kara.move()
+</kara-solution>
+<kara-tests>
+  <kara-world>
+  #######
+  #....>#
+  #######
+  </kara-world>
+</kara-tests>
+</kara-exercise>
+
+<p>This variant checks only that all leaves were consumed (no Kara char in
+target → position not checked), and uses a starting world where Kara
+already stands on the first leaf (<code>e</code> = facing right, on a leaf):</p>
+
+<kara-exercise id="doc-ex-world-match-leaves">
+<kara-world>
+########
+#eL.L..#
+########
+</kara-world>
+<kara-solution>
+while not kara.treeFront():
+    if kara.onLeaf():
+        kara.removeLeaf()
+    kara.move()
+</kara-solution>
+<kara-tests>
+  <kara-world>
+  ########
+  #......#
+  ########
+  </kara-world>
 </kara-tests>
 </kara-exercise>
 
