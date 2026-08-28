@@ -16,6 +16,7 @@ interface KaraGrid {
     width: number; height: number;
     cells: number[][];
     karaX: number; karaY: number; karaDir: number;
+    hasKara: boolean;
 }
 
 export function parseKaraWorld(s: string): KaraGrid {
@@ -25,7 +26,7 @@ export function parseKaraWorld(s: string): KaraGrid {
     const height = raw.length;
     const width  = raw.reduce((m, l) => Math.max(m, l.length), 1);
     const cells  = Array.from({ length: height }, () => new Array(width).fill(_EMPTY));
-    let karaX = 0, karaY = 0, karaDir = 0;
+    let karaX = 0, karaY = 0, karaDir = 0, hasKara = false;
     const DIR:      Record<string, number> = { '>': 0, 'v': 1, 'b': 2, '^': 3, '<': 2 };
     const DIR_LEAF: Record<string, number> = { 'e': 0, 's': 1, 'w': 2, 'n': 3 };
     for (let y = 0; y < raw.length; y++) {
@@ -34,11 +35,11 @@ export function parseKaraWorld(s: string): KaraGrid {
             if (ch === '#' || ch === 'T')    cells[y][x] = _TREE;
             else if (ch === 'L')             cells[y][x] = _LEAF;
             else if (ch === 'M')             cells[y][x] = _MUSH;
-            else if (ch in DIR)            { karaX = x; karaY = y; karaDir = DIR[ch]; }
-            else if (ch in DIR_LEAF)       { karaX = x; karaY = y; karaDir = DIR_LEAF[ch]; cells[y][x] = _LEAF; }
+            else if (ch in DIR)            { karaX = x; karaY = y; karaDir = DIR[ch]; hasKara = true; }
+            else if (ch in DIR_LEAF)       { karaX = x; karaY = y; karaDir = DIR_LEAF[ch]; cells[y][x] = _LEAF; hasKara = true; }
         }
     }
-    return { width, height, cells, karaX, karaY, karaDir };
+    return { width, height, cells, karaX, karaY, karaDir, hasKara };
 }
 
 /** Render a Kara world string to a canvas (main-thread equivalent of kara-shim.py _kara_draw). */
@@ -68,12 +69,13 @@ export function renderKaraWorld(canvas: HTMLCanvasElement, worldStr: string): vo
             else if (v === _MUSH) ctx.fillText('🍄', cx, cy);
         }
     }
-    // Kara
-    const kx = ox + grid.karaX * cell + cell / 2;
-    const ky = oy + grid.karaY * cell + cell / 2;
-    ctx.save();
-    ctx.translate(kx, ky);
-    ctx.rotate(_DIR_ANGLE[grid.karaDir]);
-    ctx.fillText('🐞', 0, 0);
-    ctx.restore();
+    if (grid.hasKara) {
+        const kx = ox + grid.karaX * cell + cell / 2;
+        const ky = oy + grid.karaY * cell + cell / 2;
+        ctx.save();
+        ctx.translate(kx, ky);
+        ctx.rotate(_DIR_ANGLE[grid.karaDir]);
+        ctx.fillText('🐞', 0, 0);
+        ctx.restore();
+    }
 }
