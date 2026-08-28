@@ -29,7 +29,8 @@ class _Grid:
         self.width   = max(len(l) for l in lines) if lines else 1
         self.cells   = [[_EMPTY] * self.width for _ in range(self.height)]
         self.kara_x  = self.kara_y = self.kara_dir = 0
-        _DIR = {'>': 0, 'v': 1, '<': 2, '^': 3}
+        _DIR      = {'>': 0, 'v': 1, '<': 2, '^': 3}
+        _DIR_LEAF = {'e': 0, 's': 1, 'w': 2, 'n': 3}  # Kara on a leaf
         for y, row in enumerate(lines):
             for x, ch in enumerate(row):
                 if   ch in ('#', 'T'):  self.cells[y][x] = _TREE
@@ -38,6 +39,10 @@ class _Grid:
                 elif ch in _DIR:
                     self.kara_x, self.kara_y = x, y
                     self.kara_dir = _DIR[ch]
+                elif ch in _DIR_LEAF:
+                    self.kara_x, self.kara_y = x, y
+                    self.kara_dir = _DIR_LEAF[ch]
+                    self.cells[y][x] = _LEAF
 
     def at(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
