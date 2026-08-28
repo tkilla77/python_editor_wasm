@@ -16,6 +16,7 @@ export class BottomEditorCanvas extends LitElement {
     private _dragging = false;
     private _dragLastX = 0;
     private _dragLastY = 0;
+    private _hintTimer: ReturnType<typeof setTimeout> | null = null;
 
     private _resizeObserver = new ResizeObserver(entries => {
         const rect = entries[0]?.contentRect;
@@ -75,6 +76,11 @@ export class BottomEditorCanvas extends LitElement {
     }
 
     private _onWheel = (e: WheelEvent) => {
+        // Pinch-to-zoom synthesises ctrlKey=true in all browsers.
+        if (!e.ctrlKey && !e.metaKey) {
+            this._showZoomHint();
+            return;
+        }
         e.preventDefault();
         const rect = this.getBoundingClientRect();
         const mx = e.clientX - rect.left;
@@ -87,6 +93,17 @@ export class BottomEditorCanvas extends LitElement {
         this._zoom = newZoom;
         this._applyTransform();
     };
+
+    private _showZoomHint(): void {
+        const hint = this.shadowRoot?.querySelector('.zoom-hint');
+        if (!hint) return;
+        hint.classList.add('visible');
+        if (this._hintTimer !== null) clearTimeout(this._hintTimer);
+        this._hintTimer = setTimeout(() => {
+            hint.classList.remove('visible');
+            this._hintTimer = null;
+        }, 1500);
+    }
 
     private _onMouseDown = (e: MouseEvent) => {
         if (e.button !== 0) return;
@@ -152,6 +169,7 @@ export class BottomEditorCanvas extends LitElement {
         return html`
             <canvas width="${CANVAS_SIZE}" height="${CANVAS_SIZE}"></canvas>
             <button @click=${this._onFitClick} title="Fit to content">⊕</button>
+            <div class="zoom-hint">Use Ctrl+scroll or pinch to zoom</div>
         `;
     }
 
