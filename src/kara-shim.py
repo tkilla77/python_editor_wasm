@@ -31,7 +31,7 @@ class _Grid:
         self.width   = max(len(l) for l in lines) if lines else 1
         self.cells   = [[_EMPTY] * self.width for _ in range(self.height)]
         self.kara_x  = self.kara_y = self.kara_dir = 0
-        _DIR      = {'>': 0, 'v': 1, '<': 2, '^': 3}
+        _DIR      = {'>': 0, 'v': 1, 'b': 2, '^': 3, '<': 2}  # < kept as alias
         _DIR_LEAF = {'e': 0, 's': 1, 'w': 2, 'n': 3}  # Kara on a leaf
         for y, row in enumerate(lines):
             for x, ch in enumerate(row):
@@ -207,7 +207,7 @@ def _world_matches(expected_str):
                         f'  ({x},{y}): expected {_NAMES[exp]}, got {_NAMES[got]}'
                     )
 
-    _DIR_CHARS = set('>v<^eswn')
+    _DIR_CHARS = set('>vb^<eswn')
     if any(ch in _DIR_CHARS for row in expected_str.splitlines() for ch in row):
         if _kara_grid.kara_x != expected.kara_x or _kara_grid.kara_y != expected.kara_y:
             errors.append(

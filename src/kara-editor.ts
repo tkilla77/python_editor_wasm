@@ -46,6 +46,12 @@ export class KaraEditor extends LitElement {
     private _parse() {
         const worldEl = this.querySelector('kara-world');
         if (worldEl) {
+            if (worldEl.children.length > 0) {
+                console.warn(
+                    'kara-world: unexpected child elements detected — the world text likely ' +
+                    'contains an unescaped < character. Use &lt; for Kara facing left in HTML.'
+                );
+            }
             this._worldStr = dedentWorld(worldEl.textContent ?? '') || DEFAULT_WORLD;
         }
 
