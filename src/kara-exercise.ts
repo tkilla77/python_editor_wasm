@@ -102,7 +102,15 @@ export class KaraExercise extends LitElement {
     set promptHtml(h: string) { if (h) { this._promptHtml = h; this.requestUpdate(); } }
     set code(c: string)       { if (c) { this._userCode   = c; this.requestUpdate(); } }
     set solution(s: string)   { if (s) { this._solutionCode = s; this.requestUpdate(); } }
-    set testCode(t: string)   { if (t) { this._testCode   = t; this.requestUpdate(); } }
+    set testCode(t: string) {
+        if (!t) return;
+        this._testCode = t;
+        // Extract expected world for visual rendering when test code was generated from a
+        // <kara-world> in <kara-tests> (format: _world_matches("""\n<world>\n""") )
+        const m = t.match(/_world_matches\("""\n([\s\S]*?)\n"""\)/);
+        if (m) this._expectedWorldStr = m[1];
+        this.requestUpdate();
+    }
 
     connectedCallback() {
         super.connectedCallback();
