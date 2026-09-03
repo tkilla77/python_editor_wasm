@@ -91,6 +91,9 @@ export class BottomExercise extends LitElement {
     /** Canvas auto-fit forwarded to <bottom-editor>. */
     @property({ type: Boolean }) autofit: boolean = false;
 
+    /** When false, hides the built-in Reset button in the inner editor. */
+    @property({ type: Boolean }) showclear: boolean = true;
+
     /**
      * Test assertions as a plain Python string. Fallback when no
      * <template data-type="test"> child is present. Used by <kara-exercise>.
@@ -245,6 +248,11 @@ export class BottomExercise extends LitElement {
         }
     }
 
+    /** Re-run readyCode to reset the world/canvas without touching editor code. */
+    async resetWorld() {
+        await this._editor?.resetWorld();
+    }
+
     /** Returns the resolved solution code, or '' if none is provided. */
     private _resolvedSolution(): string {
         if (this._solutionCode) return this._solutionCode;
@@ -336,7 +344,7 @@ export class BottomExercise extends LitElement {
                 <slot></slot>
             </exercise-prompt>
             <bottom-editor
-                showclear
+                ?showclear=${this.showclear}
                 resetmode
                 norevert
                 .permalinkCallback=${this.permalinkOverride ?? (() => this.shareExercise())}

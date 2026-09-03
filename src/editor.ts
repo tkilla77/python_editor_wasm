@@ -614,6 +614,14 @@ export class BottomEditor extends LitElement {
         }
     }
 
+    /** Re-run readyCode to reset the canvas/world without touching editor code. */
+    async resetWorld() {
+        this._output?.clearOutput();
+        this._clearEditorDiagnostics();
+        if (this._offscreenCanvas) this.runtime.clearCanvas();
+        if (this.readyCode) await this.runtime.run(this.readyCode, () => {});
+    }
+
     private _handleFitRequest() {
         const canvasEl = this.renderRoot.querySelector('bottom-editor-canvas') as BottomEditorCanvas | null;
         if (!canvasEl) return;
