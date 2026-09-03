@@ -57,6 +57,10 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     resetmode = false;
 
+    /** When true (with showclear+resetmode), splits Reset into "Reset world" + "Reset code". */
+    @property({ type: Boolean, reflect: true })
+    splitreset = false;
+
     /** When false, the permalink button is hidden. Default: true. */
     @property({ type: Boolean })
     permalink = true;
@@ -692,6 +696,7 @@ export class BottomEditor extends LitElement {
                                 : 'auto'}"
                     ?showclear="${this.showclear}"
                     ?resetmode="${this.resetmode}"
+                    ?splitreset="${this.splitreset}"
                     .permalink=${this.permalink}
                     .shareState=${this._shareState}
                     ?showrevert="${!this.norevert && !!this._effectiveStorageKey()}"

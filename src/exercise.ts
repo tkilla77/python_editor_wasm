@@ -94,6 +94,9 @@ export class BottomExercise extends LitElement {
     /** When false, hides the built-in Reset button in the inner editor. */
     @property({ type: Boolean }) showclear: boolean = true;
 
+    /** When true, splits the Reset button into "Reset world" + "Reset code". */
+    @property({ type: Boolean }) splitreset: boolean = false;
+
     /**
      * Test assertions as a plain Python string. Fallback when no
      * <template data-type="test"> child is present. Used by <kara-exercise>.
@@ -253,6 +256,11 @@ export class BottomExercise extends LitElement {
         await this._editor?.resetWorld();
     }
 
+    private readonly _onResetCode = async () => {
+        this.resetCode();
+        await this.resetWorld();
+    };
+
     /** Returns the resolved solution code, or '' if none is provided. */
     private _resolvedSolution(): string {
         if (this._solutionCode) return this._solutionCode;
@@ -346,6 +354,7 @@ export class BottomExercise extends LitElement {
             <bottom-editor
                 ?showclear=${this.showclear}
                 resetmode
+                ?splitreset=${this.splitreset}
                 norevert
                 .permalinkCallback=${this.permalinkOverride ?? (() => this.shareExercise())}
                 .onRun=${() => this.runTests()}
@@ -364,6 +373,8 @@ export class BottomExercise extends LitElement {
                 ?autofit=${this.autofit}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-clear="${this.resetCode}"
+                @bottom-reset-world="${this.resetWorld}"
+                @bottom-reset-code="${this._onResetCode}"
             >${this.code || this._starterCode}</bottom-editor>
             ${this._renderStatus()}
             ${this._renderSolution()}

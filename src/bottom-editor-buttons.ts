@@ -12,6 +12,8 @@ export class BottomEditorButtons extends LitElement {
     @property({ reflect: true }) captionmode: string = 'auto';
     @property({ type: Boolean, reflect: true }) showclear = false;
     @property({ type: Boolean, reflect: true }) resetmode = false;
+    /** When true (with showclear), shows "Reset world" + "Reset code" instead of one Reset button. */
+    @property({ type: Boolean, reflect: true }) splitreset = false;
     @property({ type: Boolean }) permalink = true;
     @property() shareState: 'idle' | 'copied' | 'error' = 'idle';
     @property({ type: Boolean }) showrevert = false;
@@ -48,7 +50,10 @@ export class BottomEditorButtons extends LitElement {
         return html`
             <button id="run"       @click="${() => this.fire('bottom-run')}"       type="button" title="Run (Ctrl+Enter)"><span class="caption">Run</span></button>
             <button id="stop"      @click="${() => this.fire('bottom-stop')}"      type="button" title="Stop"><span class="caption">Stop</span></button>
-            ${this.showclear ? html`<button id="clear" @click="${() => this.fire('bottom-clear')}" type="button" title="${this.resetmode ? 'Reset' : 'Clear Output'}"><span class="caption">${this.resetmode ? 'Reset' : 'Clear'}</span></button>` : ''}
+            ${this.showclear && this.splitreset ? html`
+                <button id="reset-world" @click="${() => this.fire('bottom-reset-world')}" type="button" title="Reset world (keep code)"><span class="caption">Reset world</span></button>
+                <button id="reset-code"  @click="${() => this.fire('bottom-reset-code')}"  type="button" title="Reset code and world"><span class="caption">Reset code</span></button>
+            ` : this.showclear ? html`<button id="clear" @click="${() => this.fire('bottom-clear')}" type="button" title="${this.resetmode ? 'Reset' : 'Clear Output'}"><span class="caption">${this.resetmode ? 'Reset' : 'Clear'}</span></button>` : ''}
             ${this.showrevert ? html`<button id="revert" @click="${() => this.fire('bottom-revert')}" type="button" title="Revert to initial code"><span class="caption">Revert</span></button>` : ''}
             ${this.permalink ? html`<button id="permalink" class="${this.shareState !== 'idle' ? this.shareState : ''}" @click="${() => this.fire('bottom-permalink')}" type="button" title="Copy share link"><span class="caption">${this.shareState === 'copied' ? 'Copied!' : this.shareState === 'error' ? 'Failed' : 'Share'}</span></button>` : ''}
             ${this.showsync ? html`<button id="sync" class="${this._syncClass()}" @click="${() => this.fire('bottom-sync')}" type="button" title="${this._syncTitle()}"><span class="caption">${this._syncCaption()}</span></button>` : ''}`;

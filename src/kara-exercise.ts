@@ -177,17 +177,6 @@ export class KaraExercise extends LitElement {
 
     private get _readyCode(): string { return this._prefix; }
 
-    private readonly _resetWorld = async () => {
-        const exercise = this.renderRoot?.querySelector('bottom-exercise') as any;
-        await exercise?.resetWorld();
-    };
-
-    private readonly _resetCode = async () => {
-        const exercise = this.renderRoot?.querySelector('bottom-exercise') as any;
-        exercise?.resetCode();
-        await exercise?.resetWorld();
-    };
-
     private readonly _onTestResult = (e: Event) => {
         const report = (e as CustomEvent).detail as { passed: boolean };
         this._showExpected = !report.passed && !!this._expectedWorldStr;
@@ -222,7 +211,7 @@ export class KaraExercise extends LitElement {
         return html`
             <bottom-exercise
                 layout="split"
-                ?showclear=${false}
+                ?splitreset=${true}
                 .code=${this._userCode}
                 .transformCode=${this._transform}
                 .transformLineOffset=${this._prefixLineCount}
@@ -238,10 +227,6 @@ export class KaraExercise extends LitElement {
                 storage=${this.storage || nothing}
                 @test-result=${this._onTestResult}
             >${this._promptHtml ? html`<div slot="prompt">${unsafeHTML(this._promptHtml)}</div>` : nothing}</bottom-exercise>
-            <div class="kara-controls">
-                <button class="kara-btn" @click=${this._resetWorld}>Reset world</button>
-                <button class="kara-btn" @click=${this._resetCode}>Reset code</button>
-            </div>
             ${this._showExpected ? html`
                 <div class="expected-world">
                     <span class="expected-label">Expected world</span>
@@ -255,22 +240,6 @@ export class KaraExercise extends LitElement {
             --be-output-row: calc(2lh + 1em + 4px);
             --be-output-min-height: calc(2lh + 1em + 4px);
         }
-        .kara-controls {
-            display: flex;
-            gap: 0.5em;
-            margin-top: 0.5em;
-        }
-        .kara-btn {
-            font: inherit;
-            font-size: 0.85em;
-            padding: 0.2em 0.75em;
-            border: 1px solid #aaa;
-            border-radius: 4px;
-            background: #f5f5f5;
-            color: #333;
-            cursor: pointer;
-        }
-        .kara-btn:hover { background: #e8e8e8; }
         .expected-world {
             display: flex;
             flex-direction: column;
