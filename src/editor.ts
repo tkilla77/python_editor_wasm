@@ -325,6 +325,11 @@ export class BottomEditor extends LitElement {
         if (key) this._saveState(); // overwrite saved state with initial code
     }
 
+    private readonly _onResetCode = async () => {
+        this.revertCode();
+        await this.clearAll();
+    };
+
     // ── Button orientation ─────────────────────────────────────────────────────
 
     private _measureButtonColHeight(): number {
@@ -706,6 +711,8 @@ export class BottomEditor extends LitElement {
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"
                     @bottom-revert="${this.revertCode}"
+                    @bottom-reset-world="${this.clearAll}"
+                    @bottom-reset-code="${this._onResetCode}"
                     @bottom-permalink="${this.copyPermalink}"
                     @bottom-sync="${this._onSync}"
                 ></bottom-editor-buttons>

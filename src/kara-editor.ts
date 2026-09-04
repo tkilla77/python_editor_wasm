@@ -120,6 +120,7 @@ export class KaraEditor extends LitElement {
                 storage=${this.storage || nothing}
                 showclear
                 resetmode
+                splitreset
             ></bottom-editor>`;
     }
 
