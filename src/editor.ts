@@ -710,7 +710,7 @@ export class BottomEditor extends LitElement {
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
                     @bottom-clear="${this.clearAll}"
-                    @bottom-revert="${this.revertCode}"
+                    @bottom-revert="${this._onResetCode}"
                     @bottom-reset-world="${this.clearAll}"
                     @bottom-reset-code="${this._onResetCode}"
                     @bottom-permalink="${this.copyPermalink}"
