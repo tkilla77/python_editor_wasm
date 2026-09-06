@@ -27,10 +27,11 @@ export class KaraEditor extends LitElement {
     static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
 
     /** Animation step delay in milliseconds (0 = instant). */
-    @property({ type: Number }) step     = 200;
-    @property({ type: Boolean }) autorun = false;
-    @property() timeout                  = '30';
-    @property() storage                  = '';
+    @property({ type: Number }) step      = 200;
+    @property({ type: Boolean }) autorun  = false;
+    @property({ type: Boolean }) showclear = false;
+    @property() timeout                   = '30';
+    @property() storage                   = '';
 
     // Each instance gets its own isolated Pyodide runtime.
     private readonly _sessionId = `kara-${crypto.randomUUID()}`;
@@ -118,8 +119,7 @@ export class KaraEditor extends LitElement {
                 timeout=${this.timeout}
                 id=${this.id || nothing}
                 storage=${this.storage || nothing}
-                showclear
-                resetmode
+                ?showrevert=${this.showclear}
             ></bottom-editor>`;
     }
 

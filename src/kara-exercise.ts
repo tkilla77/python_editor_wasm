@@ -211,7 +211,6 @@ export class KaraExercise extends LitElement {
         return html`
             <bottom-exercise
                 layout="split"
-                ?splitreset=${true}
                 .code=${this._userCode}
                 .transformCode=${this._transform}
                 .transformLineOffset=${this._prefixLineCount}

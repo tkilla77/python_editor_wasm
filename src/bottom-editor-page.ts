@@ -62,7 +62,6 @@ class BottomEditorPage extends LitElement {
                 layout='${this.initLayout}'
                 timeout='${this.initTimeout}'
                 showswitcher
-                showclear
             ></bottom-editor>`;
     }
 

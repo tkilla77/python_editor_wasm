@@ -50,24 +50,13 @@ export class BottomEditor extends LitElement {
     @property()
     session: string = '';
 
+    /** When true, show the Revert button (red eraser). Reset is shown automatically when a canvas is present. */
     @property({ type: Boolean, reflect: true })
-    showclear = false;
-
-    /** When true, the clear button becomes "Reset" and also re-runs readyCode. */
-    @property({ type: Boolean, reflect: true })
-    resetmode = false;
-
-    /** When true (with showclear+resetmode), splits Reset into "Reset world" + "Reset code". */
-    @property({ type: Boolean, reflect: true })
-    splitreset = false;
+    showrevert = false;
 
     /** When false, the permalink button is hidden. Default: true. */
     @property({ type: Boolean })
     permalink = true;
-
-    /** When true, the revert button is never shown even if a storage key exists. */
-    @property({ type: Boolean })
-    norevert = false;
 
     /**
      * Storage backend. 'local' persists code in localStorage keyed by the
@@ -319,16 +308,13 @@ export class BottomEditor extends LitElement {
 
     // ── Revert ─────────────────────────────────────────────────────────────────
 
-    revertCode() {
+    /** Revert: reset editor code to initial, then reset canvas/output. */
+    async revertCode() {
         this.replaceDoc(this._initialCode);
         const key = this._effectiveStorageKey();
-        if (key) this._saveState(); // overwrite saved state with initial code
+        if (key) this._saveState();
+        await this.reset();
     }
-
-    private readonly _onResetCode = async () => {
-        this.revertCode();
-        await this.clearAll();
-    };
 
     // ── Button orientation ─────────────────────────────────────────────────────
 
@@ -614,17 +600,8 @@ export class BottomEditor extends LitElement {
         setTimeout(() => this._shareState = 'idle', 2000);
     }
 
-    private async clearAll() {
-        this._output?.clearOutput();
-        this._clearEditorDiagnostics();
-        if (this._offscreenCanvas) this.runtime.clearCanvas();
-        if (this.resetmode && this.readyCode) {
-            await this.runtime.run(this.readyCode, () => {});
-        }
-    }
-
-    /** Re-run readyCode to reset the canvas/world without touching editor code. */
-    async resetWorld() {
+    /** Reset: clear canvas/output, re-run readyCode. Does not touch editor code. */
+    async reset() {
         this._output?.clearOutput();
         this._clearEditorDiagnostics();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
@@ -699,20 +676,16 @@ export class BottomEditor extends LitElement {
                     captionmode="${this.orientation === 'horizontal' ? 'hide'
                                 : this.orientation === 'vertical'   ? 'show'
                                 : 'auto'}"
-                    ?showclear="${this.showclear}"
-                    ?resetmode="${this.resetmode}"
-                    ?splitreset="${this.splitreset}"
+                    ?showreset="${hasCanvas || this.showswitcher}"
+                    ?showrevert="${this.showrevert}"
                     .permalink=${this.permalink}
                     .shareState=${this._shareState}
-                    ?showrevert="${!this.norevert && !!this._effectiveStorageKey()}"
                     ?showsync="${this._syncAvailable()}"
                     syncbackend="${syncBackend}"
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
                     @bottom-stop="${() => this.runtime.interrupt()}"
-                    @bottom-clear="${this.clearAll}"
-                    @bottom-revert="${this._onResetCode}"
-                    @bottom-reset-world="${this.clearAll}"
-                    @bottom-reset-code="${this._onResetCode}"
+                    @bottom-reset="${this.reset}"
+                    @bottom-revert="${this.revertCode}"
                     @bottom-permalink="${this.copyPermalink}"
                     @bottom-sync="${this._onSync}"
                 ></bottom-editor-buttons>

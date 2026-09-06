@@ -91,12 +91,6 @@ export class BottomExercise extends LitElement {
     /** Canvas auto-fit forwarded to <bottom-editor>. */
     @property({ type: Boolean }) autofit: boolean = false;
 
-    /** When false, hides the built-in Reset button in the inner editor. */
-    @property({ type: Boolean }) showclear: boolean = true;
-
-    /** When true, splits the Reset button into "Reset world" + "Reset code". */
-    @property({ type: Boolean }) splitreset: boolean = false;
-
     /**
      * Test assertions as a plain Python string. Fallback when no
      * <template data-type="test"> child is present. Used by <kara-exercise>.
@@ -239,27 +233,34 @@ export class BottomExercise extends LitElement {
         }));
     }
 
-    resetCode() {
+    /** Reset: clear test report. Inner editor handles canvas/output/readyCode. */
+    private readonly _onReset = () => {
+        this._testReport = undefined;
+        this.requestUpdate();
+    };
+
+    /** Revert: reset exercise state. Inner editor handles code + canvas/output/readyCode. */
+    private readonly _onRevert = () => {
+        this._testReport = undefined;
+        this._status   = 'pristine';
+        this._attempts = 0;
+        this._solvedAt = undefined;
+        this._confirmingSolution = false;
+        this._editor?.saveNow();
+    };
+
+    /** Public API: reset exercise code + state to pristine and reset world. */
+    async resetCode() {
         if (this._editor) {
-            this._editor.sourceCode = this._effectiveStarterCode;
-            this._testReport = undefined;
-            this._status   = 'pristine';
-            this._attempts = 0;
-            this._solvedAt = undefined;
-            this._confirmingSolution = false;
-            this._editor.saveNow();
+            await this._editor.revertCode();
+            this._onRevert();
         }
     }
 
-    /** Re-run readyCode to reset the world/canvas without touching editor code. */
+    /** Public API: reset canvas/world without touching editor code. */
     async resetWorld() {
-        await this._editor?.resetWorld();
+        await this._editor?.reset();
     }
-
-    private readonly _onResetCode = async () => {
-        this.resetCode();
-        await this.resetWorld();
-    };
 
     /** Returns the resolved solution code, or '' if none is provided. */
     private _resolvedSolution(): string {
@@ -352,10 +353,7 @@ export class BottomExercise extends LitElement {
                 <slot></slot>
             </exercise-prompt>
             <bottom-editor
-                ?showclear=${this.showclear}
-                resetmode
-                ?splitreset=${this.splitreset}
-                norevert
+                showrevert
                 .permalinkCallback=${this.permalinkOverride ?? (() => this.shareExercise())}
                 .onRun=${() => this.runTests()}
                 .transformCode=${this.transformCode}
@@ -372,9 +370,8 @@ export class BottomExercise extends LitElement {
                 ?showswitcher=${this.showswitcher}
                 ?autofit=${this.autofit}
                 @bottom-change="${this._onCodeChange}"
-                @bottom-clear="${this.resetCode}"
-                @bottom-reset-world="${this.resetWorld}"
-                @bottom-reset-code="${this._onResetCode}"
+                @bottom-reset="${this._onReset}"
+                @bottom-revert="${this._onRevert}"
             >${this.code || this._starterCode}</bottom-editor>
             ${this._renderStatus()}
             ${this._renderSolution()}
