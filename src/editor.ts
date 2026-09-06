@@ -54,6 +54,11 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     showrevert = false;
 
+    /** Alias for showrevert — kept for backward compatibility. */
+    @property({ type: Boolean })
+    set showclear(v: boolean) { this.showrevert = v; }
+    get showclear()           { return this.showrevert; }
+
     /** When false, the permalink button is hidden. Default: true. */
     @property({ type: Boolean })
     permalink = true;
