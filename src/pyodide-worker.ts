@@ -61,8 +61,9 @@ del __make_tee
 `;
 
 /**
- * Restores sys.stdout and injects output() / output_lines() helpers into the
- * test namespace so assertions can check what the user's code printed.
+ * Restores sys.stdout and injects output() / output_lines() / with_input()
+ * helpers into the test namespace so assertions can check what the user's
+ * code printed.
  * Must be run after user code completes (including after a flush).
  */
 const CAPTURE_INJECT = `
@@ -75,6 +76,38 @@ def output():
 def output_lines():
     """Return each printed line as a list, stripping the trailing newline."""
     return __captured_output__.splitlines()
+def with_input(*inputs):
+    """Re-run the user's code with the given inputs queued for input() calls.
+
+    Updates output() and output_lines() to reflect this run.
+    Always returns True so it can be used in assert expressions:
+
+        assert with_input("3", "5") and "15" in output_lines()[-1]
+    """
+    import sys, io, builtins
+    global __captured_output__
+    _queue = [str(x) for x in inputs]
+    def _sync_input(prompt=''):
+        if not _queue:
+            raise EOFError('with_input: no more inputs provided')
+        return _queue.pop(0)
+    _code = __user_code__.replace('await input(', 'input(')
+    _buf = io.StringIO()
+    _orig_stdout = sys.stdout
+    class _Cap:
+        encoding = 'utf-8'; errors = 'strict'
+        def write(self, text): _orig_stdout.write(text); _buf.write(text); return len(text)
+        def flush(self): pass
+    _orig_input = builtins.input
+    sys.stdout = _Cap()
+    builtins.input = _sync_input
+    try:
+        exec(compile(_code, '<rerun>', 'exec'), {})
+    finally:
+        sys.stdout = _orig_stdout
+        builtins.input = _orig_input
+    __captured_output__ = _buf.getvalue()
+    return True
 `;
 
 /**
@@ -504,6 +537,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 try { py.runPython(CAPTURE_INJECT); } catch {}
                 try {
                     py.globals.set('__test_source__', msg.tests || '');
+                    py.globals.set('__user_code__', codeToRun);
                     const resultJson = await py.runPythonAsync(TEST_HARNESS);
                     const testResults = JSON.parse(resultJson);
                     currentRunId = undefined;
@@ -516,7 +550,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     }});
                 } finally {
                     try { py.runPython(`
-for __k in ['__test_source__', '__run_tests__', '__captured_output__', 'output', 'output_lines']:
+for __k in ['__test_source__', '__user_code__', '__run_tests__', '__captured_output__', 'output', 'output_lines', 'with_input']:
     try: del globals()[__k]
     except: pass
 del __k

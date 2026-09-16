@@ -358,6 +358,11 @@ student prints output rather than returning a value:</p>
 <td><code>output_lines()</code></td>
 <td><code>output().splitlines()</code> — each printed line as a clean string</td>
 </tr>
+<tr>
+<td><code>with_input(*inputs)</code></td>
+<td>Re-runs the student's code with the given strings queued as <code>input()</code> responses,
+updates <code>output()</code> / <code>output_lines()</code> to reflect that run, and returns <code>True</code></td>
+</tr>
 </tbody></table>
 <p>Output is still shown in the output panel as normal — the helpers just provide
 a second view of the same text for assertions.</p>
@@ -388,6 +393,38 @@ assert output_lines() == ["1", "2", "3", "4", "5"], \
 assert len(output_lines()) == 10             # line count
 assert output().strip() == &quot;42&quot;             # ignore trailing newline
 </code></pre>
+<p>Use <code>with_input()</code> to test programs that call <code>input()</code>. It re-runs the student's
+code with the supplied strings as answers and updates <code>output_lines()</code> accordingly.
+Because it always returns <code>True</code> it can be chained directly in an assertion:</p>
+<pre><code class="language-html">&lt;bottom-exercise&gt;
+  &lt;div slot=&quot;prompt&quot;&gt;&lt;p&gt;Read two numbers and print their product.&lt;/p&gt;&lt;/div&gt;
+  &lt;template data-type=&quot;starter&quot;&gt;
+a = int(input(&quot;First number: &quot;))
+b = int(input(&quot;Second number: &quot;))
+print(a * b)
+  &lt;/template&gt;
+  &lt;template data-type=&quot;test&quot;&gt;
+assert with_input(&quot;3&quot;, &quot;5&quot;) and output_lines()[-1] == &quot;15&quot;, \
+    f&quot;Expected 15 for inputs 3 and 5, got {output_lines()!r}&quot;
+assert with_input(&quot;0&quot;, &quot;99&quot;) and output_lines()[-1] == &quot;0&quot;, \
+    f&quot;Expected 0 for inputs 0 and 99, got {output_lines()!r}&quot;
+  &lt;/template&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
+<bottom-exercise>
+<div slot="prompt"><p>Read two numbers and print their product.</p></div>
+<template data-type="starter">
+a = int(input("First number: "))
+b = int(input("Second number: "))
+print(a * b)
+</template>
+<template data-type="test">
+assert with_input("3", "5") and output_lines()[-1] == "15", \
+    f"Expected 15 for inputs 3 and 5, got {output_lines()!r}"
+assert with_input("0", "99") and output_lines()[-1] == "0", \
+    f"Expected 0 for inputs 0 and 99, got {output_lines()!r}"
+</template>
+</bottom-exercise>
 <h3>Solutions</h3>
 <p>Add a <code>&lt;template data-type=&quot;solution&quot;&gt;</code> (or <code>&lt;script type=&quot;text/x-solution&quot;&gt;</code>) to
 provide a model solution. A <strong>Show solution</strong> button appears and requires a
