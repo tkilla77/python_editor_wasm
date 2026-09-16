@@ -11,7 +11,7 @@
     "isomorphic-fetch": "^3.0.0",
     "lit": "^3.3.3",
     "node-fetch": "^3.3.2",
-    "pyodide": "^314.0.6",
+    "pyodide": "^314.0.7",
     "thememirror": "^2.0.1",
     "vite": "^8.3.0"
   },
@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   },
   "allowScripts": {
     "fsevents@2.3.3": true,
