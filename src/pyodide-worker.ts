@@ -19,16 +19,20 @@ type Msg = {
 }
 
 /**
- * Clear user-defined names from globals before each exercise run so that
- * state from a previous run cannot leak into the next one.
- * Preserves everything that was present after Pyodide initialised
- * (__init_globals__), plus dunder names.
+ * Reset globals to a previously-saved snapshot.  Used when the same editor
+ * re-runs so its own stale names are removed, but names defined by other
+ * editors earlier in the same session are kept.
+ * Falls back to __init_globals__ on the very first run (no snapshot yet).
  */
-const RESET_GLOBALS = `
+const SNAPSHOT_RESET = `
+__baseline__ = globals().get('__session_snapshot__', __init_globals__)
 __g = globals()
-[__g.pop(k) for k in list(__g) if k not in __init_globals__ and not k.startswith('__')]
-del __g
+[__g.pop(k) for k in list(__g) if k not in __baseline__ and not k.startswith('__')]
+del __g, __baseline__
 `;
+
+/** Save the current globals as the baseline for the next re-run of this editor. */
+const SNAPSHOT_SAVE = `__session_snapshot__ = frozenset(globals()) | {'__session_snapshot__'}`;
 
 /**
  * Replaces sys.stdout with a tee that forwards every write to the original
@@ -507,13 +511,14 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 ? (c: string) => py.runPythonAsync(c)
                 : (c: string) => Promise.resolve(py.runPython(c));
             try {
-                // Reset globals when the same editor re-runs so its stale state
-                // doesn't leak in. Skip when a different editor runs so shared
-                // session state (e.g. variables defined in a preceding bottom-editor
-                // on the same page) stays visible.
+                // Same editor re-running: reset to the snapshot taken before its
+                // last run (removes its own stale names, keeps other editors' state).
+                // Different editor: just save a new snapshot so the next re-run of
+                // THIS editor resets to the current shared state.
                 if (!msg.editorId || msg.editorId === lastRunEditorId) {
-                    try { py.runPython(RESET_GLOBALS); } catch {}
+                    try { py.runPython(SNAPSHOT_RESET); } catch {}
                 }
+                try { py.runPython(SNAPSHOT_SAVE); } catch {}
                 // Re-run readyCode (setup/shim) so its definitions are available to tests.
                 if (msg.readyCode) {
                     try { await py.runPythonAsync(msg.readyCode); } catch {}
