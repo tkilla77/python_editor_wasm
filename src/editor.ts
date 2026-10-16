@@ -562,7 +562,7 @@ export class BottomEditor extends LitElement {
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         try {
-            return await this.runtime.runWithTests(code, tests, (data: string) => {
+            return await this.runtime.runWithTests(code, tests, this.readyCode, (data: string) => {
                 this._output?.addOutput(data);
                 if (!this._swConsole) this._swConsoleHasNew = true;
             });

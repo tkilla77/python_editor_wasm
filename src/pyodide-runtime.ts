@@ -86,11 +86,11 @@ export class PyodideRuntime {
      * Run user code, then run test assertions in the same Python namespace.
      * Resolves with a structured TestReport. Rejects if user code errors.
      */
-    runWithTests(code: string, tests: string, onStdout: (data: string) => void): Promise<TestReport> {
-        return this.runWithTestsAs(code, tests, onStdout, this.editorId);
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void): Promise<TestReport> {
+        return this.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId);
     }
 
-    runWithTestsAs(code: string, tests: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number): Promise<TestReport> {
+    runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number): Promise<TestReport> {
         const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async (): Promise<TestReport> => {
             await this.ready;
@@ -103,7 +103,7 @@ export class PyodideRuntime {
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
-                this.worker?.postMessage({ type: 'runWithTests', code, tests, runId, editorId });
+                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId });
             });
         };
         const result = this._queue.then(doRun);

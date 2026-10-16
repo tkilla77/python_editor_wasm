@@ -507,6 +507,10 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             try {
                 // Reset globals so state from a previous run can't leak in.
                 try { py.runPython(RESET_GLOBALS); } catch {}
+                // Re-run readyCode (setup/shim) so its definitions are available to tests.
+                if (msg.readyCode) {
+                    try { await py.runPythonAsync(msg.readyCode); } catch {}
+                }
                 // Phase 1: run user code with stdout teed to capture buffer
                 try { py.runPython(CAPTURE_SETUP); } catch {}
                 try {
