@@ -169,6 +169,7 @@ let stdoutBuffer = '';
 let flushTimer: number | null = null;
 let currentRunId: number | undefined = undefined;
 let syncRun = false;   // true while runPython (blocking) is active
+let lastRunEditorId: string | undefined = undefined;
 const FLUSH_INTERVAL_MS = 100;
 // Buffer limits (configurable): keep at most these many lines/chars (last N)
 const MAX_OUTPUT_LINES = 100;
@@ -447,6 +448,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     flushStdout();
                     syncRun = false;
                     currentRunId = undefined;
+                    lastRunEditorId = msg.editorId;
                     post('done', { runId });
                 } catch (err: any) {
                     if (flushTimer !== null) {
@@ -505,8 +507,13 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 ? (c: string) => py.runPythonAsync(c)
                 : (c: string) => Promise.resolve(py.runPython(c));
             try {
-                // Reset globals so state from a previous run can't leak in.
-                try { py.runPython(RESET_GLOBALS); } catch {}
+                // Reset globals when the same editor re-runs so its stale state
+                // doesn't leak in. Skip when a different editor runs so shared
+                // session state (e.g. variables defined in a preceding bottom-editor
+                // on the same page) stays visible.
+                if (!msg.editorId || msg.editorId === lastRunEditorId) {
+                    try { py.runPython(RESET_GLOBALS); } catch {}
+                }
                 // Re-run readyCode (setup/shim) so its definitions are available to tests.
                 if (msg.readyCode) {
                     try { await py.runPythonAsync(msg.readyCode); } catch {}
@@ -545,9 +552,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     const resultJson = await py.runPythonAsync(TEST_HARNESS);
                     const testResults = JSON.parse(resultJson);
                     currentRunId = undefined;
+                    lastRunEditorId = msg.editorId;
                     post('testResults', { runId, results: testResults });
                 } catch (harnessErr: any) {
                     currentRunId = undefined;
+                    lastRunEditorId = msg.editorId;
                     post('testResults', { runId, results: {
                         passed: false,
                         results: [{ passed: false, test: '<harness error>', message: String(harnessErr) }]
