@@ -19,20 +19,27 @@ type Msg = {
 }
 
 /**
- * Reset globals to a previously-saved snapshot.  Used when the same editor
- * re-runs so its own stale names are removed, but names defined by other
- * editors earlier in the same session are kept.
+ * Restore globals to the snapshot saved before this editor's last run.
+ * Removes names the editor added AND restores values it may have changed,
+ * so other editors' state is preserved exactly as it was.
  * Falls back to __init_globals__ on the very first run (no snapshot yet).
  */
 const SNAPSHOT_RESET = `
-__baseline__ = globals().get('__session_snapshot__', __init_globals__)
-__g = globals()
-[__g.pop(k) for k in list(__g) if k not in __baseline__ and not k.startswith('__')]
-del __g, __baseline__
+if '__session_snapshot__' in globals():
+    __g = globals()
+    __snap = __session_snapshot__
+    for __k in [k for k in list(__g) if not k.startswith('__') and k not in __snap]:
+        __g.pop(__k, None)
+    __g.update(__snap)
+    del __g, __snap
+else:
+    __g = globals()
+    [__g.pop(k) for k in list(__g) if k not in __init_globals__ and not k.startswith('__')]
+    del __g
 `;
 
-/** Save the current globals as the baseline for the next re-run of this editor. */
-const SNAPSHOT_SAVE = `__session_snapshot__ = frozenset(globals()) | {'__session_snapshot__'}`;
+/** Save a shallow copy of all non-dunder globals as the baseline for the next re-run. */
+const SNAPSHOT_SAVE = `__session_snapshot__ = {k: v for k, v in globals().items() if not k.startswith('__')}`;
 
 /**
  * Replaces sys.stdout with a tee that forwards every write to the original
