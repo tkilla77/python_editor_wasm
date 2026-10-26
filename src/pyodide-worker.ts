@@ -434,6 +434,13 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // awaits (turtle/kara steps, micropip installs). Fall back to
             // runPythonAsync when await is present.
             const needsAsync = /\bawait\b|import turtle\b|from turtle\b|\binput\s*\(/.test(code);
+            // Same-editor re-run: restore globals to the snapshot from before the
+            // last run so stale names/values don't persist. Different editor: just
+            // save a new snapshot so this editor's future re-runs reset correctly.
+            if (!msg.editorId || msg.editorId === lastRunEditorId) {
+                try { py.runPython(SNAPSHOT_RESET); } catch {}
+            }
+            try { py.runPython(SNAPSHOT_SAVE); } catch {}
             // Reset default turtle state before each run so heading/position don't persist.
             if (py.runPython(`'turtle' in __import__('sys').modules`)) {
                 py.runPython(`__import__('sys').modules['turtle']._reset_default()`);

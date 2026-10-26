@@ -50,10 +50,10 @@ export function createPythonEditor(
     onRun: () => void,
     onChange?: () => void,
 ): EditorView {
-    const runKeymap = keymap.of([{
-        key: "Ctrl-Enter",
-        run: () => { onRun(); return true; },
-    }]);
+    const runKeymap = keymap.of([
+        { key: "Mod-Enter",  run: () => { onRun(); return true; } },
+        { key: "Ctrl-Enter", run: () => { onRun(); return true; } },
+    ]);
     const state = EditorState.create({
         doc,
         extensions: [
