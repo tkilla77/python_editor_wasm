@@ -262,16 +262,21 @@ export class PyodideRuntime {
             return;
         }
         if (msg.type === 'input') {
-            // Defer to a new task (setTimeout 0) so the browser gets a render
-            // cycle between the stdout message that just arrived and this dialog.
-            // requestAnimationFrame does NOT work here: rAF runs before the paint,
-            // so prompt() would block before the output is visible.
-            setTimeout(() => {
+            // Ensure any stdout that arrived just before this message is painted
+            // before the dialog blocks the main thread.
+            // - rAF alone: fires *before* the paint (part of the render step),
+            //   so prompt() would still block before the output is visible.
+            // - setTimeout(0) alone: fires too quickly (~4 ms), before the browser
+            //   has had a chance to render the DOM update.
+            // - rAF → setTimeout(0): rAF fires inside the render step; the paint
+            //   completes after it; setTimeout(0) scheduled there fires as the next
+            //   task *after* the paint, so the output is visible before the dialog.
+            requestAnimationFrame(() => setTimeout(() => {
                 // Pass '' as defaultValue explicitly — some browsers pre-fill the
                 // input field with the message when no default is given.
                 const value = prompt(msg.prompt ?? '', '') ?? '';
                 this.worker?.postMessage({ type: 'inputResponse', value });
-            }, 0);
+            }, 0));
             return;
         }
         if (msg.type === 'ready') {
