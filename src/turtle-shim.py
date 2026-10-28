@@ -13,11 +13,12 @@ import pyodide_js as _pjs
 # ---------------------------------------------------------------------------
 
 def _ctx():
-    return _pjs.canvas.getCanvas2D().getContext('2d')
+    from js import _activeCanvasCtx
+    return _activeCanvasCtx
 
 def _wh():
-    c = _pjs.canvas.getCanvas2D()
-    return c.width, c.height
+    from js import _activeCanvasCtx
+    return _activeCanvasCtx.canvas.width, _activeCanvasCtx.canvas.height
 
 def _tc(x, y):
     """World → canvas coordinates."""

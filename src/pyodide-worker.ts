@@ -421,6 +421,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // Switch the active canvas to this editor's canvas (if any).
             canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
+            (self as any)._activeCanvasCtx = canvasCtx;
             // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
             // Line-by-line substitution preserves line numbers in tracebacks.
             const code = (msg.code || '')
@@ -508,6 +509,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             currentRunId = runId;
             canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
+            (self as any)._activeCanvasCtx = canvasCtx;
             const code = (msg.code || '')
                 .replace(/^(\s*)repeat(\s+)(.+?)\s*:([ \t]+[^#\s].*)$/gm,
                          '$1for _ in range($3):$4')
@@ -534,8 +536,12 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 }
                 try { py.runPython(SNAPSHOT_SAVE); } catch {}
                 // Re-run readyCode (setup/shim) so its definitions are available to tests.
+                // Suppress canvas drawing during this re-init: user code will draw
+                // the final state anyway, so the setup draw is wasted work.
                 if (msg.readyCode) {
+                    try { py.runPython(`_kara_drawing_enabled = False`); } catch {}
                     try { await py.runPythonAsync(msg.readyCode); } catch {}
+                    try { py.runPython(`_kara_drawing_enabled = True`); } catch {}
                 }
                 // Phase 1: run user code with stdout teed to capture buffer
                 try { py.runPython(CAPTURE_SETUP); } catch {}

@@ -241,11 +241,17 @@ _CS = 2000  # OffscreenCanvas size (must match CANVAS_SIZE in bottom-editor-canv
 # Rotation (radians) to point in each direction: right, down, left, up.
 _DIR_ANGLE = [math.pi / 2, math.pi, 3 * math.pi / 2, 0]
 
+# Worker sets this to False before re-running readyCode in test context so we
+# skip the expensive canvas draw during setup; restored to True afterwards.
+_kara_drawing_enabled = globals().get('_kara_drawing_enabled', True)
+
 def _kara_draw():
-    canvas = _pjs.canvas.getCanvas2D()
-    if not canvas:
+    if not _kara_drawing_enabled:
         return
-    ctx = canvas.getContext('2d')
+    from js import _activeCanvasCtx
+    ctx = _activeCanvasCtx
+    if not ctx:
+        return
     g = _kara_grid
 
     # Scale cells to fill the canvas, capped for readability.
