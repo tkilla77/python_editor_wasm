@@ -262,10 +262,15 @@ export class PyodideRuntime {
             return;
         }
         if (msg.type === 'input') {
-            // Pass '' as defaultValue explicitly — some browsers pre-fill the
-            // input field with the message when no default is given.
-            const value = prompt(msg.prompt ?? '', '') ?? '';
-            this.worker?.postMessage({ type: 'inputResponse', value });
+            // Defer one animation frame so the browser renders any stdout that
+            // arrived just before this message (print output from the previous
+            // iteration) before the dialog blocks the main thread.
+            requestAnimationFrame(() => {
+                // Pass '' as defaultValue explicitly — some browsers pre-fill the
+                // input field with the message when no default is given.
+                const value = prompt(msg.prompt ?? '', '') ?? '';
+                this.worker?.postMessage({ type: 'inputResponse', value });
+            });
             return;
         }
         if (msg.type === 'ready') {
