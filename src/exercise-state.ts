@@ -6,6 +6,9 @@ export interface ExerciseState {
     code: string;
     attempts: number;
     solvedAt?: number; // ms timestamp
+    // Multi-file support: all file contents and which tab was active.
+    files?: { name: string; code: string }[];
+    activeFile?: string;
 }
 
 export interface StateAdapter {

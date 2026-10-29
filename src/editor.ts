@@ -29,6 +29,8 @@ declare global {
 }
 globalThis.input_fixed = (msg: string) => prompt(msg);
 
+type FileEntry = { name: string; code: string; initialCode: string };
+
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
     static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
@@ -43,6 +45,10 @@ export class BottomEditor extends LitElement {
     private _initialCode: string = '';
     /** Resolves when Pyodide is ready. Useful for testing. */
     readonly ready: Promise<void> = new Promise(r => { this._readyResolve = r; });
+
+    // Multi-file state. Empty = single-file mode (existing behaviour unchanged).
+    @state() private _tabs: FileEntry[] = [];
+    @state() private _tabIdx: number = 0;
 
     @property({ reflect: true })
     layout: string = 'console';
@@ -172,6 +178,21 @@ export class BottomEditor extends LitElement {
     set sourceCode(code: string) { this.replaceDoc(code); }
     get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
 
+    /**
+     * Set initial multi-file content from URL (?files=JSON). Should be called
+     * before firstUpdated(). Sets _pendingCode from the first file.
+     */
+    @property({ attribute: false })
+    set files(list: { name: string; code: string }[]) {
+        if (!list || list.length === 0) return;
+        this._pendingCode = list[0].code;
+        this._tabs = list.map(f => ({ name: f.name, code: f.code, initialCode: f.code }));
+        this._tabIdx = 0;
+    }
+    get files(): { name: string; code: string }[] {
+        return this._tabs.map(f => ({ name: f.name, code: f.code }));
+    }
+
     get outputText(): string { return this._output?.outputText ?? ''; }
     get logText(): string { return this._output?.logText ?? ''; }
 
@@ -194,6 +215,55 @@ export class BottomEditor extends LitElement {
             .map(n => n.textContent)
             .join('')
             .replace(/^\s*\n/, '') || '';
+    }
+
+    private _getTemplateFiles(): { name: string; code: string }[] {
+        const files: { name: string; code: string }[] = [];
+        for (const child of Array.from(this.children)) {
+            if (child.tagName === 'TEMPLATE') {
+                const name = child.getAttribute('filename');
+                if (name) {
+                    const code = (child as HTMLTemplateElement).content.textContent ?? '';
+                    files.push({ name, code: code.replace(/^\n/, '') });
+                }
+            }
+        }
+        return files;
+    }
+
+    /** Switch to a tab by index, saving the current editor content first. */
+    private _switchTab(idx: number) {
+        if (!this._editor || idx === this._tabIdx || idx < 0 || idx >= this._tabs.length) return;
+        this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
+        this._tabIdx = idx;
+        this.replaceDoc(this._tabs[idx].code);
+    }
+
+    /** Add a new blank (or named) file tab. */
+    private _addTab(name?: string) {
+        const baseName = name ?? `file${this._tabs.length + 1}.py`;
+        const entry: FileEntry = { name: baseName, code: '', initialCode: '' };
+        this._tabs = [...this._tabs, entry];
+        this._switchTab(this._tabs.length - 1);
+        this._saveState();
+    }
+
+    /** Delete a tab (not allowed if only one tab left). */
+    private _deleteTab(idx: number) {
+        if (this._tabs.length <= 1) return;
+        const newTabs = this._tabs.filter((_, i) => i !== idx);
+        const newIdx = idx >= newTabs.length ? newTabs.length - 1 : idx;
+        this._tabs = newTabs;
+        this._tabIdx = newIdx;
+        this.replaceDoc(this._tabs[this._tabIdx].code);
+        this._saveState();
+    }
+
+    private _extraFiles(): { name: string; code: string }[] | undefined {
+        if (this._tabs.length === 0) return undefined;
+        return this._tabs
+            .filter((_, i) => i !== this._tabIdx)
+            .map(f => ({ name: f.name, code: f.code }));
     }
 
     private _parseTimeout(): number {
@@ -242,12 +312,20 @@ export class BottomEditor extends LitElement {
         const key = this._effectiveStorageKey();
         if (!key) return;
         const extra = this.stateSaver?.() ?? {};
+        // In multi-file mode, keep tab contents in sync before saving.
+        if (this._tabs.length > 0 && this._editor) {
+            this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
+        }
         const state: ExerciseState = {
             exerciseId: key,
             code:       this.sourceCode,
             status:     (extra.status   as ExerciseState['status']) ?? 'started',
             attempts:   (extra.attempts as number)                  ?? 0,
             solvedAt:   extra.solvedAt  as number | undefined,
+            ...(this._tabs.length > 0 ? {
+                files:      this._tabs.map(f => ({ name: f.name, code: f.code })),
+                activeFile: this._tabs[this._tabIdx]?.name,
+            } : {}),
         };
         this._local.save(key, state);
         if (this._syncBackend !== 'local') {
@@ -264,7 +342,26 @@ export class BottomEditor extends LitElement {
     saveNow(): void { this._saveState(); }
 
     private _applyState(saved: ExerciseState): void {
-        if (saved.code !== this._initialCode) {
+        if (this._tabs.length > 0 && saved.files && saved.files.length > 0) {
+            // Multi-file: restore per-file contents, preserving initialCode.
+            const updated = this._tabs.map(tab => {
+                const saved_file = saved.files!.find(f => f.name === tab.name);
+                return saved_file ? { ...tab, code: saved_file.code } : tab;
+            });
+            // Also restore any user-added tabs that weren't in the template.
+            const templateNames = new Set(this._tabs.map(t => t.name));
+            for (const sf of saved.files) {
+                if (!templateNames.has(sf.name)) {
+                    updated.push({ name: sf.name, code: sf.code, initialCode: '' });
+                }
+            }
+            this._tabs = updated;
+            const activeIdx = saved.activeFile
+                ? this._tabs.findIndex(t => t.name === saved.activeFile)
+                : -1;
+            this._tabIdx = activeIdx >= 0 ? activeIdx : 0;
+            this.replaceDoc(this._tabs[this._tabIdx].code);
+        } else if (saved.code !== this._initialCode) {
             this.replaceDoc(saved.code);
         }
         this.stateLoader?.(saved);
@@ -315,7 +412,16 @@ export class BottomEditor extends LitElement {
 
     /** Revert: reset editor code to initial, then reset canvas/output. */
     async revertCode() {
-        this.replaceDoc(this._initialCode);
+        if (this._tabs.length > 0) {
+            // Revert all tabs to their initial code, drop user-added tabs.
+            this._tabs = this._tabs
+                .filter(t => t.initialCode !== undefined && (t.initialCode !== '' || t.name !== ''))
+                .map(t => ({ ...t, code: t.initialCode }));
+            this._tabIdx = 0;
+            this.replaceDoc(this._tabs[0]?.code ?? this._initialCode);
+        } else {
+            this.replaceDoc(this._initialCode);
+        }
         const key = this._effectiveStorageKey();
         if (key) this._saveState();
         await this.reset();
@@ -363,6 +469,19 @@ export class BottomEditor extends LitElement {
 
         const text = this._pendingCode ?? this.getSourceCode();
         this._initialCode = text;
+
+        // Multi-file: parse <template filename="..."> children.
+        const templateFiles = this._getTemplateFiles();
+        if (templateFiles.length > 0) {
+            // First tab is the main editor file; derive its name from the element id or default.
+            const mainName = this.getAttribute('mainfile') ?? 'main.py';
+            this._tabs = [
+                { name: mainName, code: text, initialCode: text },
+                ...templateFiles.map(f => ({ name: f.name, code: f.code, initialCode: f.code })),
+            ];
+            this._tabIdx = 0;
+        }
+
         this._editor = createPythonEditor(
             this._code!,
             text,
@@ -534,7 +653,7 @@ export class BottomEditor extends LitElement {
             await this.runtime.run(code, (data: string) => {
                 this._output?.addOutput(data);
                 if (!this._swConsole) this._swConsoleHasNew = true;
-            });
+            }, this._extraFiles());
             if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
             const { display, userLine } = this._formatError(err?.toString() ?? String(err));
@@ -565,7 +684,7 @@ export class BottomEditor extends LitElement {
             return await this.runtime.runWithTests(code, tests, this.readyCode, (data: string) => {
                 this._output?.addOutput(data);
                 if (!this._swConsole) this._swConsoleHasNew = true;
-            });
+            }, this._extraFiles());
         } catch (err: any) {
             const { display, userLine } = this._formatError(err?.toString() ?? String(err));
             this._output?.addOutput(display);
@@ -590,7 +709,15 @@ export class BottomEditor extends LitElement {
             } else {
                 // FIXME allow permalink base to be configured
                 const url = new URL("https://bottom.ch/editor/stable/");
-                url.searchParams.set('code', this.sourceCode);
+                if (this._tabs.length > 0) {
+                    // Save current editor content into tabs before serialising.
+                    if (this._editor) this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
+                    url.searchParams.set('files', JSON.stringify(
+                        this._tabs.map(f => ({ name: f.name, code: f.code }))
+                    ));
+                } else {
+                    url.searchParams.set('code', this.sourceCode);
+                }
                 const defaultLayout = this.showswitcher ? 'split' : 'console';
                 if (this.layout !== defaultLayout) url.searchParams.set('layout', this.layout);
                 const zip = this.getAttribute("zip");
@@ -672,9 +799,28 @@ export class BottomEditor extends LitElement {
                 ${hasCanvas ? html`<bottom-editor-canvas @bottom-fit="${this._handleFitRequest}"></bottom-editor-canvas>` : ''}
                 ${hasOutput ? html`<bottom-editor-output></bottom-editor-output>` : ''}`;
 
+        const tabBar = this._tabs.length > 0 ? html`
+            <bottom-tabs>
+                ${this._tabs.map((f, i) => html`
+                    <bottom-tab
+                        class="${i === this._tabIdx ? 'active' : ''}"
+                        @click="${() => this._switchTab(i)}">
+                        ${f.name}
+                        ${this._tabs.length > 1 ? html`
+                            <button class="tab-close" title="Delete file"
+                                @click="${(e: Event) => { e.stopPropagation(); this._deleteTab(i); }}">×</button>
+                        ` : ''}
+                    </bottom-tab>
+                `)}
+                <button class="tab-add" title="Add file" @click="${() => this._addTab()}">+</button>
+            </bottom-tabs>` : '';
+
         return html`
             <bottom-editorarea>
-                <bottom-code id="code"></bottom-code>
+                <bottom-codewrap>
+                    ${tabBar}
+                    <bottom-code id="code"></bottom-code>
+                </bottom-codewrap>
                 ${outputArea}
                 <bottom-editor-buttons
                     part="buttons"

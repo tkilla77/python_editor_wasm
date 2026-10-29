@@ -422,6 +422,12 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
             (self as any)._activeCanvasCtx = canvasCtx;
+            // Write any extra files to the virtual FS before running (multi-file support).
+            if (msg.extraFiles) {
+                for (const f of msg.extraFiles as { name: string; code: string }[]) {
+                    try { py.FS.writeFile('/home/pyodide/' + f.name, f.code); } catch {}
+                }
+            }
             // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
             // Line-by-line substitution preserves line numbers in tracebacks.
             const code = (msg.code || '')
@@ -510,6 +516,12 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
             (self as any)._activeCanvasCtx = canvasCtx;
+            // Write any extra files to the virtual FS before running (multi-file support).
+            if (msg.extraFiles) {
+                for (const f of msg.extraFiles as { name: string; code: string }[]) {
+                    try { py.FS.writeFile('/home/pyodide/' + f.name, f.code); } catch {}
+                }
+            }
             const code = (msg.code || '')
                 .replace(/^(\s*)repeat(\s+)(.+?)\s*:([ \t]+[^#\s].*)$/gm,
                          '$1for _ in range($3):$4')

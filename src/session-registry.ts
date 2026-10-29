@@ -29,11 +29,11 @@ export class EditorHandle {
     get ready(): Promise<void> { return this._runtime['ready'] as Promise<void>; }
     start() { /* managed by session */ }
 
-    run(code: string, onStdout: (data: string) => void) {
-        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs);
+    run(code: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[]) {
+        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs, extraFiles);
     }
-    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void): Promise<TestReport> {
-        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs);
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[]): Promise<TestReport> {
+        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles);
     }
     loadZip(url: string) { return this._runtime.loadZip(url); }
     setCanvas(canvas: OffscreenCanvas) { return this._runtime.setCanvasFor(canvas, this.editorId); }

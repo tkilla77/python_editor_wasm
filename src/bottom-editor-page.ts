@@ -7,6 +7,7 @@ class BottomEditorPage extends LitElement {
     static shadowRootOptions = {...LitElement.shadowRootOptions, mode: "closed" as const};
 
     private sourceCode : string = '';
+    private initFiles: { name: string; code: string }[] | null = null;
     private autoRun: boolean = false;
     private zipUrl: string = '';
     private initLayout: string = 'split';
@@ -15,7 +16,18 @@ class BottomEditorPage extends LitElement {
     constructor() {
         super();
         const params = this.getParams();
-        if (params.has('code')) {
+        if (params.has('files')) {
+            try {
+                const parsed = JSON.parse(params.get('files') ?? '[]');
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    this.initFiles = parsed;
+                    this.sourceCode = parsed[0].code ?? '';
+                }
+            } catch {}
+            const url = new URL(document.location.href);
+            url.searchParams.delete('files');
+            window.history.replaceState({}, '', url.href);
+        } else if (params.has('code')) {
             const code = params.get('code');
             if (code) this.sourceCode = code;
             const url = new URL(document.location.href);
@@ -57,6 +69,7 @@ class BottomEditorPage extends LitElement {
             <bottom-editor
                 exportparts="buttons"
                 .sourceCode=${this.sourceCode}
+                .files=${this.initFiles ?? []}
                 ?autorun=${this.autoRun}
                 zip='${this.zipUrl}'
                 layout='${this.initLayout}'

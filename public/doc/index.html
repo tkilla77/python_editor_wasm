@@ -145,6 +145,12 @@ for i in range(5):
 <td>—</td>
 <td>Set code programmatically (property, not reflected attribute)</td>
 </tr>
+<tr>
+<td><code>mainfile</code></td>
+<td>string</td>
+<td><code>main.py</code></td>
+<td>Tab label for the primary editor file when multi-file mode is active (see <a href="#multi-file">Multi-file support</a>)</td>
+</tr>
 </tbody></table>
 <hr>
 <h2>Turtle graphics</h2>
@@ -655,6 +661,77 @@ print(&quot;Dark theme&quot;)
 <bottom-editor class="dark-editor">
 print("Dark theme")
 </bottom-editor>
+
+<hr>
+<h2 id="multi-file">Multi-file support</h2>
+<p>A <code>&lt;bottom-editor&gt;</code> or <code>&lt;bottom-exercise&gt;</code> can manage several files at once.
+A tab bar appears above the editor; each tab is an independent file in Pyodide's
+virtual filesystem, so the active file can <code>import</code> or <code>open()</code> any of the others by name.</p>
+
+<h3>Declaring extra files</h3>
+<p>Add one or more <code>&lt;template filename=&quot;…&quot;&gt;</code> children. Each becomes a tab next
+to the main editor. Filenames are free-form — <code>.py</code> modules, <code>.csv</code> data files,
+anything the running code needs to read.</p>
+<pre><code class="language-html">&lt;bottom-editor mainfile=&quot;main.py&quot;&gt;
+import csv, io
+
+with open("scores.csv") as f:
+    rows = list(csv.DictReader(f))
+
+for row in rows:
+    print(row["name"], "→", row["score"])
+  &lt;template filename=&quot;scores.csv&quot;&gt;
+name,score
+Alice,92
+Bob,87
+Carol,95
+  &lt;/template&gt;
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor mainfile="main.py" autorun>
+import csv, io
+
+with open("scores.csv") as f:
+    rows = list(csv.DictReader(f))
+
+for row in rows:
+    print(row["name"], "→", row["score"])
+  <template filename="scores.csv">
+name,score
+Alice,92
+Bob,87
+Carol,95
+  </template>
+</bottom-editor>
+
+<h3>Adding and deleting files at runtime</h3>
+<p>The <strong>+</strong> button in the tab bar creates a new blank file. Any tab except the
+last one can be closed with its <strong>×</strong> button. User-added files are saved in
+<code>localStorage</code> alongside the code; the Reset / Revert button removes them and
+restores every tab to its original template content.</p>
+
+<h3>The main file</h3>
+<p>The first tab is always the main editor (the text content of the element, or its
+<code>sourcecode</code> property). Use <code>mainfile=&quot;…&quot;</code> to give it a meaningful name — the
+default is <code>main.py</code>. The name matters when other files import it:</p>
+<pre><code class="language-html">&lt;bottom-editor mainfile=&quot;helpers.py&quot;&gt;
+# helpers.py is importable from any other tab
+def greet(name):
+    print(f"Hello, {name}!")
+  &lt;template filename=&quot;main.py&quot;&gt;
+from helpers import greet
+greet("world")
+  &lt;/template&gt;
+&lt;/bottom-editor&gt;
+</code></pre>
+
+<h3>Persistence and permalinks</h3>
+<p>In multi-file mode, <strong>all</strong> tabs are saved together in <code>localStorage</code> (when an
+<code>id</code> attribute is present). The Revert button resets every tab to its initial
+template content and removes any user-added tabs.</p>
+<p>The <strong>permalink</strong> button encodes all files as a <code>?files=[…]</code> JSON parameter
+instead of the single-file <code>?code=…</code> parameter, so the full multi-file state is
+captured in the URL.</p>
 
 <hr>
 <h2>Loading files with <code>zip</code></h2>
