@@ -780,17 +780,20 @@ export class BottomEditor extends LitElement {
                 this._stopPlay();
                 this._updateStepLine(null);
                 this.runtime.enableStepMode();
-                await this.runtime.run(
-                    code,
-                    (data: string) => {
-                        this._output?.addOutput(data);
-                        if (!this._swConsole) this._swConsoleHasNew = true;
-                    },
-                    this._extraFiles(),
-                    (energy: number) => { this._energy = energy; },
-                    (line, locals, energy) => this._onStepUpdate(line, locals, energy),
-                );
-                this.runtime.disableStepMode();
+                try {
+                    await this.runtime.run(
+                        code,
+                        (data: string) => {
+                            this._output?.addOutput(data);
+                            if (!this._swConsole) this._swConsoleHasNew = true;
+                        },
+                        this._extraFiles(),
+                        (energy: number) => { this._energy = energy; },
+                        (line, locals, energy) => this._onStepUpdate(line, locals, energy),
+                    );
+                } finally {
+                    this.runtime.disableStepMode();
+                }
             } else {
                 await this.runtime.run(
                     code,
