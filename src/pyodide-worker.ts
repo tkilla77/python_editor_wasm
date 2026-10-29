@@ -94,7 +94,7 @@ def energy():
 def memory():
     """Return the number of non-blank, non-comment lines in the user's code."""
     return sum(
-        1 for l in __user_code__.splitlines()
+        1 for l in __user_code__.splitlines()[globals().get('__energy_min_line__', 0):]
         if l.strip() and not l.strip().startswith('#')
     )
 def with_input(*inputs):
@@ -188,9 +188,12 @@ __run_tests__()
 const ENERGY_TRACE_SETUP = `
 import sys as __sys_trace__
 __step_energy__ = 0
+__energy_on__ = False
+__energy_min_line__ = 0
+__energy_max_line__ = 0
 def __line_trace__(frame, event, arg):
     global __step_energy__
-    if event == 'line' and frame.f_code.co_filename == '<exec>':
+    if event == 'line' and __energy_on__ and __energy_min_line__ < frame.f_lineno <= __energy_max_line__ and frame.f_code.co_filename == '<exec>':
         __step_energy__ += 1
     return __line_trace__
 __sys_trace__.settrace(__line_trace__)
@@ -203,13 +206,17 @@ const ENERGY_TRACE_TEARDOWN = `__sys_trace__.settrace(None)`;
 const STEP_TRACE_SETUP = `
 import sys as __sys_trace__, json as __json_trace__
 __step_energy__ = 0
+__energy_on__ = False
+__energy_min_line__ = 0
+__energy_max_line__ = 0
 def __step_trace__(frame, event, arg):
     global __step_energy__
-    if event == 'line' and frame.f_code.co_filename == '<exec>':
+    if event == 'line' and __energy_on__ and __energy_min_line__ < frame.f_lineno <= __energy_max_line__ and frame.f_code.co_filename == '<exec>':
         __step_energy__ += 1
         loc = {}
         for k, v in frame.f_locals.items():
-            if not k.startswith('_') and not callable(v):
+            if (not k.startswith('_') and not callable(v) and k not in __init_globals__
+                    and not isinstance(v, type(__sys_trace__))):
                 try:
                     r = repr(v)
                     loc[k] = r if len(r) <= 120 else r[:117] + '...'
@@ -331,6 +338,7 @@ async function init(baseURL: string, indexURL: string) {
         // Replace sys.stdout with a thin wrapper that calls _pyWrite directly,
         // so every write (including print(..., end='')) is sent to JS immediately.
         // Also override builtins.input to use _pyInput (async, routed to main thread).
+        // Own filename so the trace (which counts '<exec>' lines) skips these shims.
         await py.runPythonAsync(`
 import sys, builtins
 from js import _pyWrite, _pyInput
@@ -346,7 +354,7 @@ async def _input(prompt=''):
     result = await _pyInput(str(prompt))
     return result.to_py() if hasattr(result, 'to_py') else str(result) if result is not None else ''
 builtins.input = _input
-`);
+`, { filename: '<bottom-init>' });
         await py.runPythonAsync(`\nfrom js import console\n`);
         // Snapshot globals after init so RESET_GLOBALS knows what to preserve.
         await py.runPython(`__init_globals__ = frozenset(globals()) | {'__init_globals__'}`);
@@ -526,16 +534,23 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 ? code.replace(/\binput\s*\(/g, 'await input(')
                 : code;
             syncRun = !needsAsync;
+            const runFilename: string = (msg as any).filename ?? '<exec>';
             const runCode = needsAsync
-                ? (c: string) => py.runPythonAsync(c)
-                : (c: string) => Promise.resolve(py.runPython(c));
+                ? (c: string) => py.runPythonAsync(c, { filename: runFilename })
+                : (c: string) => Promise.resolve(py.runPython(c, { filename: runFilename }));
             // Install energy/step trace. Use step trace only for sync code (Atomics.wait
             // requires a synchronous call stack; async runs use energy-only trace).
             const useStepTrace = !needsAsync && !!(msg as any).stepBuffer;
             try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
             try {
                 try {
-                    await runCode(codeToRun);
+                    py.globals.set('__energy_min_line__', (msg as any).lineOffset ?? 0);
+                    py.globals.set('__energy_max_line__', codeToRun.split('\n').length);
+                    py.globals.set('__energy_on__', true);
+                    // Trailing `pass` stops Pyodide from rewriting a final expression
+                    // into result-capture code, which emits a spurious line event.
+                    try { await runCode(codeToRun + '\npass'); }
+                    finally { py.globals.set('__energy_on__', false); }
                     // Patch any libraries installed via micropip during this run.
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
                     // ensure all buffered stdout is flushed before signaling done
@@ -549,7 +564,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     lastRunEditorId = msg.editorId;
                     try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
                     const runEnergy: number = py.globals.get('__step_energy__') ?? 0;
-                    try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__']:\n    globals().pop(__k,None)\ndel __k`); } catch {}
+                    try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__','__energy_on__','__energy_min_line__','__energy_max_line__']:\n    globals().pop(__k,None)\ndel __k`); } catch {}
                     stepBuffer = null;
                     post('done', { runId, energy: runEnergy });
                 } catch (err: any) {
@@ -633,14 +648,20 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 // the final state anyway, so the setup draw is wasted work.
                 if (msg.readyCode) {
                     try { py.runPython(`_kara_drawing_enabled = False`); } catch {}
-                    try { await py.runPythonAsync(msg.readyCode); } catch {}
+                    try { await py.runPythonAsync(msg.readyCode, { filename: '<bottom-ready>' }); } catch {}
                     try { py.runPython(`_kara_drawing_enabled = True`); } catch {}
                 }
                 // Phase 1: run user code with stdout teed to capture buffer
-                try { py.runPython(CAPTURE_SETUP); } catch {}
+                try { py.runPython(CAPTURE_SETUP, { filename: '<bottom-init>' }); } catch {}
                 try { py.runPython(ENERGY_TRACE_SETUP); } catch {}
                 try {
-                    await runCode(codeToRun);
+                    py.globals.set('__energy_min_line__', (msg as any).lineOffset ?? 0);
+                    py.globals.set('__energy_max_line__', codeToRun.split('\n').length);
+                    py.globals.set('__energy_on__', true);
+                    // Trailing `pass` stops Pyodide from rewriting a final expression
+                    // into result-capture code, which emits a spurious line event.
+                    try { await runCode(codeToRun + '\npass'); }
+                    finally { py.globals.set('__energy_on__', false); }
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
                     if (flushTimer !== null) {
                         (self as any).clearTimeout(flushTimer);
@@ -687,7 +708,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     try { py.runPython(`
 for __k in ['__test_source__', '__user_code__', '__run_tests__', '__captured_output__',
             '__energy_val__', '__step_energy__', '__sys_trace__', '__json_trace__',
-            '__line_trace__', '__step_trace__',
+            '__line_trace__', '__step_trace__', '__energy_on__', '__energy_min_line__', '__energy_max_line__',
             'output', 'output_lines', 'with_input', 'energy', 'memory']:
     try: del globals()[__k]
     except: pass

@@ -254,6 +254,9 @@ export class BottomEditor extends LitElement {
         return this._tabs.map(f => ({ name: f.name, code: f.code }));
     }
 
+    /** Lines executed by the last run, or null before the first run. */
+    get energy(): number | null { return this._energy; }
+
     get outputText(): string { return this._output?.outputText ?? ''; }
     get logText(): string { return this._output?.logText ?? ''; }
 
@@ -608,7 +611,7 @@ export class BottomEditor extends LitElement {
                 const zip = this.getAttribute('zip');
                 if (zip) await this.installFilesFromZip(zip);
                 if (this.readyCode) {
-                    await this.runtime.run(this.readyCode, () => {});
+                    await this.runtime.runSetup(this.readyCode);
                     if (this.autofit) this._handleFitRequest();
                 }
                 const autorun = this.getAttribute('autorun');
@@ -690,8 +693,12 @@ export class BottomEditor extends LitElement {
         this._editor.dispatch(setDiagnostics(this._editor.state, [diag]));
     }
 
+    private _prefixLines(): number {
+        return (this.codePrefix.match(/\n/g) ?? []).length + this.transformLineOffset;
+    }
+
     private _formatError(fullMsg: string): { display: string; userLine: number | null } {
-        const prefixLines = (this.codePrefix.match(/\n/g) ?? []).length + this.transformLineOffset;
+        const prefixLines = this._prefixLines();
         const rawLine = this._parseErrorLine(fullMsg);
         const userLine = rawLine !== null ? rawLine - prefixLines : null;
         const lastNewline = fullMsg.lastIndexOf('\n', fullMsg.length - 2);
@@ -754,8 +761,7 @@ export class BottomEditor extends LitElement {
     }
 
     private _onStepUpdate(line: number, locals: Record<string, string>, energy: number) {
-        const prefixLines = (this.codePrefix.match(/\n/g) ?? []).length + this.transformLineOffset;
-        const userLine = line - prefixLines;
+        const userLine = line - this._prefixLines();
         this._stepLocals = locals;
         this._energy = energy;
         this._stepPaused = true;
@@ -790,6 +796,7 @@ export class BottomEditor extends LitElement {
                         this._extraFiles(),
                         (energy: number) => { this._energy = energy; },
                         (line, locals, energy) => this._onStepUpdate(line, locals, energy),
+                        { lineOffset: this._prefixLines() },
                     );
                 } finally {
                     this.runtime.disableStepMode();
@@ -803,6 +810,8 @@ export class BottomEditor extends LitElement {
                     },
                     this._extraFiles(),
                     (energy: number) => { this._energy = energy; },
+                    undefined,
+                    { lineOffset: this._prefixLines() },
                 );
             }
             if (this.autofit) this._handleFitRequest();
@@ -839,7 +848,7 @@ export class BottomEditor extends LitElement {
             return await this.runtime.runWithTests(code, tests, this.readyCode, (data: string) => {
                 this._output?.addOutput(data);
                 if (!this._swConsole) this._swConsoleHasNew = true;
-            }, this._extraFiles());
+            }, this._extraFiles(), { lineOffset: this._prefixLines() });
         } catch (err: any) {
             const { display, userLine } = this._formatError(err?.toString() ?? String(err));
             this._output?.addOutput(display);
@@ -892,7 +901,7 @@ export class BottomEditor extends LitElement {
         this._output?.clearOutput();
         this._clearEditorDiagnostics();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
-        if (this.readyCode) await this.runtime.run(this.readyCode, () => {});
+        if (this.readyCode) await this.runtime.runSetup(this.readyCode);
     }
 
     private _handleFitRequest() {

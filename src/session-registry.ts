@@ -1,4 +1,4 @@
-import { PyodideRuntime, type RuntimeCallbacks, type TestReport, type StepUpdateCallback } from './pyodide-runtime.js';
+import { PyodideRuntime, type RuntimeCallbacks, type TestReport, type StepUpdateCallback, type RunOptions } from './pyodide-runtime.js';
 
 export type MemberCallbacks = {
     onLog:    (data: string) => void;
@@ -35,11 +35,16 @@ export class EditorHandle {
         extraFiles?: { name: string; code: string }[],
         onEnergy?: (energy: number) => void,
         onStepUpdate?: StepUpdateCallback,
+        opts?: RunOptions,
     ) {
-        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs, extraFiles, onEnergy, onStepUpdate);
+        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs, extraFiles, onEnergy, onStepUpdate, opts);
     }
-    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[]): Promise<TestReport> {
-        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles);
+    /** Run setup code (readyCode); its lines never count as energy. */
+    runSetup(code: string) {
+        return this.run(code, () => {}, undefined, undefined, undefined, { filename: '<bottom-ready>' });
+    }
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions): Promise<TestReport> {
+        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles, opts);
     }
     loadZip(url: string) { return this._runtime.loadZip(url); }
     setCanvas(canvas: OffscreenCanvas) { return this._runtime.setCanvasFor(canvas, this.editorId); }

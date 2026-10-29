@@ -151,6 +151,12 @@ for i in range(5):
 <td><code>main.py</code></td>
 <td>Tab label for the primary editor file when multi-file mode is active (see <a href="#multi-file">Multi-file support</a>)</td>
 </tr>
+<tr>
+<td><code>stepmode</code></td>
+<td>boolean</td>
+<td>off</td>
+<td>Run executes one line at a time, with the current line and its variables shown in the editor (see <a href="#stepping">Energy, memory and stepping</a>)</td>
+</tr>
 </tbody></table>
 <hr>
 <h2>Turtle graphics</h2>
@@ -369,6 +375,14 @@ student prints output rather than returning a value:</p>
 <td>Re-runs the student's code with the given strings queued as <code>input()</code> responses,
 updates <code>output()</code> / <code>output_lines()</code> to reflect that run, and returns <code>True</code></td>
 </tr>
+<tr>
+<td><code>energy()</code></td>
+<td>Number of lines the student's code executed (see <a href="#stepping">Energy, memory and stepping</a>)</td>
+</tr>
+<tr>
+<td><code>memory()</code></td>
+<td>Number of non-blank, non-comment lines in the student's code</td>
+</tr>
 </tbody></table>
 <p>Output is still shown in the output panel as normal — the helpers just provide
 a second view of the same text for assertions.</p>
@@ -555,6 +569,16 @@ for _ in range(4):
 <td>off</td>
 <td>Hide the <strong>Show solution</strong> button and exclude the solution from shared permalinks. Remove to release the solution to students.</td>
 </tr>
+<tr>
+<td><code>maxenergy</code></td>
+<td>—</td>
+<td>Maximum lines the solution may execute; exceeding it adds a failing <code>energy() &lt;= N</code> result</td>
+</tr>
+<tr>
+<td><code>maxmemory</code></td>
+<td>—</td>
+<td>Maximum non-blank, non-comment lines of code; exceeding it adds a failing <code>memory() &lt;= N</code> result</td>
+</tr>
 </tbody></table>
 <h3>Persistence</h3>
 <p>Add an <code>id</code> attribute to save exercise state to <code>localStorage</code>. The key is
@@ -732,6 +756,75 @@ template content and removes any user-added tabs.</p>
 <p>The <strong>permalink</strong> button encodes all files as a <code>?files=[…]</code> JSON parameter
 instead of the single-file <code>?code=…</code> parameter, so the full multi-file state is
 captured in the URL.</p>
+
+<hr>
+<h2 id="stepping">Energy, memory and stepping</h2>
+<p>Two simple cost measures help students compare solutions:</p>
+<ul>
+<li><strong>Energy</strong> is the number of lines the program actually executed. Each run of a line
+costs 1, so a loop body that runs 10 times costs 10. Blank lines and comments cost nothing. After
+every run, the energy appears as <strong>⚡ N</strong> below the editor.</li>
+<li><strong>Memory</strong> is the size of the program: its number of non-blank, non-comment lines.</li>
+</ul>
+<p>Some examples:</p>
+<table>
+<thead>
+<tr><th>Code</th><th>Energy</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td><code>x = 3</code></td><td>1</td><td>one line, run once</td></tr>
+<tr><td><code>x = 3</code> / <code>print(x)</code></td><td>2</td><td>two lines, each run once</td></tr>
+<tr><td><code>for i in range(3):</code> / <code>    print(i)</code></td><td>7</td><td>the loop header runs 4 times (3 iterations plus the final check that ends the loop), the body 3 times</td></tr>
+<tr><td><code>def f():</code> / <code>    return 1</code> / <code>f()</code></td><td>3</td><td>the <code>def</code> line, the call, and the function body once</td></tr>
+</tbody>
+</table>
+<p>Only the student's own lines count. Code inside library functions (including <code>print</code>) and
+code injected by the page, such as the Kara world helpers, is free.</p>
+
+<h3>Step-by-step execution</h3>
+<p>Add <code>stepmode</code> to run a program one line at a time. The line about to run is
+highlighted, and the current local variables are shown next to it. A control bar below the
+editor offers:</p>
+<ul>
+<li><strong>Step</strong>: run the highlighted line and stop at the next one.</li>
+<li><strong>Play / Pause</strong>: keep stepping automatically. The slider sets the speed in lines per second.</li>
+<li><strong>Continue</strong>: run the rest of the program at full speed.</li>
+</ul>
+<p>The energy counter increases with every line, so students can see where the cost comes from.</p>
+<pre><code class="language-html">&lt;bottom-editor stepmode&gt;
+total = 0
+for i in range(1, 4):
+    total += i
+print(total)
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor stepmode>
+total = 0
+for i in range(1, 4):
+    total += i
+print(total)
+</bottom-editor>
+<p>Stepping works for regular programs. Programs that use <code>input()</code>, <code>await</code> or
+turtle graphics run normally even when <code>stepmode</code> is on; their energy is still counted.</p>
+<p>Stepping relies on <code>SharedArrayBuffer</code>, so the page must be served with the
+<code>Cross-Origin-Opener-Policy: same-origin</code> and
+<code>Cross-Origin-Embedder-Policy: require-corp</code> headers. Without them the program runs
+normally.</p>
+
+<h3>Energy and memory in exercises</h3>
+<p>Tests can check both measures with the <code>energy()</code> and <code>memory()</code> helpers:</p>
+<pre><code class="language-html">&lt;template data-type=&quot;test&quot;&gt;
+assert sum_to(100) == 5050
+assert energy() &lt;= 5, &quot;Can you do it without a loop?&quot;
+&lt;/template&gt;
+</code></pre>
+<p>For the common case, the <code>maxenergy</code> and <code>maxmemory</code> attributes on
+<code>&lt;bottom-exercise&gt;</code> add the check for you. It is shown as an extra line in the test results:</p>
+<pre><code class="language-html">&lt;bottom-exercise id=&quot;sum-fast&quot; maxenergy=&quot;5&quot; maxmemory=&quot;3&quot;&gt;
+  …
+&lt;/bottom-exercise&gt;
+</code></pre>
+<p><code>energy()</code> counts the student's code only, not the test assertions themselves.</p>
 
 <hr>
 <h2>Loading files with <code>zip</code></h2>

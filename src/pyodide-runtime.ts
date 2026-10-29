@@ -12,6 +12,10 @@ export interface TestReport {
     energy?: number;
 }
 
+/** lineOffset: lines prepended before the user's code (not counted as energy).
+ *  filename: compile filename; anything other than '<exec>' is not counted. */
+export type RunOptions = { lineOffset?: number; filename?: string };
+
 export type StepUpdateCallback = (line: number, locals: Record<string, string>, energy: number) => void;
 
 export type RuntimeCallbacks = {
@@ -68,8 +72,9 @@ export class PyodideRuntime {
         extraFiles?: { name: string; code: string }[],
         onEnergy?: (energy: number) => void,
         onStepUpdate?: StepUpdateCallback,
+        opts?: RunOptions,
     ): Promise<void> {
-        return this.runAs(code, onStdout, this.editorId, undefined, extraFiles, onEnergy, onStepUpdate);
+        return this.runAs(code, onStdout, this.editorId, undefined, extraFiles, onEnergy, onStepUpdate, opts);
     }
 
     runAs(
@@ -80,6 +85,7 @@ export class PyodideRuntime {
         extraFiles?: { name: string; code: string }[],
         onEnergy?: (energy: number) => void,
         onStepUpdate?: StepUpdateCallback,
+        opts?: RunOptions,
     ): Promise<void> {
         const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async () => {
@@ -94,7 +100,7 @@ export class PyodideRuntime {
                 }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onEnergy, onStepUpdate });
                 const stepBuffer = onStepUpdate ? this._stepBuffer : undefined;
-                this.worker?.postMessage({ type: 'run', code, runId, editorId, extraFiles, stepBuffer });
+                this.worker?.postMessage({ type: 'run', code, runId, editorId, extraFiles, stepBuffer, ...opts });
             });
         };
         const result = this._queue.then(doRun);
@@ -106,11 +112,11 @@ export class PyodideRuntime {
      * Run user code, then run test assertions in the same Python namespace.
      * Resolves with a structured TestReport. Rejects if user code errors.
      */
-    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[]): Promise<TestReport> {
-        return this.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, undefined, extraFiles);
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions): Promise<TestReport> {
+        return this.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, undefined, extraFiles, opts);
     }
 
-    runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[]): Promise<TestReport> {
+    runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[], opts?: RunOptions): Promise<TestReport> {
         const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async (): Promise<TestReport> => {
             await this.ready;
@@ -123,7 +129,7 @@ export class PyodideRuntime {
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
-                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles });
+                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, lineOffset: opts?.lineOffset });
             });
         };
         const result = this._queue.then(doRun);
