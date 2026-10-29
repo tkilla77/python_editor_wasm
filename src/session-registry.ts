@@ -1,4 +1,4 @@
-import { PyodideRuntime, type RuntimeCallbacks, type TestReport } from './pyodide-runtime.js';
+import { PyodideRuntime, type RuntimeCallbacks, type TestReport, type StepUpdateCallback } from './pyodide-runtime.js';
 
 export type MemberCallbacks = {
     onLog:    (data: string) => void;
@@ -29,8 +29,14 @@ export class EditorHandle {
     get ready(): Promise<void> { return this._runtime['ready'] as Promise<void>; }
     start() { /* managed by session */ }
 
-    run(code: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[]) {
-        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs, extraFiles);
+    run(
+        code: string,
+        onStdout: (data: string) => void,
+        extraFiles?: { name: string; code: string }[],
+        onEnergy?: (energy: number) => void,
+        onStepUpdate?: StepUpdateCallback,
+    ) {
+        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs, extraFiles, onEnergy, onStepUpdate);
     }
     runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[]): Promise<TestReport> {
         return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles);
@@ -41,6 +47,10 @@ export class EditorHandle {
     requestFit(cb: Parameters<PyodideRuntime['requestFit']>[0]) { return this._runtime.requestFitFor(cb, this.editorId); }
     samplePixel(x: number, y: number) { return this._runtime.samplePixelFor(x, y, this.editorId); }
     interrupt() { this._runtime.interrupt(); }
+    enableStepMode() { this._runtime.enableStepMode(); }
+    disableStepMode() { this._runtime.disableStepMode(); }
+    step() { this._runtime.step(); }
+    stepContinue() { this._runtime.stepContinue(); }
     terminate() { /* managed by session */ }
 }
 

@@ -81,12 +81,22 @@ const CAPTURE_INJECT = `
 __captured_output__ = __sys.stdout.getvalue()
 __sys.stdout = __sys.stdout._orig
 del __sys
+__energy_val__ = globals().get('__step_energy__', 0)
 def output():
     """Return everything printed by the user's code as a single string."""
     return __captured_output__
 def output_lines():
     """Return each printed line as a list, stripping the trailing newline."""
     return __captured_output__.splitlines()
+def energy():
+    """Return the number of source lines executed by the user's code."""
+    return __energy_val__
+def memory():
+    """Return the number of non-blank, non-comment lines in the user's code."""
+    return sum(
+        1 for l in __user_code__.splitlines()
+        if l.strip() and not l.strip().startswith('#')
+    )
 def with_input(*inputs):
     """Re-run the user's code with the given inputs queued for input() calls.
 
@@ -170,8 +180,52 @@ def __run_tests__():
 __run_tests__()
 `;
 
+// ---------------------------------------------------------------------------
+// Energy / step-through trace
+// ---------------------------------------------------------------------------
+
+/** Lightweight trace: count executed lines in <exec> code only. */
+const ENERGY_TRACE_SETUP = `
+import sys as __sys_trace__
+__step_energy__ = 0
+def __line_trace__(frame, event, arg):
+    global __step_energy__
+    if event == 'line' and frame.f_code.co_filename == '<exec>':
+        __step_energy__ += 1
+    return __line_trace__
+__sys_trace__.settrace(__line_trace__)
+`;
+
+const ENERGY_TRACE_TEARDOWN = `__sys_trace__.settrace(None)`;
+
+/** Heavier trace: same as above but also sends variable snapshots and blocks
+ *  for manual/animated step-through. Only used when stepMode is active. */
+const STEP_TRACE_SETUP = `
+import sys as __sys_trace__, json as __json_trace__
+__step_energy__ = 0
+def __step_trace__(frame, event, arg):
+    global __step_energy__
+    if event == 'line' and frame.f_code.co_filename == '<exec>':
+        __step_energy__ += 1
+        loc = {}
+        for k, v in frame.f_locals.items():
+            if not k.startswith('_') and not callable(v):
+                try:
+                    r = repr(v)
+                    loc[k] = r if len(r) <= 120 else r[:117] + '...'
+                except Exception:
+                    loc[k] = '<?>'
+        from js import _step_update, _step_wait
+        _step_update(frame.f_lineno, __json_trace__.dumps(loc), __step_energy__)
+        _step_wait()
+    return __step_trace__
+__sys_trace__.settrace(__step_trace__)
+`;
+
 let py: any = null;
 let inputResolve: ((value: string) => void) | null = null;
+/** Shared step-control buffer (Int32Array over SharedArrayBuffer). 0=paused, 1=step, 2=run-free. */
+let stepBuffer: Int32Array | null = null;
 // Per-editor canvas contexts, keyed by editorId.
 const canvasCtxMap = new Map<string, OffscreenCanvasRenderingContext2D>();
 // The context currently active (set before each run).
@@ -245,6 +299,19 @@ async function init(baseURL: string, indexURL: string) {
         // Expose write callback as a JS global so Python can call it directly,
         // bypassing TextIOWrapper buffering (reconfigure(write_through=True) is
         // unreliable on Pyodide's custom stream wrapper).
+        // Step-through JS globals: called from the Python step trace.
+        (self as any)._step_update = (lineNo: number, localsJson: string, energy: number) => {
+            let locals: Record<string, string> = {};
+            try { locals = JSON.parse(localsJson); } catch {}
+            post('stepUpdate', { runId: currentRunId, line: lineNo, locals, energy });
+        };
+        (self as any)._step_wait = () => {
+            if (!stepBuffer) return;
+            if (Atomics.load(stepBuffer, 0) === 2) return; // run freely — just stream updates
+            Atomics.store(stepBuffer, 0, 0);   // signal: we're paused
+            Atomics.notify(stepBuffer, 0, 1);  // wake any main-thread waiter
+            Atomics.wait(stepBuffer, 0, 0);    // block until value changes from 0
+        };
         (self as any)._pyWrite = (text: string) => {
             stdoutBuffer += text;
             if (syncRun) { enforceBufferLimits(); flushStdout(); }
@@ -418,6 +485,8 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             }
             const runId = msg.runId;
             currentRunId = runId;
+            // Step mode: install step buffer if provided.
+            if ((msg as any).stepBuffer) stepBuffer = (msg as any).stepBuffer as Int32Array;
             // Switch the active canvas to this editor's canvas (if any).
             canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
@@ -460,6 +529,10 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             const runCode = needsAsync
                 ? (c: string) => py.runPythonAsync(c)
                 : (c: string) => Promise.resolve(py.runPython(c));
+            // Install energy/step trace. Use step trace only for sync code (Atomics.wait
+            // requires a synchronous call stack; async runs use energy-only trace).
+            const useStepTrace = !needsAsync && !!(msg as any).stepBuffer;
+            try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
             try {
                 try {
                     await runCode(codeToRun);
@@ -474,7 +547,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     syncRun = false;
                     currentRunId = undefined;
                     lastRunEditorId = msg.editorId;
-                    post('done', { runId });
+                    try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
+                    const runEnergy: number = py.globals.get('__step_energy__') ?? 0;
+                    try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__']:\n    globals().pop(__k,None)\ndel __k`); } catch {}
+                    stepBuffer = null;
+                    post('done', { runId, energy: runEnergy });
                 } catch (err: any) {
                     if (flushTimer !== null) {
                         (self as any).clearTimeout(flushTimer);
@@ -483,6 +560,8 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     flushStdout();
                     syncRun = false;
                     currentRunId = undefined;
+                    try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
+                    stepBuffer = null;
                     const errStr = String(err);
                     const errorMsg = errStr.includes("'await' outside async function")
                         ? "SyntaxError: input() is only supported in top-level code, not inside functions."
@@ -497,6 +576,8 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 flushStdout();
                 syncRun = false;
                 currentRunId = undefined;
+                try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
+                stepBuffer = null;
                 const errStr = String(err);
                 const errorMsg = errStr.includes("'await' outside async function")
                     ? "SyntaxError: input() is only supported in top-level code, not inside functions."
@@ -557,6 +638,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 }
                 // Phase 1: run user code with stdout teed to capture buffer
                 try { py.runPython(CAPTURE_SETUP); } catch {}
+                try { py.runPython(ENERGY_TRACE_SETUP); } catch {}
                 try {
                     await runCode(codeToRun);
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
@@ -566,6 +648,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     }
                     flushStdout();
                     syncRun = false;
+                    try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
                 } catch (userErr: any) {
                     // User code failed — restore stdout then re-throw so tests are skipped
                     if (flushTimer !== null) {
@@ -574,6 +657,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     }
                     flushStdout();
                     syncRun = false;
+                    try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
                     try { py.runPython(CAPTURE_RESTORE); } catch {}
                     const userErrStr = String(userErr);
                     throw userErrStr.includes("'await' outside async function")
@@ -581,16 +665,17 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                         : userErr;
                 }
 
-                // Phase 2: inject output helpers, then run test harness
+                // Phase 2: inject output + energy + memory helpers, then run test harness
                 try { py.runPython(CAPTURE_INJECT); } catch {}
                 try {
                     py.globals.set('__test_source__', msg.tests || '');
                     py.globals.set('__user_code__', codeToRun);
                     const resultJson = await py.runPythonAsync(TEST_HARNESS);
                     const testResults = JSON.parse(resultJson);
+                    const testEnergy: number = py.globals.get('__energy_val__') ?? py.globals.get('__step_energy__') ?? 0;
                     currentRunId = undefined;
                     lastRunEditorId = msg.editorId;
-                    post('testResults', { runId, results: testResults });
+                    post('testResults', { runId, results: { ...testResults, energy: testEnergy } });
                 } catch (harnessErr: any) {
                     currentRunId = undefined;
                     lastRunEditorId = msg.editorId;
@@ -600,7 +685,10 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     }});
                 } finally {
                     try { py.runPython(`
-for __k in ['__test_source__', '__user_code__', '__run_tests__', '__captured_output__', 'output', 'output_lines', 'with_input']:
+for __k in ['__test_source__', '__user_code__', '__run_tests__', '__captured_output__',
+            '__energy_val__', '__step_energy__', '__sys_trace__', '__json_trace__',
+            '__line_trace__', '__step_trace__',
+            'output', 'output_lines', 'with_input', 'energy', 'memory']:
     try: del globals()[__k]
     except: pass
 del __k

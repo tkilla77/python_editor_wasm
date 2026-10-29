@@ -97,6 +97,11 @@ export class BottomExercise extends LitElement {
      */
     @property({ attribute: false }) tests: string = '';
 
+    /** Maximum lines of code the student may execute (0 = no limit). */
+    @property({ type: Number }) maxenergy: number = 0;
+    /** Maximum non-blank, non-comment source lines allowed (0 = no limit). */
+    @property({ type: Number }) maxmemory: number = 0;
+
     /**
      * Override the permalink/share action. When set, replaces the built-in
      * shareExercise() call. Used by <kara-exercise> to generate a kara.html URL.
@@ -214,7 +219,34 @@ export class BottomExercise extends LitElement {
         const testCode = this._effectiveTestCode;
         if (!testCode) return this._editor.evaluatePython();
         this._testReport = undefined;
-        this._testReport = await this._editor.evaluateWithTests(testCode);
+        const report = await this._editor.evaluateWithTests(testCode);
+
+        // Append constraint checks as synthetic test results.
+        const extra: import('./pyodide-runtime.js').TestResult[] = [];
+        if (this.maxenergy > 0 && report.energy !== undefined) {
+            const ok = report.energy <= this.maxenergy;
+            extra.push({
+                passed: ok,
+                test: `energy() <= ${this.maxenergy}`,
+                message: ok ? null : `Used ${report.energy} steps (limit: ${this.maxenergy})`,
+            });
+        }
+        if (this.maxmemory > 0) {
+            const mem = this._editor.sourceCode.split('\n')
+                .filter(l => l.trim() && !l.trim().startsWith('#')).length;
+            const ok = mem <= this.maxmemory;
+            extra.push({
+                passed: ok,
+                test: `memory() <= ${this.maxmemory}`,
+                message: ok ? null : `Code is ${mem} lines (limit: ${this.maxmemory})`,
+            });
+        }
+        if (extra.length) {
+            report.results = [...report.results, ...extra];
+            report.passed = report.passed && extra.every(r => r.passed);
+        }
+
+        this._testReport = report;
         // Advance state machine
         if (this._testReport.passed) {
             if (this._status !== 'solved' && this._status !== 'viewed-solution') {

@@ -200,6 +200,55 @@ bottom-tab.active {
 .tab-add:hover { background: #f1f5f9; color: #1e293b; }
 /* ---- /Multi-file tab bar ---- */
 
+/* ---- Step-through controls ---- */
+bottom-stepbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.25em 0.4em;
+    flex-shrink: 0;
+    font-size: 0.8em;
+    font-family: system-ui;
+    border-top: var(--be-border, 1px solid #d4d4d4);
+    background: var(--be-editor-bg, white);
+    flex-wrap: wrap;
+    min-height: 1.8em;
+}
+.step-btn {
+    padding: 0.15em 0.5em;
+    border-radius: 0.3em;
+    border: 1px solid #d1d5db;
+    background: white;
+    cursor: pointer;
+    font-size: 1em;
+    font-family: system-ui;
+    color: #374151;
+    line-height: 1.4;
+}
+.step-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+.step-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.step-speed {
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+    margin-left: auto;
+    color: #6b7280;
+}
+.step-speed input[type=range] { width: 5em; cursor: pointer; }
+.step-hint { color: #9ca3af; font-style: italic; }
+.step-energy { margin-left: auto; color: #6b7280; }
+/* CodeMirror step line highlight */
+.cm-step-line { background: rgba(250, 204, 21, 0.25) !important; }
+.cm-step-vars {
+    font-size: 0.85em;
+    color: #6366f1;
+    font-style: italic;
+    margin-left: 0.5em;
+    pointer-events: none;
+}
+/* ---- /Step-through controls ---- */
+
 /* Cloud sync provider picker */
 editor-sync-picker {
     display: flex;

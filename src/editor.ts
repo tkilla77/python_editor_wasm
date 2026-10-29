@@ -1,6 +1,7 @@
 import { LitElement, html, nothing, unsafeCSS } from 'lit'
 import { customElement, property, state, query } from 'lit/decorators.js'
-import { EditorView } from "@codemirror/view"
+import { EditorView, Decoration, WidgetType, type DecorationSet } from "@codemirror/view"
+import { StateEffect, StateField } from "@codemirror/state"
 import { setDiagnostics, type Diagnostic } from '@codemirror/lint'
 import PyodideWorker from './pyodide-worker.ts?worker&inline';
 import { joinSession, leaveSession, type MemberCallbacks, EditorHandle } from './session-registry.js';
@@ -22,6 +23,53 @@ import type { BackendId } from './storage-manager.js';
 
 // Detect OAuth redirect returns on every page load (no-op if none pending).
 initStorageManager();
+
+// ---------------------------------------------------------------------------
+// CodeMirror step-through decorations
+// ---------------------------------------------------------------------------
+
+const setStepLine = StateEffect.define<{ line: number | null; locals: Record<string, string> }>();
+
+class VarsWidget extends WidgetType {
+    constructor(private readonly locals: Record<string, string>) { super(); }
+    toDOM() {
+        const span = document.createElement('span');
+        span.className = 'cm-step-vars';
+        const entries = Object.entries(this.locals);
+        span.textContent = '  ← ' + (entries.length ? entries.map(([k, v]) => `${k} = ${v}`).join(',  ') : '(no locals)');
+        return span;
+    }
+    eq(other: WidgetType) {
+        return other instanceof VarsWidget && JSON.stringify(this.locals) === JSON.stringify((other as VarsWidget).locals);
+    }
+    ignoreEvent() { return true; }
+}
+
+const stepLineField = StateField.define<DecorationSet>({
+    create() { return Decoration.none; },
+    update(deco, tr) {
+        deco = deco.map(tr.changes);
+        for (const e of tr.effects) {
+            if (e.is(setStepLine)) {
+                const { line, locals } = e.value;
+                if (line === null || line < 1) {
+                    deco = Decoration.none;
+                } else {
+                    const numLines = tr.state.doc.lines;
+                    if (line > numLines) { deco = Decoration.none; break; }
+                    const lineInfo = tr.state.doc.line(line);
+                    const ds = [Decoration.line({ class: 'cm-step-line' }).range(lineInfo.from)];
+                    if (Object.keys(locals).length > 0) {
+                        ds.push(Decoration.widget({ widget: new VarsWidget(locals), side: 1 }).range(lineInfo.to));
+                    }
+                    deco = Decoration.set(ds, true);
+                }
+            }
+        }
+        return deco;
+    },
+    provide: f => EditorView.decorations.from(f),
+});
 
 // Allow Python code to call input() via a browser prompt.
 declare global {
@@ -165,6 +213,19 @@ export class BottomEditor extends LitElement {
      */
     @property({ attribute: false })
     stateLoader?: (saved: Record<string, unknown>) => void;
+
+    // ── Step-through state ─────────────────────────────────────────────────────
+    /** When true, Run executes line-by-line; step controls appear. */
+    @property({ type: Boolean, reflect: true })
+    stepmode = false;
+
+    @state() private _stepping = false;
+    @state() private _stepPaused = false;
+    @state() private _stepLocals: Record<string, string> = {};
+    @state() private _energy: number | null = null;
+    @state() private _stepPlaying = false;
+    @state() private _stepSpeed = 5;
+    private _stepPlayTimer?: ReturnType<typeof setTimeout>;
 
     // ── Cloud sync state ───────────────────────────────────────────────────────
     @state() private _syncBackend: BackendId = 'local';
@@ -491,6 +552,7 @@ export class BottomEditor extends LitElement {
                 this._saveState();
             },
         );
+        this._editor.dispatch({ effects: StateEffect.appendConfig.of([stepLineField]) });
         this._setupButtonOrientation();
 
         // ── Cloud sync init ───────────────────────────────────────────────────
@@ -641,6 +703,67 @@ export class BottomEditor extends LitElement {
         return { display: validLine ? `Line ${validLine}: ${exceptionLine}` : exceptionLine, userLine: validLine };
     }
 
+    private _updateStepLine(line: number | null, locals: Record<string, string> = {}) {
+        if (!this._editor) return;
+        this._editor.dispatch({ effects: setStepLine.of({ line, locals }) });
+        if (line !== null && line >= 1) {
+            const numLines = this._editor.state.doc.lines;
+            if (line <= numLines) {
+                const pos = this._editor.state.doc.line(line).from;
+                this._editor.dispatch({ effects: EditorView.scrollIntoView(pos, { y: 'nearest' }) });
+            }
+        }
+    }
+
+    private _doStep() {
+        if (!this._stepPaused) return;
+        this._stopPlay();
+        this.runtime.step();
+    }
+
+    private _doPlay() {
+        if (!this._stepPaused) return;
+        if (this._stepPlaying) {
+            this._stopPlay();
+        } else {
+            this._stepPlaying = true;
+            this._scheduleAutoStep();
+        }
+    }
+
+    private _scheduleAutoStep() {
+        if (!this._stepPlaying || !this._stepPaused) return;
+        const delayMs = Math.round(1000 / this._stepSpeed);
+        this._stepPlayTimer = setTimeout(() => {
+            if (this._stepPlaying && this._stepPaused) {
+                this.runtime.step();
+            }
+        }, delayMs);
+    }
+
+    private _stopPlay() {
+        clearTimeout(this._stepPlayTimer);
+        this._stepPlaying = false;
+    }
+
+    private _doContinue() {
+        this._stopPlay();
+        this._stepPaused = false;
+        this._updateStepLine(null);
+        this.runtime.stepContinue();
+    }
+
+    private _onStepUpdate(line: number, locals: Record<string, string>, energy: number) {
+        const prefixLines = (this.codePrefix.match(/\n/g) ?? []).length + this.transformLineOffset;
+        const userLine = line - prefixLines;
+        this._stepLocals = locals;
+        this._energy = energy;
+        this._stepPaused = true;
+        this._updateStepLine(userLine, locals);
+        // If playing, schedule the next step after the display delay.
+        if (this._stepPlaying) this._scheduleAutoStep();
+    }
+
     async evaluatePython() {
         if (!this._editor) return;
         this._output?.clearOutput();
@@ -649,11 +772,36 @@ export class BottomEditor extends LitElement {
         const raw  = this.codePrefix + this._editor.state.doc.toString();
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
+        this._energy = null;
         try {
-            await this.runtime.run(code, (data: string) => {
-                this._output?.addOutput(data);
-                if (!this._swConsole) this._swConsoleHasNew = true;
-            }, this._extraFiles());
+            if (this.stepmode) {
+                this._stepping = true;
+                this._stepPaused = false;
+                this._stopPlay();
+                this._updateStepLine(null);
+                this.runtime.enableStepMode();
+                await this.runtime.run(
+                    code,
+                    (data: string) => {
+                        this._output?.addOutput(data);
+                        if (!this._swConsole) this._swConsoleHasNew = true;
+                    },
+                    this._extraFiles(),
+                    (energy: number) => { this._energy = energy; },
+                    (line, locals, energy) => this._onStepUpdate(line, locals, energy),
+                );
+                this.runtime.disableStepMode();
+            } else {
+                await this.runtime.run(
+                    code,
+                    (data: string) => {
+                        this._output?.addOutput(data);
+                        if (!this._swConsole) this._swConsoleHasNew = true;
+                    },
+                    this._extraFiles(),
+                    (energy: number) => { this._energy = energy; },
+                );
+            }
             if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
             const { display, userLine } = this._formatError(err?.toString() ?? String(err));
@@ -663,6 +811,10 @@ export class BottomEditor extends LitElement {
         } finally {
             if (this._buttons) this._buttons.running = false;
             if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
+            this._stepping = false;
+            this._stepPaused = false;
+            this._stopPlay();
+            this._updateStepLine(null);
         }
     }
 
@@ -815,11 +967,38 @@ export class BottomEditor extends LitElement {
                 <button class="tab-add" title="Add file" @click="${() => this._addTab()}">+</button>
             </bottom-tabs>` : '';
 
+        const stepBar = this.stepmode ? html`
+            <bottom-stepbar>
+                ${this._stepping && this._stepPaused ? html`
+                    <button class="step-btn" @click="${this._doStep}" title="Step one line">▶ Step</button>
+                    <button class="step-btn ${this._stepPlaying ? 'active' : ''}"
+                            @click="${this._doPlay}" title="${this._stepPlaying ? 'Pause' : 'Play'}">
+                        ${this._stepPlaying ? '⏸ Pause' : '▶▶ Play'}</button>
+                    <button class="step-btn" @click="${this._doContinue}" title="Run to end">⏩ Continue</button>
+                    <label class="step-speed" title="Playback speed">
+                        <span>${this._stepSpeed}×</span>
+                        <input type="range" min="1" max="20" .value="${String(this._stepSpeed)}"
+                               @input="${(e: InputEvent) => { this._stepSpeed = +(e.target as HTMLInputElement).value; }}">
+                    </label>
+                ` : this._stepping ? html`
+                    <span class="step-hint">Running…</span>
+                ` : html`
+                    <span class="step-hint">Click Run to step through</span>
+                `}
+                ${this._energy !== null ? html`
+                    <span class="step-energy" title="Lines executed">⚡ ${this._energy}</span>
+                ` : nothing}
+            </bottom-stepbar>` : (this._energy !== null ? html`
+            <bottom-stepbar>
+                <span class="step-energy" title="Lines executed">⚡ ${this._energy}</span>
+            </bottom-stepbar>` : nothing);
+
         return html`
             <bottom-editorarea>
                 <bottom-codewrap>
                     ${tabBar}
                     <bottom-code id="code"></bottom-code>
+                    ${stepBar}
                 </bottom-codewrap>
                 ${outputArea}
                 <bottom-editor-buttons

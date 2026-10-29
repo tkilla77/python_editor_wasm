@@ -9,7 +9,10 @@ export interface TestResult {
 export interface TestReport {
     passed: boolean;
     results: TestResult[];
+    energy?: number;
 }
+
+export type StepUpdateCallback = (line: number, locals: Record<string, string>, energy: number) => void;
 
 export type RuntimeCallbacks = {
     onLog: (data: string) => void;
@@ -33,8 +36,11 @@ export class PyodideRuntime {
         reject: (e: Error) => void;
         timeout: ReturnType<typeof setTimeout> | undefined;
         onStdout: (data: string) => void;
+        onEnergy?: (energy: number) => void;
+        onStepUpdate?: StepUpdateCallback;
     }>();
     private interruptBuffer?: Uint8Array;
+    private _stepBuffer?: Int32Array;
     private _queue: Promise<void|TestReport> = Promise.resolve();
     private _fitCallback?: (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null) => void;
 
@@ -56,11 +62,25 @@ export class PyodideRuntime {
     }
 
     /** Run Python code. Resolves on success, rejects on error or timeout. */
-    async run(code: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[]): Promise<void> {
-        return this.runAs(code, onStdout, this.editorId, undefined, extraFiles);
+    async run(
+        code: string,
+        onStdout: (data: string) => void,
+        extraFiles?: { name: string; code: string }[],
+        onEnergy?: (energy: number) => void,
+        onStepUpdate?: StepUpdateCallback,
+    ): Promise<void> {
+        return this.runAs(code, onStdout, this.editorId, undefined, extraFiles, onEnergy, onStepUpdate);
     }
 
-    runAs(code: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[]): Promise<void> {
+    runAs(
+        code: string,
+        onStdout: (data: string) => void,
+        editorId: string,
+        timeoutMs?: number,
+        extraFiles?: { name: string; code: string }[],
+        onEnergy?: (energy: number) => void,
+        onStepUpdate?: StepUpdateCallback,
+    ): Promise<void> {
         const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async () => {
             await this.ready;
@@ -68,13 +88,13 @@ export class PyodideRuntime {
             return new Promise<void>((resolve, reject) => {
                 const timeout = tms === Infinity ? undefined : setTimeout(() => {
                     const secs = (tms / 1000).toFixed(0);
-                    // Remove from map first so terminate() doesn't double-reject.
                     this.pendingRuns.delete(runId);
                     this.terminateAndRespawn();
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
-                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
-                this.worker?.postMessage({ type: 'run', code, runId, editorId, extraFiles });
+                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onEnergy, onStepUpdate });
+                const stepBuffer = onStepUpdate ? this._stepBuffer : undefined;
+                this.worker?.postMessage({ type: 'run', code, runId, editorId, extraFiles, stepBuffer });
             });
         };
         const result = this._queue.then(doRun);
@@ -159,6 +179,35 @@ export class PyodideRuntime {
             this.worker?.addEventListener('message', onMsg as any);
             this.worker?.postMessage({ type: 'samplePixel', x, y, editorId });
         });
+    }
+
+    /** Allocate a SharedArrayBuffer step-control slot. Call once. */
+    enableStepMode(): void {
+        try {
+            const sab = new SharedArrayBuffer(4);
+            this._stepBuffer = new Int32Array(sab);
+            Atomics.store(this._stepBuffer, 0, 0);
+        } catch {
+            this._stepBuffer = undefined;
+        }
+    }
+
+    disableStepMode(): void {
+        this._stepBuffer = undefined;
+    }
+
+    /** Advance one line (while worker is paused in step mode). */
+    step(): void {
+        if (!this._stepBuffer) return;
+        Atomics.store(this._stepBuffer, 0, 1);
+        Atomics.notify(this._stepBuffer, 0, 1);
+    }
+
+    /** Let execution run freely (worker no longer blocks on each line). */
+    stepContinue(): void {
+        if (!this._stepBuffer) return;
+        Atomics.store(this._stepBuffer, 0, 2);
+        Atomics.notify(this._stepBuffer, 0, 1);
     }
 
     /** Interrupt a running execution. Falls back to worker termination. */
@@ -291,10 +340,16 @@ export class PyodideRuntime {
             this.callbacks.onReady();
             return;
         }
+        if (msg.type === 'stepUpdate') {
+            const run = msg.runId !== undefined ? this.pendingRuns.get(msg.runId) : undefined;
+            run?.onStepUpdate?.(msg.line, msg.locals ?? {}, msg.energy ?? 0);
+            return;
+        }
         if (msg.type === 'done') {
             const run = this.pendingRuns.get(msg.runId);
             if (run) {
                 clearTimeout(run.timeout);
+                if (msg.energy !== undefined) run.onEnergy?.(msg.energy);
                 run.resolve();
                 this.pendingRuns.delete(msg.runId);
             }
