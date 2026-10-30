@@ -20,6 +20,7 @@ export class KaraEditorPage extends LitElement {
     private _timeout = '30';
     private _stepmode = false;
     private _showenergy = false;
+    private _nodebug = false;
 
     // Exercise mode: decoded from ?x=
     @state() private _decoded?: ExercisePermalinkState;
@@ -35,6 +36,7 @@ export class KaraEditorPage extends LitElement {
             if (params.has('timeout')) this._timeout = params.get('timeout')!;
             this._stepmode = isOn(params.get('stepmode'));
             this._showenergy = isOn(params.get('showenergy'));
+            this._nodebug = isOn(params.get('nodebug'));
             if (params.has('autorun')) {
                 const v = params.get('autorun');
                 this._autorun = !(v === 'false' || v === '0');
@@ -87,6 +89,7 @@ export class KaraEditorPage extends LitElement {
                     .testCode=${s.tests ?? ''}
                     ?stepmode=${!!s.stepmode}
                     ?showenergy=${!!s.showenergy}
+                    ?nodebug=${!!s.nodebug}
                     maxenergy=${s.maxenergy ?? 0}
                     maxmemory=${s.maxmemory ?? 0}
                 ></kara-exercise>`;
@@ -99,6 +102,7 @@ export class KaraEditorPage extends LitElement {
                 ?autorun=${this._autorun}
                 ?stepmode=${this._stepmode}
                 ?showenergy=${this._showenergy}
+                ?nodebug=${this._nodebug}
                 .world=${this._world}
                 .code=${this._code}
             ></kara-editor>`;

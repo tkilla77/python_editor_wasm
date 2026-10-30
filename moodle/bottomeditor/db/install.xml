@@ -21,6 +21,7 @@
         <FIELD NAME="maxenergy"    TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="maxmemory"    TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="multifile"    TYPE="int"  LENGTH="1"  NOTNULL="true"  SEQUENCE="false" DEFAULT="0"/>
+        <FIELD NAME="nodebug"      TYPE="int"  LENGTH="1"  NOTNULL="true"  SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="grade"        TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="false" DEFAULT="100"/>
         <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="timemodified" TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="false" DEFAULT="0"/>

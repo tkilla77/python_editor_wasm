@@ -22,5 +22,14 @@ function xmldb_bottomeditor_upgrade(int $oldversion): bool {
         upgrade_mod_savepoint(true, 2026103000, 'bottomeditor');
     }
 
+    if ($oldversion < 2026103001) {
+        $table = new xmldb_table('bottomeditor');
+        $field = new xmldb_field('nodebug', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'multifile');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026103001, 'bottomeditor');
+    }
+
     return true;
 }

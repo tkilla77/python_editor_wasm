@@ -16,6 +16,7 @@ export interface ExercisePermalinkState {
     mainfile?: string;
     stepmode?: boolean;
     showenergy?: boolean;
+    nodebug?: boolean;
     maxenergy?: number;
     maxmemory?: number;
     // Kara-specific (present only in kara-exercise permalinks)

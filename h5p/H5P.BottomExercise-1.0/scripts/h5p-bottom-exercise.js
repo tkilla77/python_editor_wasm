@@ -63,6 +63,7 @@
         if (p.layout && p.layout !== 'console') ex.setAttribute('layout', p.layout);
         if (b.stepmode)   ex.setAttribute('stepmode', '');
         if (b.showEnergy) ex.setAttribute('showenergy', '');
+        if (b.nodebug)    ex.setAttribute('nodebug', '');
         if (b.multifile)  ex.setAttribute('multifile', '');
         if (b.maxEnergy > 0) ex.setAttribute('maxenergy', String(b.maxEnergy));
         if (b.maxMemory > 0) ex.setAttribute('maxmemory', String(b.maxMemory));

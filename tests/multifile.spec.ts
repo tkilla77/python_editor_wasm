@@ -109,7 +109,7 @@ test('stepping switches to the main file', async ({ page }) => {
     await page.evaluate(() => {
         const e = (window as any).__ed;
         e._switchTab(1);
-        (window as any).__run = e.evaluatePython();
+        (window as any).__run = e._startRun('step');
     });
     await page.waitForFunction(() => (window as any).__ed._stepPaused);
     expect(await page.evaluate(() => (window as any).__ed._tabIdx)).toBe(0);

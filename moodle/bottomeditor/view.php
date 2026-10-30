@@ -59,7 +59,7 @@ if ($record->layout !== 'console') {
 if (!$record->enablesolution) {
     $attrs[] = 'hidesolution';
 }
-foreach (['stepmode', 'showenergy', 'multifile'] as $flag) {
+foreach (['stepmode', 'showenergy', 'multifile', 'nodebug'] as $flag) {
     if (!empty($record->$flag)) {
         $attrs[] = $flag;
     }

@@ -250,6 +250,30 @@ bottom-stepbar {
     margin-left: 0.5em;
     pointer-events: none;
 }
+/* Breakpoints: click a line number (or the dot column) to toggle */
+.cm-breakpoint-gutter .cm-gutterElement {
+    width: 0.7em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cm-breakpoint,
+.cm-breakpoint-spacer,
+.cm-breakpoint-gutter .cm-gutterElement:empty:hover::before {
+    content: '';
+    display: inline-block;
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    background: #dc2626;
+}
+.cm-breakpoint-gutter .cm-gutterElement:empty:hover::before { opacity: 0.3; }
+.cm-lineNumbers .cm-gutterElement { cursor: pointer; }
+:host([nodebug]) .cm-breakpoint-gutter,
+bottom-codewrap.nodebug .cm-breakpoint-gutter { display: none; }
+:host([nodebug]) .cm-lineNumbers .cm-gutterElement,
+bottom-codewrap.nodebug .cm-lineNumbers .cm-gutterElement { cursor: default; }
 /* ---- /Step-through controls ---- */
 
 /* Cloud sync provider picker */

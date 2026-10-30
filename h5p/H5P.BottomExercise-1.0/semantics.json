@@ -106,7 +106,14 @@
         "name": "stepmode",
         "type": "boolean",
         "label": "Step-by-step execution",
-        "description": "Run the student's code one line at a time, highlighting the current line and showing variable values. Tests still run at full speed. Needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+).",
+        "description": "Run plays the student's code line by line, highlighting the current line and showing variable values; a bar below the code offers Step, Play/Pause and speed. Tests still run at full speed. Needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+).",
+        "default": false
+      },
+      {
+        "name": "nodebug",
+        "type": "boolean",
+        "label": "Disable breakpoints",
+        "description": "By default, students can click a line number to set a breakpoint: Run then pauses there and lets them step through the code. Check this to turn that off.",
         "default": false
       },
       {

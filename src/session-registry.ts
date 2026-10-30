@@ -57,6 +57,7 @@ export class EditorHandle {
     stepContinue() { this._runtime.stepContinue(); }
     stepPause() { this._runtime.stepPause(); }
     stepAbort() { this._runtime.stepAbort(); }
+    setBreakpoints(lines: number[]) { this._runtime.setBreakpoints(lines); }
     terminate() { /* managed by session */ }
 }
 

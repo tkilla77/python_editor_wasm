@@ -1,7 +1,7 @@
 import { LitElement, html, nothing, unsafeCSS } from 'lit'
 import { customElement, property, state, query } from 'lit/decorators.js'
-import { EditorView, Decoration, WidgetType, type DecorationSet } from "@codemirror/view"
-import { StateEffect, StateField } from "@codemirror/state"
+import { EditorView, Decoration, WidgetType, GutterMarker, gutter, lineNumbers, type DecorationSet } from "@codemirror/view"
+import { StateEffect, StateField, RangeSet } from "@codemirror/state"
 import { setDiagnostics, type Diagnostic } from '@codemirror/lint'
 import PyodideWorker from './pyodide-worker.ts?worker&inline';
 import { joinSession, leaveSession, type MemberCallbacks, EditorHandle } from './session-registry.js';
@@ -50,6 +50,41 @@ class VarsWidget extends WidgetType {
     }
     ignoreEvent() { return true; }
 }
+
+// ---------------------------------------------------------------------------
+// Breakpoints: markers at line starts, kept in a field so they move with edits
+// ---------------------------------------------------------------------------
+
+class BreakpointMarker extends GutterMarker {
+    constructor(private readonly cls: string) { super(); }
+    toDOM() {
+        const dot = document.createElement('span');
+        dot.className = this.cls;
+        return dot;
+    }
+}
+const BREAKPOINT = new BreakpointMarker('cm-breakpoint');
+const BREAKPOINT_SPACER = new BreakpointMarker('cm-breakpoint-spacer');
+const setBreakpointsEffect = StateEffect.define<number[]>();
+const toggleBreakpointEffect = StateEffect.define<number>({ map: (pos, mapping) => mapping.mapPos(pos) });
+
+const breakpointField = StateField.define<RangeSet<GutterMarker>>({
+    create: () => RangeSet.empty,
+    update(set, tr) {
+        set = set.map(tr.changes);
+        for (const e of tr.effects) {
+            if (e.is(setBreakpointsEffect)) set = RangeSet.of(e.value.map(pos => BREAKPOINT.range(pos)), true);
+            if (e.is(toggleBreakpointEffect)) {
+                let on = false;
+                set.between(e.value, e.value, () => { on = true; });
+                set = on
+                    ? set.update({ filter: from => from !== e.value })
+                    : set.update({ add: [BREAKPOINT.range(e.value)] });
+            }
+        }
+        return set;
+    },
+});
 
 const stepLineField = StateField.define<DecorationSet>({
     create() { return Decoration.none; },
@@ -240,6 +275,10 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     stepmode = false;
 
+    /** Hide the breakpoint gutter. Without breakpoints (and without stepmode) runs are never traced. */
+    @property({ type: Boolean, reflect: true })
+    nodebug = false;
+
     /** Count executed lines and show the total after each run. Off by default: counting slows execution. */
     @property({ type: Boolean, reflect: true })
     showenergy = false;
@@ -252,6 +291,12 @@ export class BottomEditor extends LitElement {
     @state() private _stepSpeed = 5;
     @state() private _canStep = true;
     private _stepPlayTimer?: ReturnType<typeof setTimeout>;
+    /** Without stepmode, the step bar appears only once a breakpoint is hit. */
+    @state() private _debugShown = false;
+    /** How the next run starts; set by the step bar's buttons. */
+    private _pendingMode?: 'run' | 'step' | 'play';
+    /** Main-file breakpoint lines while another tab is open. */
+    private _mainBreakpoints: number[] = [];
 
     // ── Cloud sync state ───────────────────────────────────────────────────────
     @state() private _syncBackend: BackendId = 'local';
@@ -341,9 +386,11 @@ export class BottomEditor extends LitElement {
     /** Switch to a tab by index, saving the current editor content first. */
     private _switchTab(idx: number) {
         if (!this._editor || idx === this._tabIdx || idx < 0 || idx >= this._tabs.length) return;
+        if (this._tabIdx === 0) this._mainBreakpoints = this._breakpointLines();
         this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
         this._tabIdx = idx;
         this.replaceDoc(this._tabs[idx].code);
+        if (idx === 0) this._restoreBreakpoints(this._mainBreakpoints);
     }
 
     /** Add a new blank (or named) file tab. */
@@ -357,12 +404,10 @@ export class BottomEditor extends LitElement {
 
     /** Delete a tab (not allowed if only one tab left). */
     private _deleteTab(idx: number) {
-        if (idx === 0) return; // the main file is what Run executes
-        const newTabs = this._tabs.filter((_, i) => i !== idx);
-        const newIdx = idx >= newTabs.length ? newTabs.length - 1 : idx;
-        this._tabs = newTabs;
-        this._tabIdx = newIdx;
-        this.replaceDoc(this._tabs[this._tabIdx].code);
+        if (idx <= 0 || idx >= this._tabs.length) return; // the main file is what Run executes
+        if (idx === this._tabIdx) this._switchTab(idx - 1);
+        this._tabs = this._tabs.filter((_, i) => i !== idx);
+        if (this._tabIdx > idx) this._tabIdx--;
         this._saveState();
     }
 
@@ -587,13 +632,32 @@ export class BottomEditor extends LitElement {
         this._editor = createPythonEditor(
             this._code!,
             text,
-            () => this.onRun ? this.onRun() : this.evaluatePython(),
+            () => { this._startRun('run'); },
             () => {
                 this.dispatchEvent(new CustomEvent('bottom-change', { bubbles: true, composed: true }));
                 this._saveState();
             },
         );
-        this._editor.dispatch({ effects: StateEffect.appendConfig.of([stepLineField]) });
+        const toggleBreakpoint = (view: EditorView, line: { from: number }) => {
+            if (this.nodebug || !this._canStep || this._mainHidden) return false;
+            const text = view.state.doc.lineAt(line.from).text.trim();
+            if (!text || text.startsWith('#')) return false; // nothing to stop at
+            view.dispatch({ effects: toggleBreakpointEffect.of(line.from) });
+            if (this._stepping) this.runtime.setBreakpoints(this._rawBreakpoints());
+            return true;
+        };
+        this._editor.dispatch({ effects: StateEffect.appendConfig.of([
+            stepLineField,
+            breakpointField,
+            gutter({
+                class: 'cm-breakpoint-gutter',
+                markers: v => v.state.field(breakpointField),
+                initialSpacer: () => BREAKPOINT_SPACER,
+                renderEmptyElements: true,
+                domEventHandlers: { mousedown: toggleBreakpoint },
+            }),
+            lineNumbers({ domEventHandlers: { mousedown: toggleBreakpoint } }),
+        ]) });
         this._setupButtonOrientation();
 
         // ── Cloud sync init ───────────────────────────────────────────────────
@@ -705,7 +769,35 @@ export class BottomEditor extends LitElement {
             return;
         }
         const state = this._editor.state;
-        this._editor.dispatch(state.update({ changes: { from: 0, to: state.doc.length, insert: text } }));
+        this._editor.dispatch(state.update({
+            changes: { from: 0, to: state.doc.length, insert: text },
+            effects: setBreakpointsEffect.of([]), // the old lines are gone
+        }));
+    }
+
+    private _breakpointLines(): number[] {
+        if (!this._editor) return [];
+        const doc = this._editor.state.doc;
+        const lines = new Set<number>();
+        this._editor.state.field(breakpointField).between(0, doc.length, from => { lines.add(doc.lineAt(from).number); });
+        return [...lines].sort((a, b) => a - b);
+    }
+
+    private _mainBreakpointLines(): number[] {
+        if (this.nodebug) return [];
+        return this._mainHidden ? this._mainBreakpoints : this._breakpointLines();
+    }
+
+    /** Breakpoints in the line numbers the worker sees (after codePrefix and transforms). */
+    private _rawBreakpoints(): number[] {
+        return this._mainBreakpointLines().map(l => l + this._prefixLines());
+    }
+
+    private _restoreBreakpoints(lines: number[]) {
+        if (!this._editor) return;
+        const doc = this._editor.state.doc;
+        const positions = lines.filter(l => l <= doc.lines).map(l => doc.line(l).from);
+        this._editor.dispatch({ effects: setBreakpointsEffect.of(positions) });
     }
 
     /** Sample a canvas pixel in OffscreenCanvas coordinates. For testing. */
@@ -826,10 +918,21 @@ export class BottomEditor extends LitElement {
         this._stepLocals = locals;
         this._energy = energy;
         this._stepPaused = true;
+        this._debugShown = true;
         this._updateStepLine(userLine, locals);
-        // If playing, schedule the next step after the display delay.
+        // At full speed, an update means we stopped (breakpoint or Pause). While
+        // animating, a breakpoint stops the animation too.
+        if (this._stepPlaying && (this._fullSpeed || this._mainBreakpointLines().includes(userLine))) this._stopPlay();
         if (this._stepPlaying) this._scheduleAutoStep();
     }
+
+    /** Start a run: 'run' (Run button), 'step' (paused on line 1) or 'play' (auto-step). */
+    private _startRun(mode: 'run' | 'step' | 'play') {
+        this._pendingMode = mode;
+        return this.onRun ? this.onRun() : this.evaluatePython();
+    }
+
+    private get _showsEnergy() { return this.showenergy || this.stepmode; }
 
     async evaluatePython() {
         if (!this._editor) return;
@@ -840,7 +943,7 @@ export class BottomEditor extends LitElement {
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         this._energy = null;
-        const onStep = this._beginStepping();
+        const step = this._beginStepping();
         try {
             await this.runtime.run(
                 code,
@@ -849,9 +952,9 @@ export class BottomEditor extends LitElement {
                     if (!this._swConsole) this._swConsoleHasNew = true;
                 },
                 this._extraFiles(),
-                (energy: number) => { this._energy = energy; },
-                onStep,
-                { lineOffset: this._prefixLines(), countEnergy: this.stepmode || this.showenergy },
+                (energy: number) => { if (this._showsEnergy) this._energy = energy; },
+                step?.onStep,
+                { lineOffset: this._prefixLines(), countEnergy: this.showenergy, ...step?.opts },
             );
             if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
@@ -866,23 +969,40 @@ export class BottomEditor extends LitElement {
         }
     }
 
-    /** In stepmode, prepare the step buffer and return the per-line callback. */
+    /**
+     * Decide whether this run is traced. Plain Run is untraced unless the main file
+     * has breakpoints; then it runs at full speed until the first one.
+     */
     private _beginStepping() {
-        if (!this.stepmode || !this._canStep) return undefined;
+        let mode = this._pendingMode ?? 'run';
+        this._pendingMode = undefined;
+        if (mode === 'run' && this.stepmode) mode = 'play';
+        if (!this._canStep) return undefined;
+        const breakpoints = this._rawBreakpoints();
+        if (mode === 'run' && breakpoints.length === 0) return undefined;
+
         this._switchTab(0); // only the main file is stepped
+        this._stopPlay();
         this._stepping = true;
         this._stepPaused = false;
-        this._stopPlay();
+        this._debugShown = this.stepmode;
         this._updateStepLine(null);
-        return (line: number, locals: Record<string, string>, energy: number) => this._onStepUpdate(line, locals, energy);
+        if (mode === 'play') this._stepPlaying = true;
+        const free = mode === 'run' || (mode === 'play' && this._fullSpeed);
+        return {
+            onStep: (line: number, locals: Record<string, string>, energy: number) => this._onStepUpdate(line, locals, energy),
+            opts: { stepStart: (free ? 'free' : 'wait') as 'free' | 'wait', breakpoints },
+        };
     }
 
     private _endStepping() {
         if (!this._stepping) return;
         this._stepping = false;
         this._stepPaused = false;
+        this._debugShown = false;
         this._stopPlay();
         this._updateStepLine(null);
+        if (!this._showsEnergy) this._energy = null;
     }
 
     /**
@@ -900,16 +1020,17 @@ export class BottomEditor extends LitElement {
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         this._energy = null;
-        const onStep = this._beginStepping();
+        const step = this._beginStepping();
         try {
             const report = await this.runtime.runWithTests(code, tests, this.readyCode, (data: string) => {
                 this._output?.addOutput(data);
                 if (!this._swConsole) this._swConsoleHasNew = true;
             }, this._extraFiles(), {
                 lineOffset: this._prefixLines(),
-                countEnergy: this.stepmode || this.showenergy || !!opts?.countEnergy,
-            }, onStep, () => this._endStepping());
-            this._energy = report.energy ?? null;
+                countEnergy: this.showenergy || !!opts?.countEnergy,
+                ...step?.opts,
+            }, step?.onStep, () => this._endStepping());
+            this._energy = this._showsEnergy || opts?.countEnergy ? report.energy ?? null : null;
             return report;
         } catch (err: any) {
             const { display, userLine } = this._formatError(err?.toString() ?? String(err));
@@ -997,6 +1118,7 @@ export class BottomEditor extends LitElement {
                 if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
                 if (this.stepmode)   url.searchParams.set('stepmode', '1');
                 if (this.showenergy) url.searchParams.set('showenergy', '1');
+                if (this.nodebug)    url.searchParams.set('nodebug', '1');
                 await navigator.clipboard.writeText(url.href);
                 href = url.href;
             }
@@ -1092,13 +1214,18 @@ export class BottomEditor extends LitElement {
                 <button class="tab-add" title="Add file" @click="${() => this._addTab()}">+</button>
             </bottom-tabs>` : '';
 
-        const stepBar = this.stepmode ? html`
+        const energyChip = this._energy !== null
+            ? html`<span class="step-energy" title="Lines executed">⚡ ${this._energy}</span>` : nothing;
+        const showBar = this.stepmode || (this._stepping && this._debugShown);
+        const stepBar = showBar ? html`
             <bottom-stepbar>
-                ${this._stepping ? html`
-                    <button class="step-btn" @click="${this._doStep}" ?disabled="${!this._stepPaused}"
-                            title="Run the highlighted line">${ICON_STEP} Step</button>
-                    <button class="step-btn ${this._stepPlaying ? 'active' : ''}" @click="${this._doPlay}"
-                            title="${this._stepPlaying ? 'Pause' : 'Keep stepping automatically'}">
+                ${this._canStep ? html`
+                    <button class="step-btn" ?disabled="${this._stepping && !this._stepPaused}"
+                            @click="${() => this._stepping ? this._doStep() : this._startRun('step')}"
+                            title="${this._stepping ? 'Run the highlighted line' : 'Start, paused on the first line'}">${ICON_STEP} Step</button>
+                    <button class="step-btn ${this._stepPlaying ? 'active' : ''}"
+                            @click="${() => this._stepping ? this._doPlay() : this._startRun('play')}"
+                            title="${this._stepPlaying ? 'Pause' : 'Run line by line'}">
                         ${this._stepPlaying ? html`${ICON_PAUSE} Pause` : html`${ICON_PLAY} Play`}</button>
                     <label class="step-speed" title="Play speed (lines per second)">
                         <span>${this._fullSpeed ? 'max' : `${this._stepSpeed}/s`}</span>
@@ -1106,21 +1233,14 @@ export class BottomEditor extends LitElement {
                                @input="${(e: InputEvent) => this._setStepSpeed(+(e.target as HTMLInputElement).value)}">
                     </label>
                 ` : html`
-                    <span class="step-hint">${this._canStep
-                        ? 'Click Run to step through'
-                        : 'Stepping needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+)'}</span>
+                    <span class="step-hint">Stepping needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+)</span>
                 `}
-                ${this._energy !== null ? html`
-                    <span class="step-energy" title="Lines executed">⚡ ${this._energy}</span>
-                ` : nothing}
-            </bottom-stepbar>` : (this._energy !== null ? html`
-            <bottom-stepbar>
-                <span class="step-energy" title="Lines executed">⚡ ${this._energy}</span>
-            </bottom-stepbar>` : nothing);
+                ${energyChip}
+            </bottom-stepbar>` : (this._energy !== null ? html`<bottom-stepbar>${energyChip}</bottom-stepbar>` : nothing);
 
         return html`
             <bottom-editorarea>
-                <bottom-codewrap>
+                <bottom-codewrap class="${this._canStep ? '' : 'nodebug'}">
                     ${tabBar}
                     <bottom-code id="code"></bottom-code>
                     ${stepBar}
@@ -1138,7 +1258,7 @@ export class BottomEditor extends LitElement {
                     .shareHint=${this._shareHint}
                     ?showsync="${this._syncAvailable()}"
                     syncbackend="${syncBackend}"
-                    @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
+                    @bottom-run="${() => this._startRun('run')}"
                     @bottom-stop="${this._stop}"
                     @bottom-reset="${this.reset}"
                     @bottom-revert="${this.revertCode}"

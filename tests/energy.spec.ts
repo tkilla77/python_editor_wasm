@@ -65,7 +65,7 @@ test('stepmode pauses on each line and reports locals', async ({ page }) => {
         const e = document.querySelector('bottom-editor') as any;
         e.stepmode = true;
         e.sourceCode = 'a = 1\nb = a + 1\nprint(b)';
-        (window as any).__run = e.evaluatePython();
+        (window as any).__run = e._startRun('step');
     });
     const paused = () => page.waitForFunction(() => (document.querySelector('bottom-editor') as any)._stepPaused);
 
@@ -119,7 +119,7 @@ test('pause stops a full-speed run, stop ends a paused run', async ({ page }) =>
         const e = document.querySelector('bottom-editor') as any;
         e.stepmode = true;
         e.sourceCode = 'n = 0\nwhile True:\n    n += 1';
-        (window as any).__run = e.evaluatePython();
+        (window as any).__run = e._startRun('step');
     });
     await page.waitForFunction(`${ed}._stepPaused`);
     await page.evaluate(() => { const e = document.querySelector('bottom-editor') as any; e._setStepSpeed(21); e._doPlay(); });
@@ -148,7 +148,7 @@ test('exercises step through student code, then run tests untraced', async ({ pa
         await ex.updateComplete;
         await ex.renderRoot.querySelector('bottom-editor').ready;
         (window as any).__ex = ex;
-        (window as any).__run = ex.runTests();
+        (window as any).__run = ex.renderRoot.querySelector('bottom-editor')._startRun('step');
     });
     const inner = '__ex.renderRoot.querySelector("bottom-editor")';
     await page.waitForFunction(`${inner}._stepPaused && ${inner}.energy === 1`);
@@ -170,7 +170,7 @@ test('turtle drawing appears step by step', async ({ page }) => {
         const e = document.querySelector('bottom-editor') as any;
         e.stepmode = true;
         e.sourceCode = 'import turtle\nt = turtle.Turtle()\nt.speed(0)\nt.pensize(3)\nt.forward(100)\nt.left(90)\nt.forward(100)';
-        (window as any).__run = e.evaluatePython();
+        (window as any).__run = e._startRun('step');
     });
     const ed = 'document.querySelector("bottom-editor")';
     const pausedAt = async (line: number) => page.waitForFunction(`${ed}._stepPaused && ${ed}.energy === ${line}`);
@@ -199,7 +199,7 @@ test('input() works while stepping', async ({ page }) => {
         const e = document.querySelector('bottom-editor') as any;
         e.stepmode = true;
         e.sourceCode = 'n = int(input("n? "))\nprint(n * 2)';
-        (window as any).__run = e.evaluatePython();
+        (window as any).__run = e._startRun('step');
     });
     const ed = 'document.querySelector("bottom-editor")';
     await page.waitForFunction(`${ed}._stepPaused && ${ed}.energy === 1`);
@@ -222,7 +222,7 @@ test('a paused stepped run is not killed by the run timeout', async ({ page }) =
         document.body.append(e);
         await e.ready;
         (window as any).__ed = e;
-        (window as any).__run = e.evaluatePython();
+        (window as any).__run = e._startRun('step');
     });
     await page.waitForFunction(() => (window as any).__ed._stepPaused);
     await page.waitForTimeout(2000);

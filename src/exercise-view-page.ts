@@ -31,6 +31,7 @@ async function main() {
         }
         if (state.stepmode)     ex.setAttribute('stepmode', '');
         if (state.showenergy)   ex.setAttribute('showenergy', '');
+        if (state.nodebug)      ex.setAttribute('nodebug', '');
         if (state.maxenergy)    ex.setAttribute('maxenergy', String(state.maxenergy));
         if (state.maxmemory)    ex.setAttribute('maxmemory', String(state.maxmemory));
         // Student's code (may differ from starter; becomes initial editor content)

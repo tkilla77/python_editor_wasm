@@ -161,7 +161,13 @@ for i in range(5):
 <td><code>stepmode</code></td>
 <td>boolean</td>
 <td>off</td>
-<td>Run executes one line at a time, with the current line and its variables shown in the editor (see <a href="#stepping">Energy, memory and stepping</a>)</td>
+<td>Run plays the program line by line, with the current line and its variables shown in the editor; the step bar is always visible (see <a href="#stepping">Energy, memory and stepping</a>)</td>
+</tr>
+<tr>
+<td><code>nodebug</code></td>
+<td>boolean</td>
+<td>off</td>
+<td>Switch off breakpoints (clicking a line number to pause there)</td>
 </tr>
 <tr>
 <td><code>showenergy</code></td>
@@ -604,7 +610,12 @@ for _ in range(4):
 <tr>
 <td><code>stepmode</code></td>
 <td>off</td>
-<td>Step through the student's code line by line; the tests then run at full speed</td>
+<td>Run plays the student's code line by line; the tests then run at full speed</td>
+</tr>
+<tr>
+<td><code>nodebug</code></td>
+<td>off</td>
+<td>Switch off breakpoints</td>
 </tr>
 <tr>
 <td><code>multifile</code></td>
@@ -865,17 +876,32 @@ for i in range(3):
     print(i)
 </bottom-editor>
 
-<h3>Step-by-step execution</h3>
-<p>Add <code>stepmode</code> to run a program one line at a time. The line about to run is
-highlighted, and the current local variables are shown next to it. A control bar below the
-editor offers:</p>
+<h3>Breakpoints</h3>
+<p>Every editor has a debugger. Click a line number to set a breakpoint (a red dot); click it again
+to remove it. Run then executes normally until it reaches a breakpoint and pauses there. The line
+about to run is highlighted, and the current variables are shown next to it. A bar below the code
+appears while paused:</p>
 <ul>
 <li><strong>Step</strong>: run the highlighted line and stop at the next one.</li>
 <li><strong>Play / Pause</strong>: keep stepping automatically. The slider sets the speed in lines
-per second. Its last position, <strong>max</strong>, runs at full speed without highlighting. Pause still
-stops at the next line.</li>
+per second. Its last position, <strong>max</strong>, runs at full speed until the next breakpoint.
+Playing also stops at breakpoints.</li>
 </ul>
-<p>The energy counter increases with every line, so students can see where the cost comes from.</p>
+<p>Breakpoints can be added and removed while paused. Without breakpoints, nothing changes: Run is as
+fast as ever and the bar never appears. Add <code>nodebug</code> to switch breakpoints off.</p>
+<p>Try it: click line 3, then Run.</p>
+<bottom-editor>
+total = 0
+for i in range(1, 4):
+    total += i
+print(total)
+</bottom-editor>
+
+<h3>Step mode</h3>
+<p>With <code>stepmode</code>, Run itself plays the program line by line at the slider's speed, and
+the bar is always visible. Its <strong>Step</strong> button starts a run paused on the first line.
+Students see every line execute without having to set breakpoints. The energy counter increases
+with every line, so they can see where the cost comes from.</p>
 <pre><code class="language-html">&lt;bottom-editor stepmode&gt;
 total = 0
 for i in range(1, 4):
@@ -893,7 +919,7 @@ print(total)
 canvas shows the drawing up to the highlighted line.</p>
 <p>Stepping needs a current browser: Chrome or Edge 137+, Firefox 153+, or Safari 27+. It uses
 WebAssembly JavaScript Promise Integration (JSPI) and needs no special server headers. In older
-browsers the step bar says so and Run executes the program normally.</p>
+browsers the breakpoint gutter is hidden, and in step mode the bar says that stepping is unavailable.</p>
 
 <h3>Energy and memory in exercises</h3>
 <p>Tests can check both measures with the <code>energy()</code> and <code>memory()</code> helpers:</p>

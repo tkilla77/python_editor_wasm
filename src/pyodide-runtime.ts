@@ -15,7 +15,14 @@ export interface TestReport {
 /** countEnergy: install the line-counting trace (slows execution).
  *  lineOffset: lines prepended before the user's code (not counted as energy).
  *  filename: compile filename; anything other than '<exec>' is not counted. */
-export type RunOptions = { countEnergy?: boolean; lineOffset?: number; filename?: string };
+export type RunOptions = {
+    countEnergy?: boolean;
+    lineOffset?: number;
+    filename?: string;
+    /** Stepped runs: 'wait' pauses on the first line, 'free' runs until a breakpoint. */
+    stepStart?: 'wait' | 'free';
+    breakpoints?: number[];
+};
 
 export type StepUpdateCallback = (line: number, locals: Record<string, string>, energy: number) => void;
 
@@ -211,6 +218,11 @@ export class PyodideRuntime {
     stepPause(): void { this._stepCommand('pause'); }
     /** End a stepped run with KeyboardInterrupt. */
     stepAbort(): void { this._stepCommand('abort'); }
+
+    /** Update breakpoints of the running program. */
+    setBreakpoints(lines: number[]): void {
+        this.worker?.postMessage({ type: 'setBreakpoints', lines });
+    }
 
     private _stepCommand(cmd: 'step' | 'free' | 'pause' | 'abort') {
         this.worker?.postMessage({ type: 'stepCommand', cmd });

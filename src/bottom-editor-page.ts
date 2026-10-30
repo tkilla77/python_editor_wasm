@@ -18,6 +18,7 @@ class BottomEditorPage extends LitElement {
     private initTimeout: string = '30';
     private stepmode = false;
     private showenergy = false;
+    private nodebug = false;
 
     constructor() {
         super();
@@ -58,6 +59,7 @@ class BottomEditorPage extends LitElement {
         }
         this.stepmode = isOn(params.get('stepmode'));
         this.showenergy = isOn(params.get('showenergy'));
+        this.nodebug = isOn(params.get('nodebug'));
     }
 
     private getUrl() {
@@ -84,6 +86,7 @@ class BottomEditorPage extends LitElement {
                 timeout='${this.initTimeout}'
                 ?stepmode=${this.stepmode}
                 ?showenergy=${this.showenergy}
+                ?nodebug=${this.nodebug}
                 showswitcher
             ></bottom-editor>`;
     }

@@ -50,7 +50,7 @@ class mod_bottomeditor_mod_form extends moodleform_mod {
         $mform->setDefault('enablesolution', 1);
         $mform->addHelpButton('enablesolution', 'enablesolution', 'mod_bottomeditor');
 
-        foreach (['stepmode', 'showenergy', 'multifile'] as $flag) {
+        foreach (['stepmode', 'showenergy', 'multifile', 'nodebug'] as $flag) {
             $mform->addElement('advcheckbox', $flag, get_string($flag, 'mod_bottomeditor'));
             $mform->setDefault($flag, 0);
             $mform->addHelpButton($flag, $flag, 'mod_bottomeditor');

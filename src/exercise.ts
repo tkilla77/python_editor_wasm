@@ -65,6 +65,8 @@ export class BottomExercise extends LitElement {
 
     /** Step through the student's code line by line; tests still run at full speed. */
     @property({ type: Boolean }) stepmode: boolean = false;
+    /** Hide the breakpoint gutter. */
+    @property({ type: Boolean }) nodebug: boolean = false;
 
     /** Initial code shown in the editor — overrides starter code if set.
      *  Used by the exercise-view landing page to show the student's submission. */
@@ -413,6 +415,7 @@ export class BottomExercise extends LitElement {
             mainfile:     this.mainfile             || undefined,
             stepmode:     this.stepmode             || undefined,
             showenergy:   this.showenergy           || undefined,
+            nodebug:      this.nodebug              || undefined,
             maxenergy:    this.maxenergy            || undefined,
             maxmemory:    this.maxmemory            || undefined,
         });
@@ -453,6 +456,7 @@ export class BottomExercise extends LitElement {
                 ?showswitcher=${this.showswitcher}
                 ?showenergy=${this.showenergy}
                 ?stepmode=${this.stepmode}
+                ?nodebug=${this.nodebug}
                 ?multifile=${this.multifile}
                 mainfile=${this.mainfile || nothing}
                 .files=${this._filesForEditor()}

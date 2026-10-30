@@ -217,10 +217,10 @@ def __step_trace__(frame, event, arg):
     global __step_energy__
     if event == 'line' and __energy_on__ and __energy_min_line__ < frame.f_lineno <= __energy_max_line__ and frame.f_code.co_filename == '<exec>':
         __step_energy__ += 1
-        mode = __step_mode__()
+        mode = __step_mode__(frame.f_lineno)
         if mode == 'yield':
             __run_sync__(__step_yield__())
-            mode = __step_mode__()
+            mode = __step_mode__(frame.f_lineno)
         if mode == 'free':
             return __step_trace__
         if mode == 'abort':
@@ -253,10 +253,13 @@ let stepState: 'off' | 'wait' | 'free' = 'off';
 let stepAborted = false;
 let stepResolve: ((cmd: string) => void) | null = null;
 let stepLastYield = 0;
+/** Lines (in the worker's numbering) where a 'free' run stops. */
+let stepBreakpoints = new Set<number>();
 const STEP_YIELD_MS = 50; // at full speed, check this often for pause/stop messages
 
-function stepBegin() {
-    stepState = 'wait';
+function stepBegin(start: 'wait' | 'free' = 'wait', breakpoints: number[] = []) {
+    stepState = start;
+    stepBreakpoints = new Set(breakpoints);
     stepAborted = false;
     stepLastYield = performance.now();
 }
@@ -389,8 +392,9 @@ async function init(baseURL: string, indexURL: string) {
             try { locals = JSON.parse(localsJson); } catch {}
             post('stepUpdate', { runId: currentRunId, line: lineNo, locals, energy });
         };
-        (self as any)._step_mode = () => {
+        (self as any)._step_mode = (line: number) => {
             if (stepAborted) return 'abort';
+            if (stepState === 'free' && stepBreakpoints.has(line)) stepState = 'wait';
             if (stepState !== 'free') return 'wait';
             const now = performance.now();
             if (now - stepLastYield < STEP_YIELD_MS) return 'free';
@@ -454,6 +458,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 inputResolve = null;
                 resolve(typeof msg.value === 'string' ? msg.value : '');
             }
+            return;
+        }
+
+        if (msg.type === 'setBreakpoints') {
+            stepBreakpoints = new Set((msg as any).lines as number[]);
             return;
         }
 
@@ -627,7 +636,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 : (c: string) => Promise.resolve(py.runPython(c, { filename: runFilename }));
             // The trace slows every line, so only install it when someone reads the count.
             const countEnergy = useStepTrace || !!(msg as any).countEnergy;
-            if (useStepTrace) stepBegin();
+            if (useStepTrace) stepBegin((msg as any).stepStart, (msg as any).breakpoints);
             if (countEnergy) {
                 try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
             }
@@ -740,7 +749,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 // Phase 1: run user code with stdout teed to capture buffer
                 try { py.runPython(CAPTURE_SETUP, { filename: '<bottom-init>' }); } catch {}
                 // Step through the user's code only; tests below run untraced.
-                if (useStepTrace) stepBegin();
+                if (useStepTrace) stepBegin((msg as any).stepStart, (msg as any).breakpoints);
                 const countEnergy = useStepTrace || !!(msg as any).countEnergy;
                 if (countEnergy) {
                     try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}

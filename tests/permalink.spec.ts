@@ -27,6 +27,7 @@ test('editor permalink keeps stepmode and showenergy', async ({ page }) => {
         await e.updateComplete;
         e.stepmode = true;
         e.showenergy = true;
+        e.nodebug = true;
         await e.copyPermalink();
     });
     const path = await copied(page);
@@ -35,6 +36,7 @@ test('editor permalink keeps stepmode and showenergy', async ({ page }) => {
     const ed = page.locator('bottom-editor-page bottom-editor');
     await expect(ed).toHaveAttribute('stepmode', '');
     await expect(ed).toHaveAttribute('showenergy', '');
+    await expect(ed).toHaveAttribute('nodebug', '');
 });
 
 test('exercise permalink keeps stepmode, showenergy, maxenergy, maxmemory', async ({ page }) => {
@@ -43,7 +45,7 @@ test('exercise permalink keeps stepmode, showenergy, maxenergy, maxmemory', asyn
         const ex = document.createElement('bottom-exercise') as any;
         ex.code = 'x = 1';
         ex.tests = 'assert x == 1';
-        Object.assign(ex, { stepmode: true, showenergy: true, maxenergy: 5, maxmemory: 3 });
+        Object.assign(ex, { stepmode: true, showenergy: true, nodebug: true, maxenergy: 5, maxmemory: 3 });
         document.body.append(ex);
         await ex.updateComplete;
         await ex.shareExercise();
@@ -55,6 +57,7 @@ test('exercise permalink keeps stepmode, showenergy, maxenergy, maxmemory', asyn
     await expect(ex).toHaveAttribute('maxenergy', '5');
     await expect(ex).toHaveAttribute('maxmemory', '3');
     await expect(ex.locator('bottom-editor')).toHaveAttribute('stepmode', '');
+    await expect(ex.locator('bottom-editor')).toHaveAttribute('nodebug', '');
 });
 
 test('kara-editor permalink keeps stepmode and showenergy', async ({ page }) => {
@@ -63,19 +66,21 @@ test('kara-editor permalink keeps stepmode and showenergy', async ({ page }) => 
     await kara.evaluate(async (k: any) => {
         k.stepmode = true;
         k.showenergy = true;
+        k.nodebug = true;
         await k.updateComplete;
         k._permalink();
     });
     await page.goto(await copied(page));
     await expect(page.locator('kara-editor bottom-editor')).toHaveAttribute('stepmode', '');
     await expect(page.locator('kara-editor bottom-editor')).toHaveAttribute('showenergy', '');
+    await expect(page.locator('kara-editor bottom-editor')).toHaveAttribute('nodebug', '');
 });
 
 test('kara-exercise permalink keeps step and energy settings', async ({ page }) => {
     await page.goto('/kara.html');
     await page.evaluate(async () => {
         const k = document.createElement('kara-exercise') as any;
-        Object.assign(k, { stepmode: true, showenergy: true, maxenergy: 50, maxmemory: 4 });
+        Object.assign(k, { stepmode: true, showenergy: true, nodebug: true, maxenergy: 50, maxmemory: 4 });
         document.body.append(k);
         await k.updateComplete;
         await k._permalink();
@@ -86,6 +91,7 @@ test('kara-exercise permalink keeps step and energy settings', async ({ page }) 
     await expect(ex).toHaveAttribute('maxmemory', '4');
     await expect(ex.locator('bottom-editor')).toHaveAttribute('stepmode', '');
     await expect(ex.locator('bottom-editor')).toHaveAttribute('showenergy', '');
+    await expect(ex.locator('bottom-editor')).toHaveAttribute('nodebug', '');
 });
 
 async function decodeX(page: any, path: string) {

@@ -85,6 +85,7 @@ export class KaraExercise extends LitElement {
     @property() storage                  = '';
     @property({ type: Boolean }) stepmode   = false;
     @property({ type: Boolean }) showenergy = false;
+    @property({ type: Boolean }) nodebug    = false;
     @property({ type: Number }) maxenergy   = 0;
     @property({ type: Number }) maxmemory   = 0;
     /** Hide the "Show solution" button (teacher controls release). */
@@ -207,6 +208,7 @@ export class KaraExercise extends LitElement {
             timeout:  this.timeout !== '30'      ? this.timeout : undefined,
             stepmode:   this.stepmode            || undefined,
             showenergy: this.showenergy          || undefined,
+            nodebug:    this.nodebug             || undefined,
             maxenergy:  this.maxenergy           || undefined,
             maxmemory:  this.maxmemory           || undefined,
         });
@@ -228,6 +230,7 @@ export class KaraExercise extends LitElement {
                 .tests=${this._testCode}
                 ?stepmode=${this.stepmode}
                 ?showenergy=${this.showenergy}
+                ?nodebug=${this.nodebug}
                 maxenergy=${this.maxenergy}
                 maxmemory=${this.maxmemory}
                 .permalinkOverride=${this._permalink}
