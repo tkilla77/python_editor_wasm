@@ -320,6 +320,50 @@ function enforceBufferLimits() {
     }
 }
 
+/** Write the editor's other file tabs to the FS. Modules imported from them in an
+ *  earlier run are evicted from sys.modules so edits take effect. */
+function writeExtraFiles(files: { name: string; code: string }[]) {
+    const paths: string[] = [];
+    for (const f of files) {
+        const path = '/home/pyodide/' + f.name;
+        try { py.FS.writeFile(path, f.code); paths.push(path); } catch {}
+    }
+    py.globals.set('__written__', py.toPy(paths));
+    py.runPython(`
+import sys as __s, importlib as __il
+__w = set(__written__)
+for __n in [__n for __n, __m in list(__s.modules.items()) if getattr(__m, '__file__', None) in __w]:
+    del __s.modules[__n]
+__il.invalidate_caches()
+for __k in ['__s', '__il', '__w', '__n', '__written__']:
+    globals().pop(__k, None)
+`, { filename: '<bottom-init>' });
+}
+
+/** Text files in a zip (for the editor's file tabs); binaries, folders and hidden files are skipped. */
+function listZipTextFiles(ab: ArrayBuffer): { name: string; code: string }[] {
+    py.globals.set('__zip_bytes__', py.toPy(new Uint8Array(ab)));
+    try {
+        const json: string = py.runPython(`
+import zipfile as __zf, io as __io, json as __js
+__out = []
+with __zf.ZipFile(__io.BytesIO(bytes(__zip_bytes__))) as __z:
+    for __i in __z.infolist():
+        __base = __i.filename.rsplit('/', 1)[-1]
+        if __i.is_dir() or __i.filename.startswith('__MACOSX/') or __base.startswith('.') or __i.file_size > 200_000:
+            continue
+        try:
+            __out.append({'name': __i.filename, 'code': __z.read(__i).decode('utf-8')})
+        except UnicodeDecodeError:
+            pass
+__js.dumps(__out)
+`, { filename: '<bottom-init>' });
+        return JSON.parse(json);
+    } finally {
+        py.runPython(`for __k in ['__zip_bytes__', '__zf', '__io', '__js', '__out', '__z', '__i', '__base']:\n    globals().pop(__k, None)`);
+    }
+}
+
 function post(type: string, payload: any = {}) {
     (self as any).postMessage({ type, ...payload });
 }
@@ -545,11 +589,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
             (self as any)._activeCanvasCtx = canvasCtx;
             // Write any extra files to the virtual FS before running (multi-file support).
-            if (msg.extraFiles) {
-                for (const f of msg.extraFiles as { name: string; code: string }[]) {
-                    try { py.FS.writeFile('/home/pyodide/' + f.name, f.code); } catch {}
-                }
-            }
+            if (msg.extraFiles) writeExtraFiles(msg.extraFiles as { name: string; code: string }[]);
             // Expand `repeat <expr>:` → `for _ in range(<expr>):` (webtigerpython compat).
             // Line-by-line substitution preserves line numbers in tracebacks.
             const code = (msg.code || '')
@@ -662,11 +702,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
             (self as any)._activeCanvasCtx = canvasCtx;
             // Write any extra files to the virtual FS before running (multi-file support).
-            if (msg.extraFiles) {
-                for (const f of msg.extraFiles as { name: string; code: string }[]) {
-                    try { py.FS.writeFile('/home/pyodide/' + f.name, f.code); } catch {}
-                }
-            }
+            if (msg.extraFiles) writeExtraFiles(msg.extraFiles as { name: string; code: string }[]);
             const code = (msg.code || '')
                 .replace(/^(\s*)repeat(\s+)(.+?)\s*:([ \t]+[^#\s].*)$/gm,
                          '$1for _ in range($3):$4')
@@ -793,6 +829,7 @@ del __k
             const url = msg.url;
             if (!url) {
                 post('error', { error: 'No URL provided for loadZip' });
+                post('zipLoaded', { url, files: [] });
                 return;
             }
             try {
@@ -801,8 +838,10 @@ del __k
                 const ab = await resp.arrayBuffer();
                 await py.unpackArchive(ab, 'zip');
                 post('log', { data: 'Zip unpacked' });
+                post('zipLoaded', { url, files: listZipTextFiles(ab) });
             } catch (e) {
                 post('error', { error: String(e) });
+                post('zipLoaded', { url, files: [] });
             }
             return;
         }

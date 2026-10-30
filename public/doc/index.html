@@ -152,6 +152,12 @@ for i in range(5):
 <td>Tab label for the primary editor file when multi-file mode is active (see <a href="#multi-file">Multi-file support</a>)</td>
 </tr>
 <tr>
+<td><code>multifile</code></td>
+<td>boolean</td>
+<td>off</td>
+<td>Show the file tabs even when there is only one file, so users can add their own (see <a href="#multi-file">Multi-file support</a>)</td>
+</tr>
+<tr>
 <td><code>stepmode</code></td>
 <td>boolean</td>
 <td>off</td>
@@ -248,6 +254,16 @@ def greet(name):
 <bottom-editor session="demo" autorun>
 greet("World")
 </bottom-editor>
+
+<p>Without a <code>session</code> attribute, all editors on a page share one default session. That
+matters for step mode in two ways:</p>
+<ul>
+<li>The variable display shows every name the student can access, including ones defined by other
+editors in the same session.</li>
+<li>While one editor is paused on a step, the other editors in its session wait: their Run starts
+once the stepped program finishes or is stopped.</li>
+</ul>
+<p>Give editors that should not affect each other different <code>session</code> names.</p>
 
 <hr>
 <h2>Orientation</h2>
@@ -746,9 +762,16 @@ Carol,95
 
 <h3>Adding and deleting files at runtime</h3>
 <p>The <strong>+</strong> button in the tab bar creates a new blank file. Any tab except the
-last one can be closed with its <strong>×</strong> button. User-added files are saved in
-<code>localStorage</code> alongside the code; the Reset / Revert button removes them and
-restores every tab to its original template content.</p>
+last one can be closed with its <strong>×</strong> button. Added and deleted files are saved in
+<code>localStorage</code> alongside the code. The Revert button goes back to the original files:
+it removes added files, brings deleted ones back, and restores every file's original content.</p>
+<p>Editing a file that the main program imports takes effect on the next run.</p>
+<p>To let users create files without providing any yourself, add <code>multifile</code>. The tab
+bar then appears with just the main file:</p>
+<pre><code class="language-html">&lt;bottom-editor multifile&gt;
+print("Use + to add a module, then import it here")
+&lt;/bottom-editor&gt;
+</code></pre>
 
 <h3>The main file</h3>
 <p>The first tab is always the main editor (the text content of the element, or its
@@ -866,6 +889,9 @@ mymodule.run()
 </code></pre>
 <p>The archive is unpacked into <code>/home/pyodide/</code> (the default Python path),
 so any <code>.py</code> files inside are directly importable.</p>
+<p>In multi-file mode (with <code>multifile</code> or <code>&lt;template filename&gt;</code> children), the
+zip's text files also appear as tabs, so students can read and edit them. Binary files, folders
+and hidden files stay in the filesystem without a tab. Revert restores the zip's original contents.</p>
 <blockquote>
 <p><strong>CORS required.</strong> The server hosting the zip must send <code>Access-Control-Allow-Origin: *</code> (or the page origin).</p>
 </blockquote>

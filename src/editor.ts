@@ -102,6 +102,14 @@ export class BottomEditor extends LitElement {
 
     // Multi-file state. Empty = single-file mode (existing behaviour unchanged).
     @state() private _tabs: FileEntry[] = [];
+    /** The authored file set (main, templates, URL files, zip files) that Revert restores. */
+    private _initialTabs: FileEntry[] = [];
+    /** File names from saved state, so files the user deleted don't reappear when a zip loads. */
+    private _savedFileNames?: Set<string>;
+
+    /** Show the file tab bar even with a single file, so users can add their own. */
+    @property({ type: Boolean })
+    multifile = false;
     @state() private _tabIdx: number = 0;
 
     @property({ reflect: true })
@@ -418,19 +426,13 @@ export class BottomEditor extends LitElement {
 
     private _applyState(saved: ExerciseState): void {
         if (this._tabs.length > 0 && saved.files && saved.files.length > 0) {
-            // Multi-file: restore per-file contents, preserving initialCode.
-            const updated = this._tabs.map(tab => {
-                const saved_file = saved.files!.find(f => f.name === tab.name);
-                return saved_file ? { ...tab, code: saved_file.code } : tab;
-            });
-            // Also restore any user-added tabs that weren't in the template.
-            const templateNames = new Set(this._tabs.map(t => t.name));
-            for (const sf of saved.files) {
-                if (!templateNames.has(sf.name)) {
-                    updated.push({ name: sf.name, code: sf.code, initialCode: '' });
-                }
-            }
-            this._tabs = updated;
+            // Multi-file: the saved list wins, so added and deleted files persist.
+            this._tabs = saved.files.map(f => ({
+                name: f.name,
+                code: f.code,
+                initialCode: this._initialTabs.find(t => t.name === f.name)?.initialCode ?? '',
+            }));
+            this._savedFileNames = new Set(saved.files.map(f => f.name));
             const activeIdx = saved.activeFile
                 ? this._tabs.findIndex(t => t.name === saved.activeFile)
                 : -1;
@@ -488,10 +490,9 @@ export class BottomEditor extends LitElement {
     /** Revert: reset editor code to initial, then reset canvas/output. */
     async revertCode() {
         if (this._tabs.length > 0) {
-            // Revert all tabs to their initial code, drop user-added tabs.
-            this._tabs = this._tabs
-                .filter(t => t.initialCode !== undefined && (t.initialCode !== '' || t.name !== ''))
-                .map(t => ({ ...t, code: t.initialCode }));
+            // Back to the authored files: user-added ones go, deleted ones return.
+            this._tabs = this._initialTabs.map(t => ({ ...t, code: t.initialCode }));
+            this._savedFileNames = undefined;
             this._tabIdx = 0;
             this.replaceDoc(this._tabs[0]?.code ?? this._initialCode);
         } else {
@@ -555,7 +556,11 @@ export class BottomEditor extends LitElement {
                 ...templateFiles.map(f => ({ name: f.name, code: f.code, initialCode: f.code })),
             ];
             this._tabIdx = 0;
+        } else if (this._tabs.length === 0 && this.multifile) {
+            this._tabs = [{ name: this.getAttribute('mainfile') ?? 'main.py', code: text, initialCode: text }];
+            this._tabIdx = 0;
         }
+        this._initialTabs = this._tabs.map(t => ({ ...t }));
 
         this._editor = createPythonEditor(
             this._code!,
@@ -897,7 +902,22 @@ export class BottomEditor extends LitElement {
 
     async installFilesFromZip(url: string) {
         this._output?.addLog(`Loading ${url}...`);
-        await this.runtime.loadZip(url);
+        const files = await this.runtime.loadZip(url);
+        if (this._tabs.length === 0) return;
+        // Zip files join the authored set. The user's saved edits and deletions win.
+        if (this._editor) this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
+        const tabs = [...this._tabs];
+        for (const f of files) {
+            if (!this._initialTabs.some(t => t.name === f.name)) {
+                this._initialTabs.push({ name: f.name, code: f.code, initialCode: f.code });
+            }
+            const open = tabs.find(t => t.name === f.name);
+            if (open) open.initialCode = f.code;
+            else if (!this._savedFileNames || this._savedFileNames.has(f.name)) {
+                tabs.push({ name: f.name, code: f.code, initialCode: f.code });
+            }
+        }
+        this._tabs = tabs;
     }
 
     async copyPermalink() {

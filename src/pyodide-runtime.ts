@@ -140,10 +140,21 @@ export class PyodideRuntime {
         return result;
     }
 
-    /** Send a zip URL to be unpacked into the virtual filesystem. */
-    async loadZip(url: string): Promise<void> {
+    /** Unpack a zip into the virtual filesystem. Resolves with its text files. */
+    async loadZip(url: string): Promise<{ name: string; code: string }[]> {
         await this.ready;
-        this.worker?.postMessage({ type: 'loadZip', url });
+        const worker = this.worker;
+        if (!worker) return [];
+        return new Promise(resolve => {
+            const onMsg = (ev: MessageEvent) => {
+                if (ev.data?.type === 'zipLoaded' && ev.data.url === url) {
+                    worker.removeEventListener('message', onMsg as any);
+                    resolve(ev.data.files ?? []);
+                }
+            };
+            worker.addEventListener('message', onMsg as any);
+            worker.postMessage({ type: 'loadZip', url });
+        });
     }
 
     /** Transfer an OffscreenCanvas to the worker for use with pyodide.canvas. */
