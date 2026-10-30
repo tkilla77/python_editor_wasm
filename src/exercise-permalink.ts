@@ -8,6 +8,10 @@ export interface ExercisePermalinkState {
     zip?: string;
     timeout?: string;
     showswitcher?: boolean;
+    stepmode?: boolean;
+    showenergy?: boolean;
+    maxenergy?: number;
+    maxmemory?: number;
     // Kara-specific (present only in kara-exercise permalinks)
     world?: string;
     step?: number;

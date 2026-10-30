@@ -32,6 +32,8 @@ export class KaraEditor extends LitElement {
     @property({ type: Boolean }) showclear = false;
     @property() timeout                   = '30';
     @property() storage                   = '';
+    @property({ type: Boolean }) stepmode   = false;
+    @property({ type: Boolean }) showenergy = false;
 
     // Each instance gets its own isolated Pyodide runtime.
     private readonly _sessionId = `kara-${crypto.randomUUID()}`;
@@ -101,6 +103,8 @@ export class KaraEditor extends LitElement {
         if (currentCode.trim()) url.searchParams.set('code', currentCode);
         if (this.step !== 200)    url.searchParams.set('step', String(this.step));
         if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
+        if (this.stepmode)   url.searchParams.set('stepmode', '1');
+        if (this.showenergy) url.searchParams.set('showenergy', '1');
         navigator.clipboard.writeText(url.href);
     };
 
@@ -120,6 +124,8 @@ export class KaraEditor extends LitElement {
                 id=${this.id || nothing}
                 storage=${this.storage || nothing}
                 ?showrevert=${this.showclear}
+                ?stepmode=${this.stepmode}
+                ?showenergy=${this.showenergy}
             ></bottom-editor>`;
     }
 

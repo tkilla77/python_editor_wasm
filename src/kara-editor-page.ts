@@ -4,6 +4,10 @@ import './kara-editor.js'
 import './kara-exercise.js'
 import { decodeExercise, sanitizeHtml, type ExercisePermalinkState } from './exercise-permalink.js'
 
+function isOn(v: string | null): boolean {
+    return v !== null && v !== 'false' && v !== '0';
+}
+
 @customElement('kara-editor-page')
 export class KaraEditorPage extends LitElement {
     static shadowRootOptions = { ...LitElement.shadowRootOptions, mode: 'closed' as const };
@@ -14,6 +18,8 @@ export class KaraEditorPage extends LitElement {
     private _step    = 200;
     private _autorun = false;
     private _timeout = '30';
+    private _stepmode = false;
+    private _showenergy = false;
 
     // Exercise mode: decoded from ?x=
     @state() private _decoded?: ExercisePermalinkState;
@@ -27,6 +33,8 @@ export class KaraEditorPage extends LitElement {
             if (params.has('code'))    this._code    = params.get('code')!;
             if (params.has('step'))    this._step    = parseInt(params.get('step')!);
             if (params.has('timeout')) this._timeout = params.get('timeout')!;
+            this._stepmode = isOn(params.get('stepmode'));
+            this._showenergy = isOn(params.get('showenergy'));
             if (params.has('autorun')) {
                 const v = params.get('autorun');
                 this._autorun = !(v === 'false' || v === '0');
@@ -77,6 +85,10 @@ export class KaraEditorPage extends LitElement {
                     .code=${s.code ?? ''}
                     .solution=${s.solution ?? ''}
                     .testCode=${s.tests ?? ''}
+                    ?stepmode=${!!s.stepmode}
+                    ?showenergy=${!!s.showenergy}
+                    maxenergy=${s.maxenergy ?? 0}
+                    maxmemory=${s.maxmemory ?? 0}
                 ></kara-exercise>`;
         }
 
@@ -85,6 +97,8 @@ export class KaraEditorPage extends LitElement {
                 step=${this._step}
                 timeout=${this._timeout}
                 ?autorun=${this._autorun}
+                ?stepmode=${this._stepmode}
+                ?showenergy=${this._showenergy}
                 .world=${this._world}
                 .code=${this._code}
             ></kara-editor>`;

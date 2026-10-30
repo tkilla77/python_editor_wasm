@@ -15,6 +15,10 @@ async function main() {
         if (state.zip)         ex.setAttribute('zip',         state.zip);
         if (state.timeout)     ex.setAttribute('timeout',     state.timeout);
         if (state.showswitcher) ex.setAttribute('showswitcher', '');
+        if (state.stepmode)     ex.setAttribute('stepmode', '');
+        if (state.showenergy)   ex.setAttribute('showenergy', '');
+        if (state.maxenergy)    ex.setAttribute('maxenergy', String(state.maxenergy));
+        if (state.maxmemory)    ex.setAttribute('maxmemory', String(state.maxmemory));
         // Student's code (may differ from starter; becomes initial editor content)
         if (state.code) ex.code = state.code;
 

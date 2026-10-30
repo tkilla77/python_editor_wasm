@@ -376,6 +376,10 @@ export class BottomExercise extends LitElement {
             zip:      this.zip                  || undefined,
             timeout:      this.timeout !== '30'     ? this.timeout : undefined,
             showswitcher: this.showswitcher         || undefined,
+            stepmode:     this.stepmode             || undefined,
+            showenergy:   this.showenergy           || undefined,
+            maxenergy:    this.maxenergy            || undefined,
+            maxmemory:    this.maxmemory            || undefined,
         });
         const url = new URL('https://bottom.ch/editor/stable/exercise-view.html');
         url.searchParams.set('x', encoded);

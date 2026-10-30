@@ -2,6 +2,10 @@ import { LitElement, css, html } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import './editor.js'
 
+function isOn(v: string | null): boolean {
+    return v !== null && v !== 'false' && v !== '0';
+}
+
 @customElement('bottom-editor-page')
 class BottomEditorPage extends LitElement {
     static shadowRootOptions = {...LitElement.shadowRootOptions, mode: "closed" as const};
@@ -12,6 +16,8 @@ class BottomEditorPage extends LitElement {
     private zipUrl: string = '';
     private initLayout: string = 'split';
     private initTimeout: string = '30';
+    private stepmode = false;
+    private showenergy = false;
 
     constructor() {
         super();
@@ -50,6 +56,8 @@ class BottomEditorPage extends LitElement {
         if (params.has('timeout')) {
             this.initTimeout = params.get('timeout') ?? '30s';
         }
+        this.stepmode = isOn(params.get('stepmode'));
+        this.showenergy = isOn(params.get('showenergy'));
     }
 
     private getUrl() {
@@ -74,6 +82,8 @@ class BottomEditorPage extends LitElement {
                 zip='${this.zipUrl}'
                 layout='${this.initLayout}'
                 timeout='${this.initTimeout}'
+                ?stepmode=${this.stepmode}
+                ?showenergy=${this.showenergy}
                 showswitcher
             ></bottom-editor>`;
     }

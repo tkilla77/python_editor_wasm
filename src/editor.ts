@@ -921,6 +921,8 @@ export class BottomEditor extends LitElement {
                 const zip = this.getAttribute("zip");
                 if (zip) url.searchParams.set('zip', zip);
                 if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
+                if (this.stepmode)   url.searchParams.set('stepmode', '1');
+                if (this.showenergy) url.searchParams.set('showenergy', '1');
                 await navigator.clipboard.writeText(url.href);
             }
             this._shareState = 'copied';
