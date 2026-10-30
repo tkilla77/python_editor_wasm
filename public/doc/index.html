@@ -771,8 +771,8 @@ Carol,95
 </bottom-editor>
 
 <h3>Adding and deleting files at runtime</h3>
-<p>The <strong>+</strong> button in the tab bar creates a new blank file. Any tab except the
-last one can be closed with its <strong>×</strong> button. Added and deleted files are saved in
+<p>The <strong>+</strong> button in the tab bar creates a new blank file. Any file except the
+main one can be closed with its <strong>×</strong> button. Added and deleted files are saved in
 <code>localStorage</code> alongside the code. The Revert button goes back to the original files:
 it removes added files, brings deleted ones back, and restores every file's original content.</p>
 <p>Editing a file that the main program imports takes effect on the next run.</p>
@@ -784,8 +784,9 @@ print("Use + to add a module, then import it here")
 </code></pre>
 
 <h3>The main file</h3>
-<p>The first tab is always the main editor (the text content of the element, or its
-<code>sourcecode</code> property). Use <code>mainfile=&quot;…&quot;</code> to give it a meaningful name — the
+<p>The first tab is always the main file (the text content of the element, or its
+<code>sourcecode</code> property). Run always executes it, whichever tab is open, and it can't be
+deleted. Step mode switches to it, and error messages name it (<code>main.py, line 3: …</code>). Use <code>mainfile=&quot;…&quot;</code> to give it a meaningful name — the
 default is <code>main.py</code>. The name matters when other files import it:</p>
 <pre><code class="language-html">&lt;bottom-editor mainfile=&quot;helpers.py&quot;&gt;
 # helpers.py is importable from any other tab

@@ -83,3 +83,36 @@ test('without multifile, zip files stay hidden', async ({ page }) => {
     expect(await names(page)).toEqual([]);
     expect(await run(page)).toContain('hi from zip');
 });
+
+test('Run executes the main file whichever tab is open', async ({ page }) => {
+    await addEditor(page, {}, 'from helper import V\nprint("main", V)<template filename="helper.py">V = 3\nprint("helper ran directly")</template>');
+    await page.evaluate(() => (window as any).__ed._switchTab(1));
+    const out = await run(page);
+    expect(out).toContain('main 3');
+    expect(await page.evaluate(() => (window as any).__ed.sourceCode)).toBe('from helper import V\nprint("main", V)');
+
+    // Errors name the main file; the helper tab stays open.
+    await page.evaluate(() => {
+        const e = (window as any).__ed;
+        e.sourceCode = 'x = 1\nundefined_name';
+    });
+    expect(await page.evaluate(() => (window as any).__ed._tabIdx)).toBe(1);
+    expect(await run(page)).toContain('main.py, line 2: NameError');
+
+    // The main file can't be deleted.
+    await page.evaluate(() => (window as any).__ed._deleteTab(0));
+    expect(await names(page)).toEqual(['main.py', 'helper.py']);
+});
+
+test('stepping switches to the main file', async ({ page }) => {
+    await addEditor(page, { stepmode: '' }, 'a = 1<template filename="helper.py">X = 0</template>');
+    await page.evaluate(() => {
+        const e = (window as any).__ed;
+        e._switchTab(1);
+        (window as any).__run = e.evaluatePython();
+    });
+    await page.waitForFunction(() => (window as any).__ed._stepPaused);
+    expect(await page.evaluate(() => (window as any).__ed._tabIdx)).toBe(0);
+    await page.evaluate(() => (window as any).__ed._doStep());
+    await page.evaluate(() => (window as any).__run);
+});

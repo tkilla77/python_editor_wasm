@@ -263,8 +263,22 @@ export class BottomEditor extends LitElement {
     private _cloudSaveTimer?: ReturnType<typeof setTimeout>;
 
     @property({ attribute: 'sourcecode' })
-    set sourceCode(code: string) { this.replaceDoc(code); }
-    get sourceCode() { return this._editor?.state.doc.toString() ?? ''; }
+    /** The main program, whichever file tab is open. */
+    set sourceCode(code: string) {
+        if (this._mainHidden) {
+            this._tabs = this._tabs.map((t, i) => i === 0 ? { ...t, code } : t);
+            this._saveState();
+        } else {
+            this.replaceDoc(code);
+        }
+    }
+    get sourceCode() {
+        if (this._mainHidden) return this._tabs[0].code;
+        return this._editor?.state.doc.toString() ?? '';
+    }
+
+    /** True when another file's tab is open, so the main file lives in _tabs[0], not the editor. */
+    private get _mainHidden() { return this._tabs.length > 0 && this._tabIdx !== 0; }
 
     /**
      * Set initial multi-file content from URL (?files=JSON). Should be called
@@ -343,7 +357,7 @@ export class BottomEditor extends LitElement {
 
     /** Delete a tab (not allowed if only one tab left). */
     private _deleteTab(idx: number) {
-        if (this._tabs.length <= 1) return;
+        if (idx === 0) return; // the main file is what Run executes
         const newTabs = this._tabs.filter((_, i) => i !== idx);
         const newIdx = idx >= newTabs.length ? newTabs.length - 1 : idx;
         this._tabs = newTabs;
@@ -354,9 +368,8 @@ export class BottomEditor extends LitElement {
 
     private _extraFiles(): { name: string; code: string }[] | undefined {
         if (this._tabs.length === 0) return undefined;
-        return this._tabs
-            .filter((_, i) => i !== this._tabIdx)
-            .map(f => ({ name: f.name, code: f.code }));
+        if (this._editor) this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
+        return this._tabs.slice(1).map(f => ({ name: f.name, code: f.code }));
     }
 
     private _parseTimeout(): number {
@@ -711,7 +724,7 @@ export class BottomEditor extends LitElement {
     }
 
     private _setEditorDiagnostic(userLine: number, message: string) {
-        if (!this._editor) return;
+        if (!this._editor || this._mainHidden) return;
         const doc = this._editor.state.doc;
         if (userLine < 1 || userLine > doc.lines) return;
         const line = doc.line(userLine);
@@ -731,9 +744,10 @@ export class BottomEditor extends LitElement {
         const exceptionLine = lastNewline > 0 && fullMsg.includes('  File "<exec>"')
             ? fullMsg.substring(lastNewline + 1).trim()
             : fullMsg.trim();
-        const docLines = this._editor?.state.doc.lines ?? 0;
+        const docLines = this.sourceCode.split('\n').length;
         const validLine = userLine !== null && userLine >= 1 && userLine <= docLines ? userLine : null;
-        return { display: validLine ? `Line ${validLine}: ${exceptionLine}` : exceptionLine, userLine: validLine };
+        const where = this._tabs.length > 0 ? `${this._tabs[0].name}, line` : 'Line';
+        return { display: validLine ? `${where} ${validLine}: ${exceptionLine}` : exceptionLine, userLine: validLine };
     }
 
     private _updateStepLine(line: number | null, locals: Record<string, string> = {}) {
@@ -822,7 +836,7 @@ export class BottomEditor extends LitElement {
         this._output?.clearOutput();
         this._clearEditorDiagnostics();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
-        const raw  = this.codePrefix + this._editor.state.doc.toString();
+        const raw  = this.codePrefix + this.sourceCode;
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         this._energy = null;
@@ -855,6 +869,7 @@ export class BottomEditor extends LitElement {
     /** In stepmode, prepare the step buffer and return the per-line callback. */
     private _beginStepping() {
         if (!this.stepmode || !this._canStep) return undefined;
+        this._switchTab(0); // only the main file is stepped
         this._stepping = true;
         this._stepPaused = false;
         this._stopPlay();
@@ -881,7 +896,7 @@ export class BottomEditor extends LitElement {
         this._output?.clearOutput();
         this._clearEditorDiagnostics();
         if (this._offscreenCanvas) this.runtime.clearCanvas();
-        const raw  = this.codePrefix + this._editor.state.doc.toString();
+        const raw  = this.codePrefix + this.sourceCode;
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         this._energy = null;
@@ -1068,7 +1083,7 @@ export class BottomEditor extends LitElement {
                         class="${i === this._tabIdx ? 'active' : ''}"
                         @click="${() => this._switchTab(i)}">
                         ${f.name}
-                        ${this._tabs.length > 1 ? html`
+                        ${i > 0 ? html`
                             <button class="tab-close" title="Delete file"
                                 @click="${(e: Event) => { e.stopPropagation(); this._deleteTab(i); }}">×</button>
                         ` : ''}
