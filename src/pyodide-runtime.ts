@@ -90,7 +90,8 @@ export class PyodideRuntime {
         onStepUpdate?: StepUpdateCallback,
         opts?: RunOptions,
     ): Promise<void> {
-        const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
+        // Stepped runs are paced by the user (who can press Stop), so they never time out.
+        const tms = onStepUpdate ? Infinity : timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async () => {
             await this.ready;
             const runId = this.runIdCounter++;
@@ -120,7 +121,8 @@ export class PyodideRuntime {
 
     /** onStepUpdate steps through the user's code only; onStepDone fires before the tests start. */
     runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void): Promise<TestReport> {
-        const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
+        // Stepped runs are paced by the user (who can press Stop), so they never time out.
+        const tms = onStepUpdate ? Infinity : timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async (): Promise<TestReport> => {
             await this.ready;
             const runId = this.runIdCounter++;

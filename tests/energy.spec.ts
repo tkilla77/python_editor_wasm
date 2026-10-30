@@ -210,3 +210,23 @@ test('input() works while stepping', async ({ page }) => {
     await page.evaluate(() => (window as any).__run);
     expect(await page.evaluate(`${ed}.outputText`)).toContain('42');
 });
+
+test('a paused stepped run is not killed by the run timeout', async ({ page }) => {
+    await withoutIsolation(page);
+    await page.goto('/tests/fixtures/basic.html');
+    await page.evaluate(async () => {
+        const e = document.createElement('bottom-editor') as any;
+        e.setAttribute('timeout', '1');
+        e.stepmode = true;
+        e.textContent = 'a = 1\nprint("done")';
+        document.body.append(e);
+        await e.ready;
+        (window as any).__ed = e;
+        (window as any).__run = e.evaluatePython();
+    });
+    await page.waitForFunction(() => (window as any).__ed._stepPaused);
+    await page.waitForTimeout(2000);
+    await page.evaluate(() => { const e = (window as any).__ed; e._setStepSpeed(21); e._doPlay(); });
+    await page.evaluate(() => (window as any).__run);
+    expect(await page.evaluate(() => (window as any).__ed.outputText)).toContain('done');
+});
