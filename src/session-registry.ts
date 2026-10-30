@@ -56,6 +56,7 @@ export class EditorHandle {
     disableStepMode() { this._runtime.disableStepMode(); }
     step() { this._runtime.step(); }
     stepContinue() { this._runtime.stepContinue(); }
+    stepPause() { this._runtime.stepPause(); }
     terminate() { /* managed by session */ }
 }
 

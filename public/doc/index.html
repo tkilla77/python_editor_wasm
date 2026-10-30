@@ -810,8 +810,9 @@ highlighted, and the current local variables are shown next to it. A control bar
 editor offers:</p>
 <ul>
 <li><strong>Step</strong>: run the highlighted line and stop at the next one.</li>
-<li><strong>Play / Pause</strong>: keep stepping automatically. The slider sets the speed in lines per second.</li>
-<li><strong>Continue</strong>: run the rest of the program at full speed.</li>
+<li><strong>Play / Pause</strong>: keep stepping automatically. The slider sets the speed in lines
+per second. Its last position, <strong>max</strong>, runs at full speed without highlighting. Pause still
+stops at the next line.</li>
 </ul>
 <p>The energy counter increases with every line, so students can see where the cost comes from.</p>
 <pre><code class="language-html">&lt;bottom-editor stepmode&gt;

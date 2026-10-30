@@ -63,7 +63,11 @@ test('stepmode pauses on each line and reports locals', async ({ page }) => {
     await page.waitForFunction(() => (document.querySelector('bottom-editor') as any).energy === 2);
     expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any)._stepLocals)).toEqual({ a: '1' });
 
-    await page.evaluate(() => (document.querySelector('bottom-editor') as any)._doContinue());
+    await page.evaluate(() => {
+        const e = document.querySelector('bottom-editor') as any;
+        e._setStepSpeed(21);  // max: run the rest at full speed
+        e._doPlay();
+    });
     await page.evaluate(() => (window as any).__run);
     expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any).energy)).toBe(3);
     expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any).outputText)).toContain('2');
@@ -90,4 +94,30 @@ test('exercises count energy only when maxenergy or energy() is used', async ({ 
     expect(await run({ maxenergy: 5, tests: 'assert total == 3' })).toEqual({
         energy: 8, results: [['assert total == 3', true], ['energy() <= 5', false]],
     });
+});
+
+test('pause stops a full-speed run, stop ends a paused run', async ({ page }) => {
+    await page.goto('/tests/fixtures/basic.html');
+    await page.evaluate(() => (document.querySelector('bottom-editor') as any)?.ready, { timeout: 75_000 });
+    const ed = 'document.querySelector("bottom-editor")';
+
+    await page.evaluate(() => {
+        const e = document.querySelector('bottom-editor') as any;
+        e.stepmode = true;
+        e.sourceCode = 'n = 0\nwhile True:\n    n += 1';
+        (window as any).__run = e.evaluatePython();
+    });
+    await page.waitForFunction(`${ed}._stepPaused`);
+    await page.evaluate(() => { const e = document.querySelector('bottom-editor') as any; e._setStepSpeed(21); e._doPlay(); });
+    await page.waitForFunction(`!${ed}._stepPaused`);
+    await page.waitForTimeout(300);
+    await page.evaluate(() => (document.querySelector('bottom-editor') as any)._doPlay());  // pause
+    await page.waitForFunction(`${ed}._stepPaused`);
+    const n = Number(await page.evaluate(() => (document.querySelector('bottom-editor') as any)._stepLocals.n));
+    expect(n).toBeGreaterThan(1000);
+
+    await page.evaluate(() => (document.querySelector('bottom-editor') as any)._stop());
+    await page.evaluate(() => (window as any).__run);
+    expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any)._stepping)).toBe(false);
+    expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any).outputText)).toContain('KeyboardInterrupt');
 });

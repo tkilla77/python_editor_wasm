@@ -210,6 +210,12 @@ export class PyodideRuntime {
         Atomics.notify(this._stepBuffer, 0, 1);
     }
 
+    /** Stop free-running execution at the next line. */
+    stepPause(): void {
+        if (!this._stepBuffer) return;
+        Atomics.store(this._stepBuffer, 0, 0);
+    }
+
     /** Let execution run freely (worker no longer blocks on each line). */
     stepContinue(): void {
         if (!this._stepBuffer) return;

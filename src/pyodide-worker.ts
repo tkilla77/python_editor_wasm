@@ -205,6 +205,7 @@ const ENERGY_TRACE_TEARDOWN = `__sys_trace__.settrace(None)`;
  *  for manual/animated step-through. Only used when stepMode is active. */
 const STEP_TRACE_SETUP = `
 import sys as __sys_trace__, json as __json_trace__
+from js import _step_update as __step_update__, _step_wait as __step_wait__, _step_free as __step_free__
 __step_energy__ = 0
 __energy_on__ = False
 __energy_min_line__ = 0
@@ -213,6 +214,8 @@ def __step_trace__(frame, event, arg):
     global __step_energy__
     if event == 'line' and __energy_on__ and __energy_min_line__ < frame.f_lineno <= __energy_max_line__ and frame.f_code.co_filename == '<exec>':
         __step_energy__ += 1
+        if __step_free__():
+            return __step_trace__
         loc = {}
         for k, v in frame.f_locals.items():
             if (not k.startswith('_') and not callable(v) and k not in __init_globals__
@@ -222,9 +225,8 @@ def __step_trace__(frame, event, arg):
                     loc[k] = r if len(r) <= 120 else r[:117] + '...'
                 except Exception:
                     loc[k] = '<?>'
-        from js import _step_update, _step_wait
-        _step_update(frame.f_lineno, __json_trace__.dumps(loc), __step_energy__)
-        _step_wait()
+        __step_update__(frame.f_lineno, __json_trace__.dumps(loc), __step_energy__)
+        __step_wait__()
     return __step_trace__
 __sys_trace__.settrace(__step_trace__)
 `;
@@ -312,6 +314,8 @@ async function init(baseURL: string, indexURL: string) {
             try { locals = JSON.parse(localsJson); } catch {}
             post('stepUpdate', { runId: currentRunId, line: lineNo, locals, energy });
         };
+        // Full speed (value 2): skip the per-line snapshot and message.
+        (self as any)._step_free = () => !!stepBuffer && Atomics.load(stepBuffer, 0) === 2;
         (self as any)._step_wait = () => {
             if (!stepBuffer) return;
             if (Atomics.load(stepBuffer, 0) === 2) return; // run freely — just stream updates
@@ -568,7 +572,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     lastRunEditorId = msg.editorId;
                     try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
                     const runEnergy: number = py.globals.get('__step_energy__') ?? 0;
-                    try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__','__energy_on__','__energy_min_line__','__energy_max_line__']:\n    globals().pop(__k,None)\ndel __k`); } catch {}
+                    try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__','__energy_on__','__energy_min_line__','__energy_max_line__','__step_update__','__step_wait__','__step_free__']:\n    globals().pop(__k,None)\ndel __k`); } catch {}
                     stepBuffer = null;
                     post('done', { runId, energy: countEnergy ? runEnergy : undefined });
                 } catch (err: any) {

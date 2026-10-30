@@ -28,6 +28,12 @@ initStorageManager();
 // CodeMirror step-through decorations
 // ---------------------------------------------------------------------------
 
+const MAX_STEP_SPEED = 20; // lines per second; one notch above means full speed
+
+const ICON_STEP = html`<svg class="step-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2l8 6-8 6z"/><rect x="12" y="2" width="2" height="12"/></svg>`;
+const ICON_PLAY = html`<svg class="step-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 2l7 6-7 6zM8 2l7 6-7 6z"/></svg>`;
+const ICON_PAUSE = html`<svg class="step-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12"/><rect x="9.5" y="2" width="3.5" height="12"/></svg>`;
+
 const setStepLine = StateEffect.define<{ line: number | null; locals: Record<string, string> }>();
 
 class VarsWidget extends WidgetType {
@@ -726,6 +732,8 @@ export class BottomEditor extends LitElement {
         }
     }
 
+    private get _fullSpeed() { return this._stepSpeed > MAX_STEP_SPEED; }
+
     private _doStep() {
         if (!this._stepPaused) return;
         this._stopPlay();
@@ -733,9 +741,11 @@ export class BottomEditor extends LitElement {
     }
 
     private _doPlay() {
-        if (!this._stepPaused) return;
+        if (!this._stepping) return;
         if (this._stepPlaying) {
+            const freeRunning = !this._stepPaused;
             this._stopPlay();
+            if (freeRunning) this.runtime.stepPause();
         } else {
             this._stepPlaying = true;
             this._scheduleAutoStep();
@@ -743,13 +753,25 @@ export class BottomEditor extends LitElement {
     }
 
     private _scheduleAutoStep() {
+        clearTimeout(this._stepPlayTimer);
         if (!this._stepPlaying || !this._stepPaused) return;
-        const delayMs = Math.round(1000 / this._stepSpeed);
+        if (this._fullSpeed) {
+            this._stepPaused = false;
+            this._updateStepLine(null);
+            this.runtime.stepContinue();
+            return;
+        }
         this._stepPlayTimer = setTimeout(() => {
-            if (this._stepPlaying && this._stepPaused) {
-                this.runtime.step();
-            }
-        }, delayMs);
+            if (this._stepPlaying && this._stepPaused) this.runtime.step();
+        }, Math.round(1000 / this._stepSpeed));
+    }
+
+    private _setStepSpeed(speed: number) {
+        const wasFull = this._fullSpeed;
+        this._stepSpeed = speed;
+        if (!this._stepPlaying) return;
+        if (wasFull && !this._fullSpeed && !this._stepPaused) this.runtime.stepPause();
+        else this._scheduleAutoStep();
     }
 
     private _stopPlay() {
@@ -757,11 +779,13 @@ export class BottomEditor extends LitElement {
         this._stepPlaying = false;
     }
 
-    private _doContinue() {
-        this._stopPlay();
-        this._stepPaused = false;
-        this._updateStepLine(null);
-        this.runtime.stepContinue();
+    private _stop() {
+        // Wake a worker blocked between steps so it can see the interrupt.
+        if (this._stepping) {
+            this._stopPlay();
+            this.runtime.stepContinue();
+        }
+        this.runtime.interrupt();
     }
 
     private _onStepUpdate(line: number, locals: Record<string, string>, energy: number) {
@@ -991,19 +1015,17 @@ export class BottomEditor extends LitElement {
 
         const stepBar = this.stepmode ? html`
             <bottom-stepbar>
-                ${this._stepping && this._stepPaused ? html`
-                    <button class="step-btn" @click="${this._doStep}" title="Step one line">▶ Step</button>
-                    <button class="step-btn ${this._stepPlaying ? 'active' : ''}"
-                            @click="${this._doPlay}" title="${this._stepPlaying ? 'Pause' : 'Play'}">
-                        ${this._stepPlaying ? '⏸ Pause' : '▶▶ Play'}</button>
-                    <button class="step-btn" @click="${this._doContinue}" title="Run to end">⏩ Continue</button>
-                    <label class="step-speed" title="Playback speed">
-                        <span>${this._stepSpeed}×</span>
-                        <input type="range" min="1" max="20" .value="${String(this._stepSpeed)}"
-                               @input="${(e: InputEvent) => { this._stepSpeed = +(e.target as HTMLInputElement).value; }}">
+                ${this._stepping ? html`
+                    <button class="step-btn" @click="${this._doStep}" ?disabled="${!this._stepPaused}"
+                            title="Run the highlighted line">${ICON_STEP} Step</button>
+                    <button class="step-btn ${this._stepPlaying ? 'active' : ''}" @click="${this._doPlay}"
+                            title="${this._stepPlaying ? 'Pause' : 'Keep stepping automatically'}">
+                        ${this._stepPlaying ? html`${ICON_PAUSE} Pause` : html`${ICON_PLAY} Play`}</button>
+                    <label class="step-speed" title="Play speed (lines per second)">
+                        <span>${this._fullSpeed ? 'max' : `${this._stepSpeed}/s`}</span>
+                        <input type="range" min="1" max="${MAX_STEP_SPEED + 1}" .value="${String(this._stepSpeed)}"
+                               @input="${(e: InputEvent) => this._setStepSpeed(+(e.target as HTMLInputElement).value)}">
                     </label>
-                ` : this._stepping ? html`
-                    <span class="step-hint">Running…</span>
                 ` : html`
                     <span class="step-hint">Click Run to step through</span>
                 `}
@@ -1035,7 +1057,7 @@ export class BottomEditor extends LitElement {
                     ?showsync="${this._syncAvailable()}"
                     syncbackend="${syncBackend}"
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"
-                    @bottom-stop="${() => this.runtime.interrupt()}"
+                    @bottom-stop="${this._stop}"
                     @bottom-reset="${this.reset}"
                     @bottom-revert="${this.revertCode}"
                     @bottom-permalink="${this.copyPermalink}"
