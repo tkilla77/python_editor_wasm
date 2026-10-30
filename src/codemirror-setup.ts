@@ -1,6 +1,6 @@
 import { EditorState } from "@codemirror/state"
 import {
-    EditorView, keymap, gutter, lineNumbers,
+    EditorView, keymap, lineNumbers,
     highlightActiveLineGutter, highlightSpecialChars, drawSelection, dropCursor,
     rectangularSelection, crosshairCursor, highlightActiveLine,
 } from "@codemirror/view"
@@ -11,7 +11,7 @@ import {
 } from "@codemirror/language"
 import { closeBrackets, autocompletion, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete"
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
-import { lintGutter, lintKeymap } from "@codemirror/lint"
+import { lintKeymap } from "@codemirror/lint"
 import { python } from "@codemirror/lang-python"
 
 // Equivalent to codemirror's `basicSetup`, minus foldGutter() and
@@ -66,8 +66,6 @@ export function createPythonEditor(
             keymap.of([indentWithTab]),
             lineNumbers(),
             bracketMatching(),
-            gutter({ class: "cm-mygutter" }),
-            lintGutter(),
             ...(onChange ? [EditorView.updateListener.of(u => { if (u.docChanged) onChange(); })] : []),
         ],
     });
