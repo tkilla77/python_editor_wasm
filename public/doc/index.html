@@ -887,6 +887,10 @@ appears while paused:</p>
 per second. Its last position, <strong>max</strong>, runs at full speed until the next breakpoint.
 Playing also stops at breakpoints.</li>
 </ul>
+<p>Variables are shown as Python would print them, except for objects without a readable form:
+an open file or a turtle appears as <code>&lt;TextIOWrapper&gt;</code> or <code>&lt;Turtle&gt;</code>
+instead of <code>&lt;turtle.Turtle object at 0x129df80&gt;</code>. Objects that define
+<code>__str__</code> show that instead.</p>
 <p>Breakpoints can be added and removed while paused. Without breakpoints, nothing changes: Run is as
 fast as ever and the bar never appears. Add <code>nodebug</code> to switch breakpoints off.</p>
 <p>Try it: click line 3, then Run.</p>

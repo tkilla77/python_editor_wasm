@@ -132,3 +132,38 @@ test('stepmode: Play stops at a breakpoint', async ({ page }) => {
     await continueAtMax(page);
     await finish(page);
 });
+
+test('variables show readable values instead of raw object reprs', async ({ page }) => {
+    const code = [
+        'from enum import Enum',
+        'import io',
+        'class Color(Enum):',
+        '    RED = 1',
+        'class Foo: pass',
+        'class Named:',
+        '    def __str__(self): return "named!"',
+        'fh = open("t.txt", "w")',
+        'buf = io.StringIO("x")',
+        'c = Color.RED',
+        'foos = [Foo(), Foo()]',
+        'n = Named()',
+        'e = ValueError("bad")',
+        'nums = [1, 2]',
+        'done = True',
+    ];
+    await addEditor(page, {}, code.join('\n'));
+    await clickLine(page, code.length);
+    await startRun(page);
+    await page.waitForFunction(() => (window as any).__ed._stepPaused);
+    expect(await get(page, '_stepLocals')).toEqual({
+        fh: '<TextIOWrapper>',
+        buf: '<StringIO>',
+        c: 'Color.RED',
+        foos: '[<Foo>, <Foo>]',
+        n: 'named!',
+        e: "ValueError('bad')",
+        nums: '[1, 2]',
+    });
+    await continueAtMax(page);
+    await finish(page);
+});

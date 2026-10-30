@@ -206,13 +206,24 @@ const ENERGY_TRACE_TEARDOWN = `__sys_trace__.settrace(None)`;
  *  the worker returns to its event loop while waiting: messages arrive and the
  *  canvas repaints. Needs the code to run via runPythonAsync. */
 const STEP_TRACE_SETUP = `
-import sys as __sys_trace__, json as __json_trace__
+import sys as __sys_trace__, json as __json_trace__, re as __re_trace__
 from pyodide.ffi import run_sync as __run_sync__
 from js import _step_update as __step_update__, _step_wait as __step_wait__, _step_mode as __step_mode__, _step_yield as __step_yield__
 __step_energy__ = 0
 __energy_on__ = False
 __energy_min_line__ = 0
 __energy_max_line__ = 0
+__default_obj__ = __re_trace__.compile(r'<(?:[\\w.]+\\.)?(\\w+) object at 0x[0-9a-fA-F]+>')
+def __step_repr__(v):
+    # A repr in angle brackets isn't a readable value (open files, turtles, plain
+    # objects): use str() if that's readable, else just the type name. Inside
+    # containers, shorten the default "<mod.Class object at 0x...>" to "<Class>".
+    r = repr(v)
+    if r.startswith('<') and r.endswith('>'):
+        s = str(v)
+        r = s if not (s.startswith('<') and s.endswith('>')) else '<' + type(v).__name__ + '>'
+    r = __default_obj__.sub(r'<\\1>', r)
+    return r if len(r) <= 120 else r[:117] + '...'
 def __step_trace__(frame, event, arg):
     global __step_energy__
     if event == 'line' and __energy_on__ and __energy_min_line__ < frame.f_lineno <= __energy_max_line__ and frame.f_code.co_filename == '<exec>':
@@ -230,8 +241,7 @@ def __step_trace__(frame, event, arg):
             if (not k.startswith('_') and not callable(v) and k not in __init_globals__
                     and not isinstance(v, type(__sys_trace__))):
                 try:
-                    r = repr(v)
-                    loc[k] = r if len(r) <= 120 else r[:117] + '...'
+                    loc[k] = __step_repr__(v)
                 except Exception:
                     loc[k] = '<?>'
         __step_update__(frame.f_lineno, __json_trace__.dumps(loc), __step_energy__)
@@ -241,7 +251,8 @@ def __step_trace__(frame, event, arg):
 __sys_trace__.settrace(__step_trace__)
 `;
 
-const STEP_GLOBALS = ['__step_update__', '__step_wait__', '__step_mode__', '__step_yield__', '__run_sync__'];
+const STEP_GLOBALS = ['__step_update__', '__step_wait__', '__step_mode__', '__step_yield__', '__run_sync__',
+                      '__re_trace__', '__default_obj__', '__step_repr__'];
 
 /** JSPI lets Python block on a promise without SharedArrayBuffer. */
 const canStep = typeof (WebAssembly as any).Suspending === 'function';
