@@ -55,6 +55,8 @@ export class BottomExercise extends LitElement {
     @property() zip: string = '';
     @property({ type: Boolean }) showswitcher: boolean = false;
     @property({ type: Boolean }) showenergy: boolean = false;
+    /** Step through the student's code line by line; tests still run at full speed. */
+    @property({ type: Boolean }) stepmode: boolean = false;
 
     /** Initial code shown in the editor — overrides starter code if set.
      *  Used by the exercise-view landing page to show the student's submission. */
@@ -404,6 +406,7 @@ export class BottomExercise extends LitElement {
                 zip=${this.zip}
                 ?showswitcher=${this.showswitcher}
                 ?showenergy=${this.showenergy}
+                ?stepmode=${this.stepmode}
                 ?autofit=${this.autofit}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-reset="${this._onReset}"

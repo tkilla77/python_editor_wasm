@@ -43,6 +43,7 @@ export class PyodideRuntime {
         onStdout: (data: string) => void;
         onEnergy?: (energy: number) => void;
         onStepUpdate?: StepUpdateCallback;
+        onStepDone?: () => void;
     }>();
     private interruptBuffer?: Uint8Array;
     private _stepBuffer?: Int32Array;
@@ -113,11 +114,12 @@ export class PyodideRuntime {
      * Run user code, then run test assertions in the same Python namespace.
      * Resolves with a structured TestReport. Rejects if user code errors.
      */
-    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions): Promise<TestReport> {
-        return this.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, undefined, extraFiles, opts);
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void): Promise<TestReport> {
+        return this.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, undefined, extraFiles, opts, onStepUpdate, onStepDone);
     }
 
-    runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[], opts?: RunOptions): Promise<TestReport> {
+    /** onStepUpdate steps through the user's code only; onStepDone fires before the tests start. */
+    runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void): Promise<TestReport> {
         const tms = timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async (): Promise<TestReport> => {
             await this.ready;
@@ -129,8 +131,9 @@ export class PyodideRuntime {
                     this.terminateAndRespawn();
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
-                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
-                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, ...opts });
+                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onStepUpdate, onStepDone });
+                const stepBuffer = onStepUpdate ? this._stepBuffer : undefined;
+                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, stepBuffer, ...opts });
             });
         };
         const result = this._queue.then(doRun);
@@ -356,6 +359,10 @@ export class PyodideRuntime {
         if (msg.type === 'stepUpdate') {
             const run = msg.runId !== undefined ? this.pendingRuns.get(msg.runId) : undefined;
             run?.onStepUpdate?.(msg.line, msg.locals ?? {}, msg.energy ?? 0);
+            return;
+        }
+        if (msg.type === 'stepDone') {
+            this.pendingRuns.get(msg.runId)?.onStepDone?.();
             return;
         }
         if (msg.type === 'done') {

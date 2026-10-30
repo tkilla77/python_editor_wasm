@@ -43,8 +43,8 @@ export class EditorHandle {
     runSetup(code: string) {
         return this.run(code, () => {}, undefined, undefined, undefined, { filename: '<bottom-ready>' });
     }
-    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions): Promise<TestReport> {
-        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles, opts);
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void): Promise<TestReport> {
+        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles, opts, onStepUpdate, onStepDone);
     }
     loadZip(url: string) { return this._runtime.loadZip(url); }
     setCanvas(canvas: OffscreenCanvas) { return this._runtime.setCanvasFor(canvas, this.editorId); }

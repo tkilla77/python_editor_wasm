@@ -807,41 +807,19 @@ export class BottomEditor extends LitElement {
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         this._energy = null;
+        const onStep = this._beginStepping();
         try {
-            if (this.stepmode) {
-                this._stepping = true;
-                this._stepPaused = false;
-                this._stopPlay();
-                this._updateStepLine(null);
-                this.runtime.enableStepMode();
-                try {
-                    await this.runtime.run(
-                        code,
-                        (data: string) => {
-                            this._output?.addOutput(data);
-                            if (!this._swConsole) this._swConsoleHasNew = true;
-                        },
-                        this._extraFiles(),
-                        (energy: number) => { this._energy = energy; },
-                        (line, locals, energy) => this._onStepUpdate(line, locals, energy),
-                        { lineOffset: this._prefixLines(), countEnergy: true },
-                    );
-                } finally {
-                    this.runtime.disableStepMode();
-                }
-            } else {
-                await this.runtime.run(
-                    code,
-                    (data: string) => {
-                        this._output?.addOutput(data);
-                        if (!this._swConsole) this._swConsoleHasNew = true;
-                    },
-                    this._extraFiles(),
-                    (energy: number) => { this._energy = energy; },
-                    undefined,
-                    { lineOffset: this._prefixLines(), countEnergy: this.showenergy },
-                );
-            }
+            await this.runtime.run(
+                code,
+                (data: string) => {
+                    this._output?.addOutput(data);
+                    if (!this._swConsole) this._swConsoleHasNew = true;
+                },
+                this._extraFiles(),
+                (energy: number) => { this._energy = energy; },
+                onStep,
+                { lineOffset: this._prefixLines(), countEnergy: this.stepmode || this.showenergy },
+            );
             if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
             const { display, userLine } = this._formatError(err?.toString() ?? String(err));
@@ -851,11 +829,28 @@ export class BottomEditor extends LitElement {
         } finally {
             if (this._buttons) this._buttons.running = false;
             if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
-            this._stepping = false;
-            this._stepPaused = false;
-            this._stopPlay();
-            this._updateStepLine(null);
+            this._endStepping();
         }
+    }
+
+    /** In stepmode, prepare the step buffer and return the per-line callback. */
+    private _beginStepping() {
+        if (!this.stepmode) return undefined;
+        this._stepping = true;
+        this._stepPaused = false;
+        this._stopPlay();
+        this._updateStepLine(null);
+        this.runtime.enableStepMode();
+        return (line: number, locals: Record<string, string>, energy: number) => this._onStepUpdate(line, locals, energy);
+    }
+
+    private _endStepping() {
+        if (!this._stepping) return;
+        this.runtime.disableStepMode();
+        this._stepping = false;
+        this._stepPaused = false;
+        this._stopPlay();
+        this._updateStepLine(null);
     }
 
     /**
@@ -872,15 +867,16 @@ export class BottomEditor extends LitElement {
         const raw  = this.codePrefix + this._editor.state.doc.toString();
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
+        this._energy = null;
+        const onStep = this._beginStepping();
         try {
-            this._energy = null;
             const report = await this.runtime.runWithTests(code, tests, this.readyCode, (data: string) => {
                 this._output?.addOutput(data);
                 if (!this._swConsole) this._swConsoleHasNew = true;
             }, this._extraFiles(), {
                 lineOffset: this._prefixLines(),
-                countEnergy: this.showenergy || !!opts?.countEnergy,
-            });
+                countEnergy: this.stepmode || this.showenergy || !!opts?.countEnergy,
+            }, onStep, () => this._endStepping());
             this._energy = report.energy ?? null;
             return report;
         } catch (err: any) {
@@ -892,6 +888,7 @@ export class BottomEditor extends LitElement {
         } finally {
             if (this._buttons) this._buttons.running = false;
             if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
+            this._endStepping();
         }
     }
 

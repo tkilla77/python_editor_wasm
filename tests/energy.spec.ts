@@ -121,3 +121,28 @@ test('pause stops a full-speed run, stop ends a paused run', async ({ page }) =>
     expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any)._stepping)).toBe(false);
     expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any).outputText)).toContain('KeyboardInterrupt');
 });
+
+test('exercises step through student code, then run tests untraced', async ({ page }) => {
+    await page.goto('/exercise.html');
+    await page.evaluate(async () => {
+        const ex = document.createElement('bottom-exercise') as any;
+        ex.stepmode = true;
+        ex.code = 'a = 1\nb = 2';
+        ex.tests = 'assert a + b == 3\nfor _ in range(1000): pass';
+        document.body.append(ex);
+        await ex.updateComplete;
+        await ex.renderRoot.querySelector('bottom-editor').ready;
+        (window as any).__ex = ex;
+        (window as any).__run = ex.runTests();
+    });
+    const inner = '__ex.renderRoot.querySelector("bottom-editor")';
+    await page.waitForFunction(`${inner}._stepPaused && ${inner}.energy === 1`);
+    await page.evaluate(`${inner}._doStep()`);
+    await page.waitForFunction(`${inner}._stepPaused && ${inner}.energy === 2`);
+    await page.evaluate(`${inner}._doStep()`);
+    await page.evaluate(() => (window as any).__run);
+    const report = await page.evaluate(() => (window as any).__ex._testReport);
+    expect(report.passed).toBe(true);
+    expect(report.energy).toBe(2);
+    expect(await page.evaluate(`${inner}._stepping`)).toBe(false);
+});

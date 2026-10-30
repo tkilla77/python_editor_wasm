@@ -661,9 +661,12 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 }
                 // Phase 1: run user code with stdout teed to capture buffer
                 try { py.runPython(CAPTURE_SETUP, { filename: '<bottom-init>' }); } catch {}
-                const countEnergy = !!(msg as any).countEnergy;
+                // Step through the user's code only; tests below run untraced.
+                const useStepTrace = !needsAsync && !!(msg as any).stepBuffer;
+                if (useStepTrace) stepBuffer = (msg as any).stepBuffer as Int32Array;
+                const countEnergy = useStepTrace || !!(msg as any).countEnergy;
                 if (countEnergy) {
-                    try { py.runPython(ENERGY_TRACE_SETUP); } catch {}
+                    try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
                 }
                 try {
                     py.globals.set('__energy_min_line__', (msg as any).lineOffset ?? 0);
@@ -672,7 +675,13 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     // Trailing `pass` stops Pyodide from rewriting a final expression
                     // into result-capture code, which emits a spurious line event.
                     try { await runCode(countEnergy ? codeToRun + '\npass' : codeToRun); }
-                    finally { py.globals.set('__energy_on__', false); }
+                    finally {
+                        py.globals.set('__energy_on__', false);
+                        if (useStepTrace) {
+                            stepBuffer = null;
+                            post('stepDone', { runId });
+                        }
+                    }
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
                     if (flushTimer !== null) {
                         (self as any).clearTimeout(flushTimer);
@@ -720,6 +729,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
 for __k in ['__test_source__', '__user_code__', '__run_tests__', '__captured_output__',
             '__energy_val__', '__step_energy__', '__sys_trace__', '__json_trace__',
             '__line_trace__', '__step_trace__', '__energy_on__', '__energy_min_line__', '__energy_max_line__',
+            '__step_update__', '__step_wait__', '__step_free__',
             'output', 'output_lines', 'with_input', 'energy', 'memory']:
     try: del globals()[__k]
     except: pass
