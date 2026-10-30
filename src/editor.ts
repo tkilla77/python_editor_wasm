@@ -219,6 +219,10 @@ export class BottomEditor extends LitElement {
     @property({ type: Boolean, reflect: true })
     stepmode = false;
 
+    /** Count executed lines and show the total after each run. Off by default: counting slows execution. */
+    @property({ type: Boolean, reflect: true })
+    showenergy = false;
+
     @state() private _stepping = false;
     @state() private _stepPaused = false;
     @state() private _stepLocals: Record<string, string> = {};
@@ -796,7 +800,7 @@ export class BottomEditor extends LitElement {
                         this._extraFiles(),
                         (energy: number) => { this._energy = energy; },
                         (line, locals, energy) => this._onStepUpdate(line, locals, energy),
-                        { lineOffset: this._prefixLines() },
+                        { lineOffset: this._prefixLines(), countEnergy: true },
                     );
                 } finally {
                     this.runtime.disableStepMode();
@@ -811,7 +815,7 @@ export class BottomEditor extends LitElement {
                     this._extraFiles(),
                     (energy: number) => { this._energy = energy; },
                     undefined,
-                    { lineOffset: this._prefixLines() },
+                    { lineOffset: this._prefixLines(), countEnergy: this.showenergy },
                 );
             }
             if (this.autofit) this._handleFitRequest();
@@ -834,7 +838,7 @@ export class BottomEditor extends LitElement {
      * Run the editor's code, then run test assertions in the same Python
      * namespace. Returns a structured TestReport with per-assertion results.
      */
-    async evaluateWithTests(tests: string): Promise<TestReport> {
+    async evaluateWithTests(tests: string, opts?: { countEnergy?: boolean }): Promise<TestReport> {
         if (!this._editor) {
             return { passed: false, results: [{ passed: false, test: '<error>', message: 'Editor not initialized' }] };
         }
@@ -845,10 +849,16 @@ export class BottomEditor extends LitElement {
         const code = this.transformCode ? this.transformCode(raw) : raw;
         if (this._buttons) this._buttons.running = true;
         try {
-            return await this.runtime.runWithTests(code, tests, this.readyCode, (data: string) => {
+            this._energy = null;
+            const report = await this.runtime.runWithTests(code, tests, this.readyCode, (data: string) => {
                 this._output?.addOutput(data);
                 if (!this._swConsole) this._swConsoleHasNew = true;
-            }, this._extraFiles(), { lineOffset: this._prefixLines() });
+            }, this._extraFiles(), {
+                lineOffset: this._prefixLines(),
+                countEnergy: this.showenergy || !!opts?.countEnergy,
+            });
+            this._energy = report.energy ?? null;
+            return report;
         } catch (err: any) {
             const { display, userLine } = this._formatError(err?.toString() ?? String(err));
             this._output?.addOutput(display);

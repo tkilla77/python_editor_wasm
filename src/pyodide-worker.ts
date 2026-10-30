@@ -541,7 +541,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             // Install energy/step trace. Use step trace only for sync code (Atomics.wait
             // requires a synchronous call stack; async runs use energy-only trace).
             const useStepTrace = !needsAsync && !!(msg as any).stepBuffer;
-            try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
+            // The trace slows every line, so only install it when someone reads the count.
+            const countEnergy = !!(msg as any).stepBuffer || !!(msg as any).countEnergy;
+            if (countEnergy) {
+                try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
+            }
             try {
                 try {
                     py.globals.set('__energy_min_line__', (msg as any).lineOffset ?? 0);
@@ -549,7 +553,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     py.globals.set('__energy_on__', true);
                     // Trailing `pass` stops Pyodide from rewriting a final expression
                     // into result-capture code, which emits a spurious line event.
-                    try { await runCode(codeToRun + '\npass'); }
+                    try { await runCode(countEnergy ? codeToRun + '\npass' : codeToRun); }
                     finally { py.globals.set('__energy_on__', false); }
                     // Patch any libraries installed via micropip during this run.
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
@@ -566,7 +570,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     const runEnergy: number = py.globals.get('__step_energy__') ?? 0;
                     try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__','__energy_on__','__energy_min_line__','__energy_max_line__']:\n    globals().pop(__k,None)\ndel __k`); } catch {}
                     stepBuffer = null;
-                    post('done', { runId, energy: runEnergy });
+                    post('done', { runId, energy: countEnergy ? runEnergy : undefined });
                 } catch (err: any) {
                     if (flushTimer !== null) {
                         (self as any).clearTimeout(flushTimer);
@@ -653,14 +657,17 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 }
                 // Phase 1: run user code with stdout teed to capture buffer
                 try { py.runPython(CAPTURE_SETUP, { filename: '<bottom-init>' }); } catch {}
-                try { py.runPython(ENERGY_TRACE_SETUP); } catch {}
+                const countEnergy = !!(msg as any).countEnergy;
+                if (countEnergy) {
+                    try { py.runPython(ENERGY_TRACE_SETUP); } catch {}
+                }
                 try {
                     py.globals.set('__energy_min_line__', (msg as any).lineOffset ?? 0);
                     py.globals.set('__energy_max_line__', codeToRun.split('\n').length);
                     py.globals.set('__energy_on__', true);
                     // Trailing `pass` stops Pyodide from rewriting a final expression
                     // into result-capture code, which emits a spurious line event.
-                    try { await runCode(codeToRun + '\npass'); }
+                    try { await runCode(countEnergy ? codeToRun + '\npass' : codeToRun); }
                     finally { py.globals.set('__energy_on__', false); }
                     await py.runPythonAsync('import canvas_shim; canvas_shim.apply_pending()');
                     if (flushTimer !== null) {
@@ -696,7 +703,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     const testEnergy: number = py.globals.get('__energy_val__') ?? py.globals.get('__step_energy__') ?? 0;
                     currentRunId = undefined;
                     lastRunEditorId = msg.editorId;
-                    post('testResults', { runId, results: { ...testResults, energy: testEnergy } });
+                    post('testResults', { runId, results: { ...testResults, energy: countEnergy ? testEnergy : undefined } });
                 } catch (harnessErr: any) {
                     currentRunId = undefined;
                     lastRunEditorId = msg.editorId;

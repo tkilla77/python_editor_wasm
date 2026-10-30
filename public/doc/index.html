@@ -157,6 +157,12 @@ for i in range(5):
 <td>off</td>
 <td>Run executes one line at a time, with the current line and its variables shown in the editor (see <a href="#stepping">Energy, memory and stepping</a>)</td>
 </tr>
+<tr>
+<td><code>showenergy</code></td>
+<td>boolean</td>
+<td>off</td>
+<td>Count executed lines and show the total below the editor after each run (see <a href="#stepping">Energy, memory and stepping</a>)</td>
+</tr>
 </tbody></table>
 <hr>
 <h2>Turtle graphics</h2>
@@ -575,6 +581,11 @@ for _ in range(4):
 <td>Maximum lines the solution may execute; exceeding it adds a failing <code>energy() &lt;= N</code> result</td>
 </tr>
 <tr>
+<td><code>showenergy</code></td>
+<td>off</td>
+<td>Show the energy of each run below the editor</td>
+</tr>
+<tr>
 <td><code>maxmemory</code></td>
 <td>—</td>
 <td>Maximum non-blank, non-comment lines of code; exceeding it adds a failing <code>memory() &lt;= N</code> result</td>
@@ -762,8 +773,7 @@ captured in the URL.</p>
 <p>Two simple cost measures help students compare solutions:</p>
 <ul>
 <li><strong>Energy</strong> is the number of lines the program actually executed. Each run of a line
-costs 1, so a loop body that runs 10 times costs 10. Blank lines and comments cost nothing. After
-every run, the energy appears as <strong>⚡ N</strong> below the editor.</li>
+costs 1, so a loop body that runs 10 times costs 10. Blank lines and comments cost nothing.</li>
 <li><strong>Memory</strong> is the size of the program: its number of non-blank, non-comment lines.</li>
 </ul>
 <p>Some examples:</p>
@@ -780,6 +790,19 @@ every run, the energy appears as <strong>⚡ N</strong> below the editor.</li>
 </table>
 <p>Only the student's own lines count. Code inside library functions (including <code>print</code>) and
 code injected by the page, such as the Kara world helpers, is free.</p>
+<p>Counting slows down every line, so it is off unless something needs it. It is switched on by
+<code>showenergy</code> (shows <strong>⚡ N</strong> below the editor after each run), by
+<code>stepmode</code>, and in exercises by <code>maxenergy</code> or by tests that call <code>energy()</code>.
+Everything else runs at full speed.</p>
+<pre><code class="language-html">&lt;bottom-editor showenergy&gt;
+for i in range(3):
+    print(i)
+&lt;/bottom-editor&gt;
+</code></pre>
+<bottom-editor showenergy>
+for i in range(3):
+    print(i)
+</bottom-editor>
 
 <h3>Step-by-step execution</h3>
 <p>Add <code>stepmode</code> to run a program one line at a time. The line about to run is

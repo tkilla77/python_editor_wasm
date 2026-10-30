@@ -12,9 +12,10 @@ export interface TestReport {
     energy?: number;
 }
 
-/** lineOffset: lines prepended before the user's code (not counted as energy).
+/** countEnergy: install the line-counting trace (slows execution).
+ *  lineOffset: lines prepended before the user's code (not counted as energy).
  *  filename: compile filename; anything other than '<exec>' is not counted. */
-export type RunOptions = { lineOffset?: number; filename?: string };
+export type RunOptions = { countEnergy?: boolean; lineOffset?: number; filename?: string };
 
 export type StepUpdateCallback = (line: number, locals: Record<string, string>, energy: number) => void;
 
@@ -129,7 +130,7 @@ export class PyodideRuntime {
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout });
-                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, lineOffset: opts?.lineOffset });
+                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, ...opts });
             });
         };
         const result = this._queue.then(doRun);

@@ -9,9 +9,24 @@ async function energyOf(page: any, code: string): Promise<number | null> {
     }, code);
 }
 
+test('without showenergy, no trace is installed and no energy reported', async ({ page }) => {
+    await page.goto('/tests/fixtures/basic.html');
+    await page.evaluate(() => (document.querySelector('bottom-editor') as any)?.ready, { timeout: 75_000 });
+
+    const res = await page.evaluate(async () => {
+        const ed = document.querySelector('bottom-editor') as any;
+        ed.sourceCode = 'import sys\nprint(sys.gettrace())';
+        await ed.evaluatePython();
+        return { out: ed.outputText, energy: ed.energy };
+    });
+    expect(res.out).toContain('None');
+    expect(res.energy).toBeNull();
+});
+
 test('energy counts executed user lines only', async ({ page }) => {
     await page.goto('/tests/fixtures/basic.html');
     await page.evaluate(() => (document.querySelector('bottom-editor') as any)?.ready, { timeout: 75_000 });
+    await page.evaluate(() => { (document.querySelector('bottom-editor') as any).showenergy = true; });
 
     expect(await energyOf(page, '')).toBe(0);
     expect(await energyOf(page, 'x = 3')).toBe(1);
@@ -52,4 +67,27 @@ test('stepmode pauses on each line and reports locals', async ({ page }) => {
     await page.evaluate(() => (window as any).__run);
     expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any).energy)).toBe(3);
     expect(await page.evaluate(() => (document.querySelector('bottom-editor') as any).outputText)).toContain('2');
+});
+
+test('exercises count energy only when maxenergy or energy() is used', async ({ page }) => {
+    await page.goto('/exercise.html');
+    const run = (attrs: { maxenergy?: number; tests: string }) => page.evaluate(async ({ maxenergy, tests }) => {
+        const ex = document.createElement('bottom-exercise') as any;
+        ex.code = 'total = 0\nfor i in range(3):\n    total += i';
+        ex.tests = tests;
+        if (maxenergy) ex.maxenergy = maxenergy;
+        document.body.append(ex);
+        await ex.updateComplete;
+        await ex.renderRoot.querySelector('bottom-editor').ready;
+        await ex.runTests();
+        const r = ex._testReport;
+        ex.remove();
+        return { energy: r.energy ?? null, results: r.results.map((x: any) => [x.test, x.passed]) };
+    }, attrs);
+
+    expect((await run({ tests: 'assert total == 3' })).energy).toBeNull();
+    expect(await run({ tests: 'assert energy() == 8' })).toEqual({ energy: 8, results: [['assert energy() == 8', true]] });
+    expect(await run({ maxenergy: 5, tests: 'assert total == 3' })).toEqual({
+        energy: 8, results: [['assert total == 3', true], ['energy() <= 5', false]],
+    });
 });

@@ -54,6 +54,7 @@ export class BottomExercise extends LitElement {
     @property() timeout: string = '30';
     @property() zip: string = '';
     @property({ type: Boolean }) showswitcher: boolean = false;
+    @property({ type: Boolean }) showenergy: boolean = false;
 
     /** Initial code shown in the editor — overrides starter code if set.
      *  Used by the exercise-view landing page to show the student's submission. */
@@ -219,7 +220,9 @@ export class BottomExercise extends LitElement {
         const testCode = this._effectiveTestCode;
         if (!testCode) return this._editor.evaluatePython();
         this._testReport = undefined;
-        const report = await this._editor.evaluateWithTests(testCode);
+        const report = await this._editor.evaluateWithTests(testCode, {
+            countEnergy: this.maxenergy > 0 || /\benergy\s*\(/.test(testCode),
+        });
 
         // Append constraint checks as synthetic test results.
         const extra: import('./pyodide-runtime.js').TestResult[] = [];
@@ -400,6 +403,7 @@ export class BottomExercise extends LitElement {
                 timeout=${this.timeout}
                 zip=${this.zip}
                 ?showswitcher=${this.showswitcher}
+                ?showenergy=${this.showenergy}
                 ?autofit=${this.autofit}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-reset="${this._onReset}"
