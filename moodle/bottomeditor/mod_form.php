@@ -50,6 +50,20 @@ class mod_bottomeditor_mod_form extends moodleform_mod {
         $mform->setDefault('enablesolution', 1);
         $mform->addHelpButton('enablesolution', 'enablesolution', 'mod_bottomeditor');
 
+        foreach (['stepmode', 'showenergy', 'multifile'] as $flag) {
+            $mform->addElement('advcheckbox', $flag, get_string($flag, 'mod_bottomeditor'));
+            $mform->setDefault($flag, 0);
+            $mform->addHelpButton($flag, $flag, 'mod_bottomeditor');
+        }
+
+        foreach (['maxenergy', 'maxmemory'] as $limit) {
+            $mform->addElement('text', $limit, get_string($limit, 'mod_bottomeditor'), ['size' => 8]);
+            $mform->setType($limit, PARAM_INT);
+            $mform->setDefault($limit, 0);
+            $mform->addRule($limit, null, 'numeric', null, 'client');
+            $mform->addHelpButton($limit, $limit, 'mod_bottomeditor');
+        }
+
         // ── Standard grading / completion elements ────────────────────────────
         $this->standard_grading_coursemodule_elements();
         $this->standard_coursemodule_elements();

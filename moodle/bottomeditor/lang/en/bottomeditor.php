@@ -20,6 +20,16 @@ $string['layout_canvas']     = 'Canvas (turtle graphics)';
 $string['layout_split']      = 'Split (editor + canvas + console)';
 $string['enablesolution']    = 'Show solution button';
 $string['enablesolution_help'] = 'Allow students to reveal the solution. Disable for assessments.';
+$string['stepmode']          = 'Step-by-step execution';
+$string['stepmode_help']     = 'Run the student\'s code one line at a time, highlighting the current line and showing variable values. Tests still run at full speed. Needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+).';
+$string['showenergy']        = 'Show energy';
+$string['showenergy_help']   = 'Show how many lines the code executed after each run. Counting slows execution, so leave this off for heavy computations.';
+$string['multifile']         = 'Allow multiple files';
+$string['multifile_help']    = 'Show file tabs so students can add their own modules or data files.';
+$string['maxenergy']         = 'Maximum energy';
+$string['maxenergy_help']    = 'Maximum number of executed lines. Solutions that use more fail an extra "energy() <= N" check. 0 means no limit.';
+$string['maxmemory']         = 'Maximum memory';
+$string['maxmemory_help']    = 'Maximum number of non-blank, non-comment code lines. Longer solutions fail an extra "memory() <= N" check. 0 means no limit.';
 
 // Admin settings
 $string['scriptbaseurl']      = 'Script base URL';

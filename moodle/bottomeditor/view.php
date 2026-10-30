@@ -59,6 +59,16 @@ if ($record->layout !== 'console') {
 if (!$record->enablesolution) {
     $attrs[] = 'hidesolution';
 }
+foreach (['stepmode', 'showenergy', 'multifile'] as $flag) {
+    if (!empty($record->$flag)) {
+        $attrs[] = $flag;
+    }
+}
+foreach (['maxenergy', 'maxmemory'] as $limit) {
+    if (!empty($record->$limit) && (int)$record->$limit > 0) {
+        $attrs[] = $limit . '="' . (int)$record->$limit . '"';
+    }
+}
 
 echo '<bottom-exercise ' . implode(' ', $attrs) . '>';
 

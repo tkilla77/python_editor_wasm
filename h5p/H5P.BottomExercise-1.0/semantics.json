@@ -13,9 +13,27 @@
         "description": "Exercise description shown above the editor.",
         "optional": true,
         "tags": [
-          "p", "br", "strong", "em", "u", "code", "pre",
-          "h2", "h3", "h4", "ul", "ol", "li", "a",
-          "table", "thead", "tbody", "tr", "th", "td", "blockquote"
+          "p",
+          "br",
+          "strong",
+          "em",
+          "u",
+          "code",
+          "pre",
+          "h2",
+          "h3",
+          "h4",
+          "ul",
+          "ol",
+          "li",
+          "a",
+          "table",
+          "thead",
+          "tbody",
+          "tr",
+          "th",
+          "td",
+          "blockquote"
         ]
       },
       {
@@ -48,9 +66,18 @@
         "label": "Editor layout",
         "default": "console",
         "options": [
-          {"value": "console", "label": "Text console"},
-          {"value": "canvas",  "label": "Canvas (turtle graphics)"},
-          {"value": "split",   "label": "Split (editor + canvas + console)"}
+          {
+            "value": "console",
+            "label": "Text console"
+          },
+          {
+            "value": "canvas",
+            "label": "Canvas (turtle graphics)"
+          },
+          {
+            "value": "split",
+            "label": "Split (editor + canvas + console)"
+          }
         ]
       }
     ]
@@ -74,6 +101,43 @@
         "label": "Enable \"Retry\" button",
         "description": "Allow students to reset the editor and start over.",
         "default": true
+      },
+      {
+        "name": "stepmode",
+        "type": "boolean",
+        "label": "Step-by-step execution",
+        "description": "Run the student's code one line at a time, highlighting the current line and showing variable values. Tests still run at full speed. Needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+).",
+        "default": false
+      },
+      {
+        "name": "showEnergy",
+        "type": "boolean",
+        "label": "Show energy",
+        "description": "Show how many lines the code executed after each run. Counting slows execution, so leave this off for heavy computations.",
+        "default": false
+      },
+      {
+        "name": "multifile",
+        "type": "boolean",
+        "label": "Allow multiple files",
+        "description": "Show file tabs so students can add their own modules or data files.",
+        "default": false
+      },
+      {
+        "name": "maxEnergy",
+        "type": "number",
+        "label": "Maximum energy",
+        "min": 0,
+        "optional": true,
+        "description": "Maximum number of executed lines. Solutions that use more fail an extra \"energy() <= N\" check. Leave empty for no limit."
+      },
+      {
+        "name": "maxMemory",
+        "type": "number",
+        "label": "Maximum memory",
+        "min": 0,
+        "optional": true,
+        "description": "Maximum number of non-blank, non-comment code lines. Longer solutions fail an extra \"memory() <= N\" check. Leave empty for no limit."
       }
     ]
   }
