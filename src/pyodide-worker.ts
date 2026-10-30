@@ -201,11 +201,14 @@ __sys_trace__.settrace(__line_trace__)
 
 const ENERGY_TRACE_TEARDOWN = `__sys_trace__.settrace(None)`;
 
-/** Heavier trace: same as above but also sends variable snapshots and blocks
- *  for manual/animated step-through. Only used when stepMode is active. */
+/** Step trace: counts like the energy trace, and also pauses before each user
+ *  line until the page sends a step command. Pausing uses JSPI (run_sync), so
+ *  the worker returns to its event loop while waiting: messages arrive and the
+ *  canvas repaints. Needs the code to run via runPythonAsync. */
 const STEP_TRACE_SETUP = `
 import sys as __sys_trace__, json as __json_trace__
-from js import _step_update as __step_update__, _step_wait as __step_wait__, _step_free as __step_free__
+from pyodide.ffi import run_sync as __run_sync__
+from js import _step_update as __step_update__, _step_wait as __step_wait__, _step_mode as __step_mode__, _step_yield as __step_yield__
 __step_energy__ = 0
 __energy_on__ = False
 __energy_min_line__ = 0
@@ -214,8 +217,14 @@ def __step_trace__(frame, event, arg):
     global __step_energy__
     if event == 'line' and __energy_on__ and __energy_min_line__ < frame.f_lineno <= __energy_max_line__ and frame.f_code.co_filename == '<exec>':
         __step_energy__ += 1
-        if __step_free__():
+        mode = __step_mode__()
+        if mode == 'yield':
+            __run_sync__(__step_yield__())
+            mode = __step_mode__()
+        if mode == 'free':
             return __step_trace__
+        if mode == 'abort':
+            raise KeyboardInterrupt
         loc = {}
         for k, v in frame.f_locals.items():
             if (not k.startswith('_') and not callable(v) and k not in __init_globals__
@@ -226,15 +235,36 @@ def __step_trace__(frame, event, arg):
                 except Exception:
                     loc[k] = '<?>'
         __step_update__(frame.f_lineno, __json_trace__.dumps(loc), __step_energy__)
-        __step_wait__()
+        if __run_sync__(__step_wait__()) == 'abort':
+            raise KeyboardInterrupt
     return __step_trace__
 __sys_trace__.settrace(__step_trace__)
 `;
 
+const STEP_GLOBALS = ['__step_update__', '__step_wait__', '__step_mode__', '__step_yield__', '__run_sync__'];
+
+/** JSPI lets Python block on a promise without SharedArrayBuffer. */
+const canStep = typeof (WebAssembly as any).Suspending === 'function';
+
 let py: any = null;
 let inputResolve: ((value: string) => void) | null = null;
-/** Shared step-control buffer (Int32Array over SharedArrayBuffer). 0=paused, 1=step, 2=run-free. */
-let stepBuffer: Int32Array | null = null;
+/** 'off' = not stepping; 'wait' = pause before every line; 'free' = run, but yield now and then. */
+let stepState: 'off' | 'wait' | 'free' = 'off';
+let stepAborted = false;
+let stepResolve: ((cmd: string) => void) | null = null;
+let stepLastYield = 0;
+const STEP_YIELD_MS = 50; // at full speed, check this often for pause/stop messages
+
+function stepBegin() {
+    stepState = 'wait';
+    stepAborted = false;
+    stepLastYield = performance.now();
+}
+
+function stepEnd() {
+    stepState = 'off';
+    stepResolve = null;
+}
 // Per-editor canvas contexts, keyed by editorId.
 const canvasCtxMap = new Map<string, OffscreenCanvasRenderingContext2D>();
 // The context currently active (set before each run).
@@ -310,19 +340,21 @@ async function init(baseURL: string, indexURL: string) {
         // unreliable on Pyodide's custom stream wrapper).
         // Step-through JS globals: called from the Python step trace.
         (self as any)._step_update = (lineNo: number, localsJson: string, energy: number) => {
+            flushStdout();
             let locals: Record<string, string> = {};
             try { locals = JSON.parse(localsJson); } catch {}
             post('stepUpdate', { runId: currentRunId, line: lineNo, locals, energy });
         };
-        // Full speed (value 2): skip the per-line snapshot and message.
-        (self as any)._step_free = () => !!stepBuffer && Atomics.load(stepBuffer, 0) === 2;
-        (self as any)._step_wait = () => {
-            if (!stepBuffer) return;
-            if (Atomics.load(stepBuffer, 0) === 2) return; // run freely — just stream updates
-            Atomics.store(stepBuffer, 0, 0);   // signal: we're paused
-            Atomics.notify(stepBuffer, 0, 1);  // wake any main-thread waiter
-            Atomics.wait(stepBuffer, 0, 0);    // block until value changes from 0
+        (self as any)._step_mode = () => {
+            if (stepAborted) return 'abort';
+            if (stepState !== 'free') return 'wait';
+            const now = performance.now();
+            if (now - stepLastYield < STEP_YIELD_MS) return 'free';
+            stepLastYield = now;
+            return 'yield';
         };
+        (self as any)._step_yield = () => new Promise(r => setTimeout(r, 0));
+        (self as any)._step_wait = () => new Promise<string>(r => { stepResolve = r; });
         (self as any)._pyWrite = (text: string) => {
             stdoutBuffer += text;
             if (syncRun) { enforceBufferLimits(); flushStdout(); }
@@ -362,7 +394,7 @@ builtins.input = _input
         await py.runPythonAsync(`\nfrom js import console\n`);
         // Snapshot globals after init so RESET_GLOBALS knows what to preserve.
         await py.runPython(`__init_globals__ = frozenset(globals()) | {'__init_globals__'}`);
-        post('ready');
+        post('ready', { canStep });
     } catch (err: any) {
         console.error('[pyodide-worker] init failed:', err);
         post('error', { error: String(err) });
@@ -378,6 +410,17 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 inputResolve = null;
                 resolve(typeof msg.value === 'string' ? msg.value : '');
             }
+            return;
+        }
+
+        if (msg.type === 'stepCommand') {
+            const cmd = (msg as any).cmd as 'step' | 'free' | 'pause' | 'abort';
+            if (cmd === 'pause') { if (stepState === 'free') stepState = 'wait'; return; }
+            if (cmd === 'free') stepState = 'free';
+            if (cmd === 'abort') stepAborted = true;
+            const resolve = stepResolve;
+            stepResolve = null;
+            resolve?.(cmd === 'abort' ? 'abort' : 'go');
             return;
         }
 
@@ -497,8 +540,6 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             }
             const runId = msg.runId;
             currentRunId = runId;
-            // Step mode: install step buffer if provided.
-            if ((msg as any).stepBuffer) stepBuffer = (msg as any).stepBuffer as Int32Array;
             // Switch the active canvas to this editor's canvas (if any).
             canvasCtx = (msg.editorId && canvasCtxMap.get(msg.editorId)) || null;
             if (canvasCtx) py.canvas.setCanvas2D(canvasCtx.canvas);
@@ -537,16 +578,16 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             const codeToRun = needsAsync
                 ? code.replace(/\binput\s*\(/g, 'await input(')
                 : code;
-            syncRun = !needsAsync;
+            // Stepping blocks via run_sync, which only works under runPythonAsync.
+            const useStepTrace = canStep && !!(msg as any).step;
+            syncRun = !needsAsync && !useStepTrace;
             const runFilename: string = (msg as any).filename ?? '<exec>';
-            const runCode = needsAsync
+            const runCode = needsAsync || useStepTrace
                 ? (c: string) => py.runPythonAsync(c, { filename: runFilename })
                 : (c: string) => Promise.resolve(py.runPython(c, { filename: runFilename }));
-            // Install energy/step trace. Use step trace only for sync code (Atomics.wait
-            // requires a synchronous call stack; async runs use energy-only trace).
-            const useStepTrace = !needsAsync && !!(msg as any).stepBuffer;
             // The trace slows every line, so only install it when someone reads the count.
-            const countEnergy = !!(msg as any).stepBuffer || !!(msg as any).countEnergy;
+            const countEnergy = useStepTrace || !!(msg as any).countEnergy;
+            if (useStepTrace) stepBegin();
             if (countEnergy) {
                 try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
             }
@@ -572,8 +613,8 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     lastRunEditorId = msg.editorId;
                     try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
                     const runEnergy: number = py.globals.get('__step_energy__') ?? 0;
-                    try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__','__energy_on__','__energy_min_line__','__energy_max_line__','__step_update__','__step_wait__','__step_free__']:\n    globals().pop(__k,None)\ndel __k`); } catch {}
-                    stepBuffer = null;
+                    try { py.runPython(`for __k in ['__step_energy__','__sys_trace__','__json_trace__','__line_trace__','__step_trace__','__energy_on__','__energy_min_line__','__energy_max_line__',${STEP_GLOBALS.map(n => `'${n}'`).join(',')}]:\n    globals().pop(__k,None)\ndel __k`); } catch {}
+                    stepEnd();
                     post('done', { runId, energy: countEnergy ? runEnergy : undefined });
                 } catch (err: any) {
                     if (flushTimer !== null) {
@@ -584,7 +625,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     syncRun = false;
                     currentRunId = undefined;
                     try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
-                    stepBuffer = null;
+                    stepEnd();
                     const errStr = String(err);
                     const errorMsg = errStr.includes("'await' outside async function")
                         ? "SyntaxError: input() is only supported in top-level code, not inside functions."
@@ -600,7 +641,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 syncRun = false;
                 currentRunId = undefined;
                 try { py.runPython(ENERGY_TRACE_TEARDOWN); } catch {}
-                stepBuffer = null;
+                stepEnd();
                 const errStr = String(err);
                 const errorMsg = errStr.includes("'await' outside async function")
                     ? "SyntaxError: input() is only supported in top-level code, not inside functions."
@@ -638,8 +679,9 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
             const codeToRun = needsAsync
                 ? code.replace(/\binput\s*\(/g, 'await input(')
                 : code;
-            syncRun = !needsAsync;
-            const runCode = needsAsync
+            const useStepTrace = canStep && !!(msg as any).step;
+            syncRun = !needsAsync && !useStepTrace;
+            const runCode = needsAsync || useStepTrace
                 ? (c: string) => py.runPythonAsync(c)
                 : (c: string) => Promise.resolve(py.runPython(c));
             try {
@@ -662,8 +704,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 // Phase 1: run user code with stdout teed to capture buffer
                 try { py.runPython(CAPTURE_SETUP, { filename: '<bottom-init>' }); } catch {}
                 // Step through the user's code only; tests below run untraced.
-                const useStepTrace = !needsAsync && !!(msg as any).stepBuffer;
-                if (useStepTrace) stepBuffer = (msg as any).stepBuffer as Int32Array;
+                if (useStepTrace) stepBegin();
                 const countEnergy = useStepTrace || !!(msg as any).countEnergy;
                 if (countEnergy) {
                     try { py.runPython(useStepTrace ? STEP_TRACE_SETUP : ENERGY_TRACE_SETUP); } catch {}
@@ -678,7 +719,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                     finally {
                         py.globals.set('__energy_on__', false);
                         if (useStepTrace) {
-                            stepBuffer = null;
+                            stepEnd();
                             post('stepDone', { runId });
                         }
                     }
@@ -729,7 +770,7 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
 for __k in ['__test_source__', '__user_code__', '__run_tests__', '__captured_output__',
             '__energy_val__', '__step_energy__', '__sys_trace__', '__json_trace__',
             '__line_trace__', '__step_trace__', '__energy_on__', '__energy_min_line__', '__energy_max_line__',
-            '__step_update__', '__step_wait__', '__step_free__',
+            ${STEP_GLOBALS.map(n => `'${n}'`).join(', ')},
             'output', 'output_lines', 'with_input', 'energy', 'memory']:
     try: del globals()[__k]
     except: pass

@@ -833,12 +833,11 @@ for i in range(1, 4):
     total += i
 print(total)
 </bottom-editor>
-<p>Stepping works for regular programs. Programs that use <code>input()</code>, <code>await</code> or
-turtle graphics run normally even when <code>stepmode</code> is on; their energy is still counted.</p>
-<p>Stepping relies on <code>SharedArrayBuffer</code>, so the page must be served with the
-<code>Cross-Origin-Opener-Policy: same-origin</code> and
-<code>Cross-Origin-Embedder-Policy: require-corp</code> headers. Without them the program runs
-normally.</p>
+<p>Stepping works for any program, including <code>input()</code> and turtle or Kara graphics: the
+canvas shows the drawing up to the highlighted line.</p>
+<p>Stepping needs a current browser: Chrome or Edge 137+, Firefox 153+, or Safari 27+. It uses
+WebAssembly JavaScript Promise Integration (JSPI) and needs no special server headers. In older
+browsers the step bar says so and Run executes the program normally.</p>
 
 <h3>Energy and memory in exercises</h3>
 <p>Tests can check both measures with the <code>energy()</code> and <code>memory()</code> helpers:</p>

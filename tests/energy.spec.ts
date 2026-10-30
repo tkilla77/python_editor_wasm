@@ -1,5 +1,16 @@
 import { test, expect } from '@playwright/test';
 
+/** Serve pages like a typical embedding site: no COOP/COEP, so no SharedArrayBuffer. */
+async function withoutIsolation(page: any) {
+    await page.route('**/*', async (route: any) => {
+        const res = await route.fetch();
+        const headers = { ...res.headers() };
+        delete headers['cross-origin-opener-policy'];
+        delete headers['cross-origin-embedder-policy'];
+        await route.fulfill({ response: res, headers });
+    });
+}
+
 async function energyOf(page: any, code: string): Promise<number | null> {
     return page.evaluate(async (code: string) => {
         const ed = document.querySelector('bottom-editor') as any;
@@ -45,7 +56,9 @@ test('energy counts executed user lines only', async ({ page }) => {
 });
 
 test('stepmode pauses on each line and reports locals', async ({ page }) => {
+    await withoutIsolation(page);
     await page.goto('/tests/fixtures/basic.html');
+    expect(await page.evaluate(() => crossOriginIsolated)).toBe(false);
     await page.evaluate(() => (document.querySelector('bottom-editor') as any)?.ready, { timeout: 75_000 });
 
     await page.evaluate(() => {
@@ -97,6 +110,7 @@ test('exercises count energy only when maxenergy or energy() is used', async ({ 
 });
 
 test('pause stops a full-speed run, stop ends a paused run', async ({ page }) => {
+    await withoutIsolation(page);
     await page.goto('/tests/fixtures/basic.html');
     await page.evaluate(() => (document.querySelector('bottom-editor') as any)?.ready, { timeout: 75_000 });
     const ed = 'document.querySelector("bottom-editor")';
@@ -123,6 +137,7 @@ test('pause stops a full-speed run, stop ends a paused run', async ({ page }) =>
 });
 
 test('exercises step through student code, then run tests untraced', async ({ page }) => {
+    await withoutIsolation(page);
     await page.goto('/exercise.html');
     await page.evaluate(async () => {
         const ex = document.createElement('bottom-exercise') as any;
@@ -145,4 +160,53 @@ test('exercises step through student code, then run tests untraced', async ({ pa
     expect(report.passed).toBe(true);
     expect(report.energy).toBe(2);
     expect(await page.evaluate(`${inner}._stepping`)).toBe(false);
+});
+
+test('turtle drawing appears step by step', async ({ page }) => {
+    await withoutIsolation(page);
+    await page.goto('/tests/fixtures/turtle.html');
+    await page.evaluate(() => (document.querySelector('bottom-editor') as any)?.ready, { timeout: 75_000 });
+    await page.evaluate(() => {
+        const e = document.querySelector('bottom-editor') as any;
+        e.stepmode = true;
+        e.sourceCode = 'import turtle\nt = turtle.Turtle()\nt.speed(0)\nt.pensize(3)\nt.forward(100)\nt.left(90)\nt.forward(100)';
+        (window as any).__run = e.evaluatePython();
+    });
+    const ed = 'document.querySelector("bottom-editor")';
+    const pausedAt = async (line: number) => page.waitForFunction(`${ed}._stepPaused && ${ed}.energy === ${line}`);
+    await pausedAt(1);
+    for (let line = 2; line <= 6; line++) {
+        await page.evaluate(`${ed}._doStep()`);
+        await pausedAt(line);
+    }
+    // Paused before t.left(90): the first segment is drawn, the second is not.
+    const pixel = (x: number, y: number) => page.evaluate(([x, y]) => (document.querySelector('bottom-editor') as any).samplePixel(x, y), [x, y]);
+    expect((await pixel(1050, 1000)).a).toBeGreaterThan(200);
+    expect((await pixel(1100, 950)).a).toBe(0);
+    if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+
+    await page.evaluate(() => { const e = document.querySelector('bottom-editor') as any; e._setStepSpeed(21); e._doPlay(); });
+    await page.evaluate(() => (window as any).__run);
+    expect((await pixel(1100, 950)).a).toBeGreaterThan(200);
+});
+
+test('input() works while stepping', async ({ page }) => {
+    await withoutIsolation(page);
+    page.on('dialog', (d: any) => d.accept('21'));
+    await page.goto('/tests/fixtures/basic.html');
+    await page.evaluate(() => (document.querySelector('bottom-editor') as any)?.ready, { timeout: 75_000 });
+    await page.evaluate(() => {
+        const e = document.querySelector('bottom-editor') as any;
+        e.stepmode = true;
+        e.sourceCode = 'n = int(input("n? "))\nprint(n * 2)';
+        (window as any).__run = e.evaluatePython();
+    });
+    const ed = 'document.querySelector("bottom-editor")';
+    await page.waitForFunction(`${ed}._stepPaused && ${ed}.energy === 1`);
+    await page.evaluate(`${ed}._doStep()`);
+    await page.waitForFunction(`${ed}._stepPaused && ${ed}.energy === 2`);
+    expect(await page.evaluate(`${ed}._stepLocals`)).toEqual({ n: '21' });
+    await page.evaluate(`${ed}._doStep()`);
+    await page.evaluate(() => (window as any).__run);
+    expect(await page.evaluate(`${ed}.outputText`)).toContain('42');
 });

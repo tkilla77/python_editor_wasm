@@ -235,6 +235,7 @@ export class BottomEditor extends LitElement {
     @state() private _energy: number | null = null;
     @state() private _stepPlaying = false;
     @state() private _stepSpeed = 5;
+    @state() private _canStep = true;
     private _stepPlayTimer?: ReturnType<typeof setTimeout>;
 
     // ── Cloud sync state ───────────────────────────────────────────────────────
@@ -613,6 +614,7 @@ export class BottomEditor extends LitElement {
                 this._output?.clearOutput();
                 this._output?.addLog('Python Ready!');
                 this._pyReady = true;
+                this._canStep = this.runtime.canStep;
                 this._readyResolve();
                 if (canvasEl) {
                     this._offscreenCanvas = canvasEl.transferToOffscreen();
@@ -780,12 +782,15 @@ export class BottomEditor extends LitElement {
     }
 
     private _stop() {
-        // Wake a worker blocked between steps so it can see the interrupt.
-        if (this._stepping) {
-            this._stopPlay();
-            this.runtime.stepContinue();
+        if (!this._stepping) {
+            this.runtime.interrupt();
+            return;
         }
-        this.runtime.interrupt();
+        // The step trace raises KeyboardInterrupt at the next line. If the code is
+        // stuck inside a long library call it never gets there, so fall back.
+        this._stopPlay();
+        this.runtime.stepAbort();
+        setTimeout(() => { if (this._stepping) this.runtime.interrupt(); }, 1500);
     }
 
     private _onStepUpdate(line: number, locals: Record<string, string>, energy: number) {
@@ -835,18 +840,16 @@ export class BottomEditor extends LitElement {
 
     /** In stepmode, prepare the step buffer and return the per-line callback. */
     private _beginStepping() {
-        if (!this.stepmode) return undefined;
+        if (!this.stepmode || !this._canStep) return undefined;
         this._stepping = true;
         this._stepPaused = false;
         this._stopPlay();
         this._updateStepLine(null);
-        this.runtime.enableStepMode();
         return (line: number, locals: Record<string, string>, energy: number) => this._onStepUpdate(line, locals, energy);
     }
 
     private _endStepping() {
         if (!this._stepping) return;
-        this.runtime.disableStepMode();
         this._stepping = false;
         this._stepPaused = false;
         this._stopPlay();
@@ -1024,7 +1027,9 @@ export class BottomEditor extends LitElement {
                                @input="${(e: InputEvent) => this._setStepSpeed(+(e.target as HTMLInputElement).value)}">
                     </label>
                 ` : html`
-                    <span class="step-hint">Click Run to step through</span>
+                    <span class="step-hint">${this._canStep
+                        ? 'Click Run to step through'
+                        : 'Stepping needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+)'}</span>
                 `}
                 ${this._energy !== null ? html`
                     <span class="step-energy" title="Lines executed">⚡ ${this._energy}</span>

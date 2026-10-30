@@ -46,7 +46,8 @@ export class PyodideRuntime {
         onStepDone?: () => void;
     }>();
     private interruptBuffer?: Uint8Array;
-    private _stepBuffer?: Int32Array;
+    /** True when the browser supports JSPI, which stepping needs. Known once ready. */
+    canStep = false;
     private _queue: Promise<void|TestReport> = Promise.resolve();
     private _fitCallback?: (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null) => void;
 
@@ -101,8 +102,7 @@ export class PyodideRuntime {
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onEnergy, onStepUpdate });
-                const stepBuffer = onStepUpdate ? this._stepBuffer : undefined;
-                this.worker?.postMessage({ type: 'run', code, runId, editorId, extraFiles, stepBuffer, ...opts });
+                this.worker?.postMessage({ type: 'run', code, runId, editorId, extraFiles, step: !!onStepUpdate, ...opts });
             });
         };
         const result = this._queue.then(doRun);
@@ -132,8 +132,7 @@ export class PyodideRuntime {
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
                 this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onStepUpdate, onStepDone });
-                const stepBuffer = onStepUpdate ? this._stepBuffer : undefined;
-                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, stepBuffer, ...opts });
+                this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, step: !!onStepUpdate, ...opts });
             });
         };
         const result = this._queue.then(doRun);
@@ -191,39 +190,17 @@ export class PyodideRuntime {
         });
     }
 
-    /** Allocate a SharedArrayBuffer step-control slot. Call once. */
-    enableStepMode(): void {
-        try {
-            const sab = new SharedArrayBuffer(4);
-            this._stepBuffer = new Int32Array(sab);
-            Atomics.store(this._stepBuffer, 0, 0);
-        } catch {
-            this._stepBuffer = undefined;
-        }
-    }
+    /** Run the highlighted line, then pause again. */
+    step(): void { this._stepCommand('step'); }
+    /** Run at full speed until paused. */
+    stepContinue(): void { this._stepCommand('free'); }
+    /** Pause a full-speed run at the next line. */
+    stepPause(): void { this._stepCommand('pause'); }
+    /** End a stepped run with KeyboardInterrupt. */
+    stepAbort(): void { this._stepCommand('abort'); }
 
-    disableStepMode(): void {
-        this._stepBuffer = undefined;
-    }
-
-    /** Advance one line (while worker is paused in step mode). */
-    step(): void {
-        if (!this._stepBuffer) return;
-        Atomics.store(this._stepBuffer, 0, 1);
-        Atomics.notify(this._stepBuffer, 0, 1);
-    }
-
-    /** Stop free-running execution at the next line. */
-    stepPause(): void {
-        if (!this._stepBuffer) return;
-        Atomics.store(this._stepBuffer, 0, 0);
-    }
-
-    /** Let execution run freely (worker no longer blocks on each line). */
-    stepContinue(): void {
-        if (!this._stepBuffer) return;
-        Atomics.store(this._stepBuffer, 0, 2);
-        Atomics.notify(this._stepBuffer, 0, 1);
+    private _stepCommand(cmd: 'step' | 'free' | 'pause' | 'abort') {
+        this.worker?.postMessage({ type: 'stepCommand', cmd });
     }
 
     /** Interrupt a running execution. Falls back to worker termination. */
@@ -345,6 +322,7 @@ export class PyodideRuntime {
             return;
         }
         if (msg.type === 'ready') {
+            this.canStep = !!msg.canStep;
             try {
                 this.interruptBuffer = new Uint8Array(new SharedArrayBuffer(1));
                 this.interruptBuffer[0] = 0;

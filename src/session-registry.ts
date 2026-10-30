@@ -52,11 +52,11 @@ export class EditorHandle {
     requestFit(cb: Parameters<PyodideRuntime['requestFit']>[0]) { return this._runtime.requestFitFor(cb, this.editorId); }
     samplePixel(x: number, y: number) { return this._runtime.samplePixelFor(x, y, this.editorId); }
     interrupt() { this._runtime.interrupt(); }
-    enableStepMode() { this._runtime.enableStepMode(); }
-    disableStepMode() { this._runtime.disableStepMode(); }
+    get canStep() { return this._runtime.canStep; }
     step() { this._runtime.step(); }
     stepContinue() { this._runtime.stepContinue(); }
     stepPause() { this._runtime.stepPause(); }
+    stepAbort() { this._runtime.stepAbort(); }
     terminate() { /* managed by session */ }
 }
 
