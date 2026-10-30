@@ -607,6 +607,16 @@ for _ in range(4):
 <td>Step through the student's code line by line; the tests then run at full speed</td>
 </tr>
 <tr>
+<td><code>multifile</code></td>
+<td>off</td>
+<td>Show file tabs so students can add files (see <a href="#multi-file">Multi-file support</a>)</td>
+</tr>
+<tr>
+<td><code>mainfile</code></td>
+<td><code>main.py</code></td>
+<td>Tab name of the starter code in multi-file mode</td>
+</tr>
+<tr>
 <td><code>maxmemory</code></td>
 <td>—</td>
 <td>Maximum non-blank, non-comment lines of code; exceeding it adds a failing <code>memory() &lt;= N</code> result</td>
@@ -794,7 +804,29 @@ greet("world")
 template content and removes any user-added tabs.</p>
 <p>The <strong>permalink</strong> button encodes all files as a <code>?files=[…]</code> JSON parameter
 instead of the single-file <code>?code=…</code> parameter, so the full multi-file state is
-captured in the URL.</p>
+captured in the URL. Files that came from a <code>zip</code> are left out unless they were edited:
+the link keeps the zip URL, which brings them back.</p>
+<p>Long links can fail: many web servers reject URLs over about 8,000 characters. When a copied
+link is longer than that, the Share button turns amber and says <strong>Long link!</strong>. Its
+tooltip names the largest files. Large data files are better shipped in a <code>zip</code>.</p>
+
+<h3>Multiple files in exercises</h3>
+<p><code>&lt;bottom-exercise&gt;</code> takes the same <code>&lt;template filename&gt;</code> children,
+<code>multifile</code> and <code>mainfile</code> attributes. The starter code is the main file. Tests
+run with every file in place, and exercise permalinks carry the extra files.</p>
+<pre><code class="language-html">&lt;bottom-exercise id=&quot;stats&quot; mainfile=&quot;stats.py&quot;&gt;
+  &lt;template data-type=&quot;starter&quot;&gt;
+rows = open(&quot;scores.csv&quot;).read().splitlines()[1:]
+  &lt;/template&gt;
+  &lt;template filename=&quot;scores.csv&quot;&gt;
+name,score
+Alice,92
+  &lt;/template&gt;
+  &lt;template data-type=&quot;test&quot;&gt;
+assert len(rows) == 1
+  &lt;/template&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
 
 <hr>
 <h2 id="stepping">Energy, memory and stepping</h2>

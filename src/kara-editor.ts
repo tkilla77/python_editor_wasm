@@ -95,7 +95,7 @@ export class KaraEditor extends LitElement {
         return this._prefix;
     }
 
-    private readonly _permalink = () => {
+    private readonly _permalink = async () => {
         const url = new URL(PERMALINK_BASE);
         url.searchParams.set('world', this._worldStr);
         // Read live editor content rather than the stale initial value.
@@ -105,7 +105,8 @@ export class KaraEditor extends LitElement {
         if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
         if (this.stepmode)   url.searchParams.set('stepmode', '1');
         if (this.showenergy) url.searchParams.set('showenergy', '1');
-        navigator.clipboard.writeText(url.href);
+        await navigator.clipboard.writeText(url.href);
+        return url.href;
     };
 
     render() {

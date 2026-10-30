@@ -83,7 +83,14 @@ declare global {
 }
 globalThis.input_fixed = (msg: string) => prompt(msg);
 
-type FileEntry = { name: string; code: string; initialCode: string };
+/** added: created by the user, not part of the authored set. zip: original text when the file came from the zip. */
+type FileEntry = { name: string; code: string; initialCode: string; added?: boolean; zip?: string };
+
+/** A file as passed in or shared. `initial` is the authored text (defaults to code); null marks a user-added file. */
+export type FileSpec = { name: string; code: string; initial?: string | null };
+
+/** Links longer than this get rejected by common server defaults (nginx, Apache: 8 KB). */
+const LONG_LINK = 8000;
 
 @customElement('bottom-editor')
 export class BottomEditor extends LitElement {
@@ -202,7 +209,7 @@ export class BottomEditor extends LitElement {
      * instead of copyPermalink()'s built-in URL builder.
      */
     @property({ attribute: false })
-    permalinkCallback?: () => Promise<void> | void;
+    permalinkCallback?: () => Promise<string | void> | string | void;
 
     /**
      * Override the storage key used for persistence. When set, bypasses the
@@ -250,7 +257,8 @@ export class BottomEditor extends LitElement {
     @state() private _syncBackend: BackendId = 'local';
     @state() private _cloudSyncing = false;
     @state() private _showSyncPicker = false;
-    @state() private _shareState: 'idle' | 'copied' | 'error' = 'idle';
+    @state() private _shareState: 'idle' | 'copied' | 'large' | 'error' = 'idle';
+    @state() private _shareHint = '';
     private readonly _local = new LocalStorageAdapter();
     private _cloudSaveTimer?: ReturnType<typeof setTimeout>;
 
@@ -263,10 +271,12 @@ export class BottomEditor extends LitElement {
      * before firstUpdated(). Sets _pendingCode from the first file.
      */
     @property({ attribute: false })
-    set files(list: { name: string; code: string }[]) {
+    set files(list: FileSpec[]) {
         if (!list || list.length === 0) return;
         this._pendingCode = list[0].code;
-        this._tabs = list.map(f => ({ name: f.name, code: f.code, initialCode: f.code }));
+        this._tabs = list.map(f => f.initial === null
+            ? { name: f.name, code: f.code, initialCode: '', added: true }
+            : { name: f.name, code: f.code, initialCode: f.initial ?? f.code });
         this._tabIdx = 0;
     }
     get files(): { name: string; code: string }[] {
@@ -325,7 +335,7 @@ export class BottomEditor extends LitElement {
     /** Add a new blank (or named) file tab. */
     private _addTab(name?: string) {
         const baseName = name ?? `file${this._tabs.length + 1}.py`;
-        const entry: FileEntry = { name: baseName, code: '', initialCode: '' };
+        const entry: FileEntry = { name: baseName, code: '', initialCode: '', added: true };
         this._tabs = [...this._tabs, entry];
         this._switchTab(this._tabs.length - 1);
         this._saveState();
@@ -427,11 +437,10 @@ export class BottomEditor extends LitElement {
     private _applyState(saved: ExerciseState): void {
         if (this._tabs.length > 0 && saved.files && saved.files.length > 0) {
             // Multi-file: the saved list wins, so added and deleted files persist.
-            this._tabs = saved.files.map(f => ({
-                name: f.name,
-                code: f.code,
-                initialCode: this._initialTabs.find(t => t.name === f.name)?.initialCode ?? '',
-            }));
+            this._tabs = saved.files.map(f => {
+                const authored = this._initialTabs.find(t => t.name === f.name);
+                return authored ? { ...authored, code: f.code } : { name: f.name, code: f.code, initialCode: '', added: true };
+            });
             this._savedFileNames = new Set(saved.files.map(f => f.name));
             const activeIdx = saved.activeFile
                 ? this._tabs.findIndex(t => t.name === saved.activeFile)
@@ -560,7 +569,7 @@ export class BottomEditor extends LitElement {
             this._tabs = [{ name: this.getAttribute('mainfile') ?? 'main.py', code: text, initialCode: text }];
             this._tabIdx = 0;
         }
-        this._initialTabs = this._tabs.map(t => ({ ...t }));
+        this._initialTabs = this._tabs.filter(t => !t.added).map(t => ({ ...t }));
 
         this._editor = createPythonEditor(
             this._code!,
@@ -906,32 +915,62 @@ export class BottomEditor extends LitElement {
         if (this._tabs.length === 0) return;
         // Zip files join the authored set. The user's saved edits and deletions win.
         if (this._editor) this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
-        const tabs = [...this._tabs];
+        // Zip files go after the other files, in zip order, whatever order they arrived in.
+        const zipNames = new Set(files.map(f => f.name));
+        const active = this._tabs[this._tabIdx]?.name;
+        const tabs = this._tabs.filter(t => !zipNames.has(t.name));
+        this._initialTabs = this._initialTabs.filter(t => !zipNames.has(t.name));
         for (const f of files) {
-            if (!this._initialTabs.some(t => t.name === f.name)) {
-                this._initialTabs.push({ name: f.name, code: f.code, initialCode: f.code });
-            }
-            const open = tabs.find(t => t.name === f.name);
-            if (open) open.initialCode = f.code;
-            else if (!this._savedFileNames || this._savedFileNames.has(f.name)) {
-                tabs.push({ name: f.name, code: f.code, initialCode: f.code });
-            }
+            const fromZip: FileEntry = { name: f.name, code: f.code, initialCode: f.code, zip: f.code };
+            this._initialTabs.push(fromZip);
+            const open = this._tabs.find(t => t.name === f.name);
+            if (open) tabs.push({ ...fromZip, code: open.code });
+            else if (!this._savedFileNames || this._savedFileNames.has(f.name)) tabs.push(fromZip);
         }
         this._tabs = tabs;
+        this._tabIdx = Math.max(0, tabs.findIndex(t => t.name === active));
+    }
+
+    /**
+     * Files worth putting in a link: everything except zip files the user hasn't
+     * changed, since the zip URL brings those back. Changed zip files and
+     * user-added files are marked initial: null (the zip or nothing is their original).
+     */
+    sharedFiles(): FileSpec[] {
+        if (this._editor && this._tabs.length > 0) this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
+        return this._tabs
+            .filter(t => t.zip === undefined || t.code !== t.zip)
+            .map(t => t.added || t.zip !== undefined
+                ? { name: t.name, code: t.code, initial: null }
+                : { name: t.name, code: t.code, ...(t.initialCode !== t.code ? { initial: t.initialCode } : {}) });
+    }
+
+    /** Warn (via the Share button) when a copied link is long enough that servers may reject it. */
+    private _checkLinkLength(href: string | void) {
+        if (typeof href !== 'string' || href.length <= LONG_LINK) return false;
+        const big = [...this._tabs]
+            .sort((a, b) => b.code.length - a.code.length)
+            .slice(0, 3)
+            .filter(t => t.code.length > 1000)
+            .map(t => `${t.name} (${Math.round(t.code.length / 1000)} kB)`);
+        this._shareHint = `Copied, but the link is ${href.length.toLocaleString()} characters long. `
+            + `Servers often reject links over ${LONG_LINK.toLocaleString()} characters.`
+            + (big.length ? ` Largest files: ${big.join(', ')}. Large data files are better shipped in a zip.` : '');
+        console.warn('[bottom-editor] ' + this._shareHint);
+        return true;
     }
 
     async copyPermalink() {
         try {
+            let href: string | void;
             if (this.permalinkCallback) {
-                await this.permalinkCallback();
+                href = await this.permalinkCallback();
             } else {
                 // FIXME allow permalink base to be configured
                 const url = new URL("https://bottom.ch/editor/stable/");
                 if (this._tabs.length > 0) {
-                    // Save current editor content into tabs before serialising.
-                    if (this._editor) this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
                     url.searchParams.set('files', JSON.stringify(
-                        this._tabs.map(f => ({ name: f.name, code: f.code }))
+                        this.sharedFiles().map(f => ({ name: f.name, code: f.code }))
                     ));
                 } else {
                     url.searchParams.set('code', this.sourceCode);
@@ -944,12 +983,15 @@ export class BottomEditor extends LitElement {
                 if (this.stepmode)   url.searchParams.set('stepmode', '1');
                 if (this.showenergy) url.searchParams.set('showenergy', '1');
                 await navigator.clipboard.writeText(url.href);
+                href = url.href;
             }
-            this._shareState = 'copied';
+            this._shareHint = '';
+            this._shareState = this._checkLinkLength(href) ? 'large' : 'copied';
         } catch {
             this._shareState = 'error';
         }
-        setTimeout(() => this._shareState = 'idle', 2000);
+        const state = this._shareState;
+        setTimeout(() => { if (this._shareState === state) this._shareState = 'idle'; }, state === 'large' ? 8000 : 2000);
     }
 
     /** Reset: clear canvas/output, re-run readyCode. Does not touch editor code. */
@@ -1078,6 +1120,7 @@ export class BottomEditor extends LitElement {
                     ?showrevert="${this.showrevert}"
                     .permalink=${this.permalink}
                     .shareState=${this._shareState}
+                    .shareHint=${this._shareHint}
                     ?showsync="${this._syncAvailable()}"
                     syncbackend="${syncBackend}"
                     @bottom-run="${() => this.onRun ? this.onRun() : this.evaluatePython()}"

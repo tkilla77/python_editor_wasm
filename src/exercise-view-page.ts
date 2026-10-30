@@ -15,6 +15,20 @@ async function main() {
         if (state.zip)         ex.setAttribute('zip',         state.zip);
         if (state.timeout)     ex.setAttribute('timeout',     state.timeout);
         if (state.showswitcher) ex.setAttribute('showswitcher', '');
+        if (state.multifile)    ex.setAttribute('multifile', '');
+        if (state.mainfile)     ex.setAttribute('mainfile', state.mainfile);
+        if (state.files?.length) {
+            // Authored files become templates (their original text is the Revert target);
+            // the current contents, including user-added files, override them.
+            for (const f of state.files) {
+                if (f.initial === null) continue;
+                const t = document.createElement('template');
+                t.setAttribute('filename', f.name);
+                t.content.textContent = f.initial ?? f.code;
+                ex.appendChild(t);
+            }
+            ex.files = state.files;
+        }
         if (state.stepmode)     ex.setAttribute('stepmode', '');
         if (state.showenergy)   ex.setAttribute('showenergy', '');
         if (state.maxenergy)    ex.setAttribute('maxenergy', String(state.maxenergy));

@@ -87,3 +87,91 @@ test('kara-exercise permalink keeps step and energy settings', async ({ page }) 
     await expect(ex.locator('bottom-editor')).toHaveAttribute('stepmode', '');
     await expect(ex.locator('bottom-editor')).toHaveAttribute('showenergy', '');
 });
+
+async function decodeX(page: any, path: string) {
+    const x = new URL(path, 'http://x').searchParams.get('x')!;
+    return page.evaluate(async (x: string) => (await import('/src/exercise-permalink.ts')).decodeExercise(x), x);
+}
+
+const exEditor = 'document.querySelector("bottom-exercise").renderRoot.querySelector("bottom-editor")';
+
+test('exercise permalink carries extra files; revert goes back to the authored versions', async ({ page }) => {
+    await page.goto('/exercise.html');
+    await page.evaluate(async () => {
+        document.querySelectorAll('bottom-exercise').forEach(e => e.remove());
+        const ex = document.createElement('bottom-exercise') as any;
+        ex.setAttribute('mainfile', 'app.py');
+        ex.innerHTML = '<template data-type="starter">from helper import f\nprint(f())</template>'
+            + '<template filename="helper.py">def f(): return 1</template>';
+        document.body.append(ex);
+        await ex.updateComplete;
+        const ed = ex.renderRoot.querySelector('bottom-editor');
+        await ed.updateComplete;
+        ed._switchTab(1); ed.replaceDoc('def f(): return 2'); ed._switchTab(0);
+        ed._addTab('notes.txt'); ed.replaceDoc('mine'); ed._switchTab(0);
+        await ex.shareExercise();
+    });
+    await page.goto(await copied(page));
+    await page.waitForFunction(`${exEditor}?.files.length === 3`);
+    expect(await page.evaluate(`${exEditor}.files`)).toEqual([
+        { name: 'app.py', code: 'from helper import f\nprint(f())' },
+        { name: 'helper.py', code: 'def f(): return 2' },
+        { name: 'notes.txt', code: 'mine' },
+    ]);
+    await page.evaluate(`${exEditor}.ready`);
+    await page.evaluate(`${exEditor}.revertCode()`);
+    expect(await page.evaluate(`${exEditor}.files`)).toEqual([
+        { name: 'app.py', code: 'from helper import f\nprint(f())' },
+        { name: 'helper.py', code: 'def f(): return 1' },
+    ]);
+});
+
+test('links leave out unchanged zip files and keep edited ones', async ({ page }) => {
+    await page.goto('/exercise.html');
+    await page.evaluate(async () => {
+        document.querySelectorAll('bottom-exercise').forEach(e => e.remove());
+        const ex = document.createElement('bottom-exercise') as any;
+        ex.setAttribute('multifile', '');
+        ex.setAttribute('zip', '/tests/fixtures/helpers.zip');
+        ex.code = 'print(open("data/values.txt").read())';
+        document.body.append(ex);
+        await ex.updateComplete;
+    });
+    await page.waitForFunction(`${exEditor}.files.length === 3`);
+    await page.evaluate(async (sel: string) => {
+        const ed = eval(sel);
+        ed._switchTab(2); ed.replaceDoc('9\n'); ed._switchTab(0);
+        await document.querySelector<any>('bottom-exercise').shareExercise();
+    }, exEditor);
+    const path = await copied(page);
+    expect((await decodeX(page, path)).files).toEqual([{ name: 'data/values.txt', code: '9\n', initial: null }]);
+
+    await page.goto(path);
+    await page.waitForFunction(`${exEditor}?.files.length === 3`);
+    expect(await page.evaluate(`${exEditor}.files.map(f => f.name + '=' + f.code.trim())`))
+        .toEqual(['main.py=print(open("data/values.txt").read())', 'helper.py=GREETING = "hi from zip"', 'data/values.txt=9']);
+    await page.evaluate(`${exEditor}.revertCode()`);
+    expect(await page.evaluate(`${exEditor}.files[2].code`)).toBe('1\n2\n3\n');
+});
+
+test('editor permalink skips unchanged zip files; long links are flagged', async ({ page }) => {
+    await page.goto('/tests/fixtures/basic.html');
+    const res = await page.evaluate(async () => {
+        const e = document.createElement('bottom-editor') as any;
+        e.setAttribute('multifile', '');
+        e.setAttribute('zip', '/tests/fixtures/helpers.zip');
+        e.textContent = 'print(1)';
+        document.body.append(e);
+        await e.ready;
+        while (e.files.length < 3) await new Promise(r => setTimeout(r, 50));
+        await e.copyPermalink();
+        const short = JSON.parse(new URL((window as any).__clip).searchParams.get('files'));
+        e._addTab('big.csv');
+        e.replaceDoc('x,y\n'.repeat(5000));
+        await e.copyPermalink();
+        return { short, state: e._shareState, hint: e._shareHint };
+    });
+    expect(res.short).toEqual([{ name: 'main.py', code: 'print(1)' }]);
+    expect(res.state).toBe('large');
+    expect(res.hint).toContain('big.csv (20 kB)');
+});

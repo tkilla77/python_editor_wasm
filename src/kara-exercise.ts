@@ -212,7 +212,8 @@ export class KaraExercise extends LitElement {
         });
         const url = new URL(PERMALINK_BASE);
         url.searchParams.set('x', encoded);
-        navigator.clipboard.writeText(url.href);
+        await navigator.clipboard.writeText(url.href);
+        return url.href;
     };
 
     render() {

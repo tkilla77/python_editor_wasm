@@ -1,7 +1,7 @@
 import { LitElement, css, html, nothing } from 'lit'
 import { customElement, property, query, state } from 'lit/decorators.js'
 import './editor.js' // side-effect: registers <bottom-editor>
-import type { BottomEditor } from './editor.js'
+import type { BottomEditor, FileSpec } from './editor.js'
 import type { TestReport } from './pyodide-runtime.js'
 import { type ExerciseStatus } from './exercise-state.js'
 
@@ -55,6 +55,14 @@ export class BottomExercise extends LitElement {
     @property() zip: string = '';
     @property({ type: Boolean }) showswitcher: boolean = false;
     @property({ type: Boolean }) showenergy: boolean = false;
+    /** Show file tabs even without <template filename> children. */
+    @property({ type: Boolean }) multifile: boolean = false;
+    /** Tab name of the main file in multi-file mode. */
+    @property() mainfile: string = '';
+    /** Current contents of extra files, overriding the <template filename> versions
+     *  (and adding user-created files). Set before the element renders. */
+    @property({ attribute: false }) files: FileSpec[] = [];
+
     /** Step through the student's code line by line; tests still run at full speed. */
     @property({ type: Boolean }) stepmode: boolean = false;
 
@@ -109,7 +117,7 @@ export class BottomExercise extends LitElement {
      * Override the permalink/share action. When set, replaces the built-in
      * shareExercise() call. Used by <kara-exercise> to generate a kara.html URL.
      */
-    @property({ attribute: false }) permalinkOverride?: () => Promise<void> | void;
+    @property({ attribute: false }) permalinkOverride?: () => Promise<string | void> | string | void;
 
     private _starterCode: string = '';
     private _testCode: string = '';
@@ -117,6 +125,8 @@ export class BottomExercise extends LitElement {
     private _attempts: number = 0;
     private _solvedAt?: number;
     private _pendingState?: ExerciseH5PState;
+    private _fileTemplates: { name: string; code: string }[] = [];
+    private _editorFiles?: FileSpec[];
 
     @state() private _confirmingSolution = false;
 
@@ -138,6 +148,12 @@ export class BottomExercise extends LitElement {
         const solutionScript   = this.querySelector('script[type="text/x-solution"]') as HTMLScriptElement | null;
         const solutionText = solutionTemplate?.content.textContent ?? solutionScript?.textContent ?? '';
         if (solutionText) this._solutionCode = BottomExercise.dedent(solutionText);
+
+        this._fileTemplates = Array.from(this.querySelectorAll(':scope > template[filename]'))
+            .map(t => ({
+                name: t.getAttribute('filename')!,
+                code: ((t as HTMLTemplateElement).content.textContent ?? '').replace(/^\n/, ''),
+            }));
 
         // H5P server state injected before DOM attachment takes priority over starter code
         if (this._pendingState?.code) this.code = this._pendingState.code;
@@ -213,6 +229,22 @@ export class BottomExercise extends LitElement {
 
     /** The initial code to reset to — from a child template or the `code` property. */
     private get _effectiveStarterCode(): string { return this._starterCode || this.code; }
+
+    /** Files for the inner editor, or [] for single-file mode. Computed once: a new
+     *  array on every render would reset the editor's tabs. */
+    private _filesForEditor(): FileSpec[] {
+        if (this._editorFiles) return this._editorFiles;
+        if (!this.multifile && this._fileTemplates.length === 0 && this.files.length === 0) {
+            return this._editorFiles = [];
+        }
+        const override = (name: string) => this.files.find(f => f.name === name);
+        const authored = new Set(this._fileTemplates.map(t => t.name));
+        return this._editorFiles = [
+            { name: this.mainfile || 'main.py', code: this.code || this._starterCode },
+            ...this._fileTemplates.map(t => ({ name: t.name, code: override(t.name)?.code ?? t.code, initial: t.code })),
+            ...this.files.filter(f => !authored.has(f.name)),
+        ];
+    }
 
     /** Live source code of the inner editor. */
     get sourceCode(): string { return this._editor?.sourceCode ?? ''; }
@@ -376,6 +408,9 @@ export class BottomExercise extends LitElement {
             zip:      this.zip                  || undefined,
             timeout:      this.timeout !== '30'     ? this.timeout : undefined,
             showswitcher: this.showswitcher         || undefined,
+            files:        this._sharedExtraFiles(),
+            multifile:    this.multifile            || undefined,
+            mainfile:     this.mainfile             || undefined,
             stepmode:     this.stepmode             || undefined,
             showenergy:   this.showenergy           || undefined,
             maxenergy:    this.maxenergy            || undefined,
@@ -385,6 +420,13 @@ export class BottomExercise extends LitElement {
         url.searchParams.set('x', encoded);
         await navigator.clipboard.writeText(url.href);
         // State feedback is handled by the editor's Share button via permalinkCallback
+        return url.href;
+    }
+
+    /** Extra files for a permalink: all but the main file, minus unchanged zip files. */
+    private _sharedExtraFiles(): FileSpec[] | undefined {
+        const rest = (this._editor?.sharedFiles() ?? []).slice(1);
+        return rest.length ? rest : undefined;
     }
 
     render() {
@@ -411,6 +453,9 @@ export class BottomExercise extends LitElement {
                 ?showswitcher=${this.showswitcher}
                 ?showenergy=${this.showenergy}
                 ?stepmode=${this.stepmode}
+                ?multifile=${this.multifile}
+                mainfile=${this.mainfile || nothing}
+                .files=${this._filesForEditor()}
                 ?autofit=${this.autofit}
                 @bottom-change="${this._onCodeChange}"
                 @bottom-reset="${this._onReset}"

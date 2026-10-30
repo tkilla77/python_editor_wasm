@@ -92,6 +92,9 @@ button#permalink {
 button#permalink.copied {
     background-color: #166534bb;
 }
+button#permalink.large {
+    background-color: #b45309dd;
+}
 button#permalink.error {
     background-color: #991b1bbb;
 }

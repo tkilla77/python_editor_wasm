@@ -15,7 +15,9 @@ export class BottomEditorButtons extends LitElement {
     /** Show the Revert button (red eraser — resets editor code to initial + performs reset). */
     @property({ type: Boolean, reflect: true }) showrevert = false;
     @property({ type: Boolean }) permalink = true;
-    @property() shareState: 'idle' | 'copied' | 'error' = 'idle';
+    @property() shareState: 'idle' | 'copied' | 'large' | 'error' = 'idle';
+    /** Tooltip explaining a 'large' share state. */
+    @property() shareHint = '';
     /** Show the cloud-sync button. Set when at least one cloud backend is configured. */
     @property({ type: Boolean, reflect: true }) showsync = false;
     /** Active cloud backend: 'local' | 'google' | 'microsoft' */
@@ -51,7 +53,7 @@ export class BottomEditorButtons extends LitElement {
             <button id="stop"     @click="${() => this.fire('bottom-stop')}"     type="button" title="Stop"><span class="caption">Stop</span></button>
             ${this.showreset  ? html`<button id="reset"  @click="${() => this.fire('bottom-reset')}"  type="button" title="Reset world"><span class="caption">Reset</span></button>`  : ''}
             ${this.showrevert ? html`<button id="revert" @click="${() => this.fire('bottom-revert')}" type="button" title="Revert to initial code"><span class="caption">Revert</span></button>` : ''}
-            ${this.permalink ? html`<button id="permalink" class="${this.shareState !== 'idle' ? this.shareState : ''}" @click="${() => this.fire('bottom-permalink')}" type="button" title="Copy share link"><span class="caption">${this.shareState === 'copied' ? 'Copied!' : this.shareState === 'error' ? 'Failed' : 'Share'}</span></button>` : ''}
+            ${this.permalink ? html`<button id="permalink" class="${this.shareState !== 'idle' ? this.shareState : ''}" @click="${() => this.fire('bottom-permalink')}" type="button" title="${this.shareState === 'large' ? this.shareHint : 'Copy share link'}"><span class="caption">${this.shareState === 'copied' ? 'Copied!' : this.shareState === 'large' ? 'Long link!' : this.shareState === 'error' ? 'Failed' : 'Share'}</span></button>` : ''}
             ${this.showsync ? html`<button id="sync" class="${this._syncClass()}" @click="${() => this.fire('bottom-sync')}" type="button" title="${this._syncTitle()}"><span class="caption">${this._syncCaption()}</span></button>` : ''}`;
     }
 }

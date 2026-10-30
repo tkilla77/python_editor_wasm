@@ -1,3 +1,5 @@
+import type { FileSpec } from './editor.js';
+
 export interface ExercisePermalinkState {
     code: string;
     starter?: string;
@@ -8,6 +10,10 @@ export interface ExercisePermalinkState {
     zip?: string;
     timeout?: string;
     showswitcher?: boolean;
+    /** Extra files (not the main one). initial: null marks user-added or edited zip files. */
+    files?: FileSpec[];
+    multifile?: boolean;
+    mainfile?: string;
     stepmode?: boolean;
     showenergy?: boolean;
     maxenergy?: number;
