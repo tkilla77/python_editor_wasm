@@ -299,6 +299,8 @@ export class BottomEditor extends LitElement {
     @state() private _debugShown = false;
     /** How the next run starts; set by the step bar's buttons. */
     private _pendingMode?: 'run' | 'step' | 'play';
+    /** The last list given to `files`, so re-assigning the same one is a no-op. */
+    private _filesInput?: FileSpec[];
     /** Main-file breakpoint lines while another tab is open. */
     private _mainBreakpoints: number[] = [];
 
@@ -335,7 +337,10 @@ export class BottomEditor extends LitElement {
      */
     @property({ attribute: false })
     set files(list: FileSpec[]) {
-        if (!list || list.length === 0) return;
+        // Lit re-assigns object bindings on every parent render; applying the same
+        // list again would wipe restored state and edits.
+        if (!list || list.length === 0 || list === this._filesInput) return;
+        this._filesInput = list;
         this._pendingCode = list[0].code;
         this._tabs = list.map(f => f.initial === null
             ? { name: f.name, code: f.code, initialCode: '', added: true }

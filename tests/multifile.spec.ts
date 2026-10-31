@@ -116,3 +116,36 @@ test('stepping switches to the main file', async ({ page }) => {
     await page.evaluate(() => (window as any).__ed._doStep());
     await page.evaluate(() => (window as any).__run);
 });
+
+for (const tag of ['bottom-exercise', 'kara-exercise']) {
+    test(`${tag}: edited files survive Run and reload`, async ({ page }) => {
+        await page.addInitScript(() => {
+            const attach = Element.prototype.attachShadow;
+            Element.prototype.attachShadow = function (init: ShadowRootInit) { return attach.call(this, { ...init, mode: 'open' }); };
+        });
+        const tests = tag === 'kara-exercise' ? '<kara-tests>assert X == 2</kara-tests>' : '<template data-type="test">assert X == 2</template>';
+        const starter = tag === 'kara-exercise' ? 'from toolbox import X' : '<template data-type="starter">from toolbox import X</template>';
+        const html = `<!doctype html><script type="module" src="/src/kara-exercise.ts"></script>
+            <${tag} id="persist-run" multifile>${starter}<template filename="toolbox.py">X = 1</template>${tests}</${tag}>`;
+        await page.route('**/persist-run.html', (r: any) => r.fulfill({ contentType: 'text/html', body: html }));
+        const ex = tag === 'kara-exercise'
+            ? `document.querySelector("${tag}").shadowRoot.querySelector("bottom-exercise")`
+            : `document.querySelector("${tag}")`;
+        const ed = `${ex}.shadowRoot.querySelector("bottom-editor")`;
+        const load = async () => {
+            await page.goto('/persist-run.html');
+            await page.waitForFunction(`${ed}?.files.length === 2`);
+            await page.evaluate(`${ed}.ready`);
+        };
+        await load();
+        await page.evaluate(`(() => { const e = ${ed}; e._switchTab(1); e.replaceDoc('X = 2'); e._switchTab(0); })()`);
+        // Run changes the exercise status, which re-renders the exercise.
+        await page.evaluate(`${ex}.runTests()`);
+        expect(await page.evaluate(`${ex}._testReport.passed`)).toBe(true);
+        expect(await page.evaluate(`${ed}.files[1].code`)).toBe('X = 2');
+
+        await load();
+        await page.waitForTimeout(300);
+        expect(await page.evaluate(`${ed}.files[1].code`)).toBe('X = 2');
+    });
+}
