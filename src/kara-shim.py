@@ -168,6 +168,9 @@ def _kara_setup(world_str, step_ms):
     global _kara_grid, kara
     _kara_grid = _Grid(world_str)
     kara       = _Kara(_kara_grid, step_ms)
+    # A builtin, so modules in other file tabs can use kara without importing it.
+    import builtins
+    builtins.kara = kara
     _kara_draw()
 
 

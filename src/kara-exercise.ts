@@ -5,6 +5,8 @@ import './exercise.js'
 import karaShimSrc from './kara-shim.py?raw'
 import { dedentWorld, renderKaraWorld } from './kara-world.js'
 import { encodeExercise } from './exercise-permalink.js'
+import type { FileSpec } from './editor.js'
+import { readFileTemplates, mergeFiles } from './file-templates.js'
 
 // Minimal custom elements so the browser doesn't treat them as unknown inline.
 for (const tag of ['kara-world', 'kara-prompt', 'kara-solution', 'kara-tests']) {
@@ -87,6 +89,12 @@ export class KaraExercise extends LitElement {
     @property({ type: Boolean }) nodebug    = false;
     @property({ type: Number }) maxenergy   = 0;
     @property({ type: Number }) maxmemory   = 0;
+    /** Show file tabs even without <template filename> children. */
+    @property({ type: Boolean }) multifile  = false;
+    /** Tab name of the main file in multi-file mode. */
+    @property() mainfile                    = '';
+    /** Current contents of extra files (from a permalink), overriding the templates. */
+    @property({ attribute: false }) files: FileSpec[] = [];
     /** Hide the "Show solution" button (teacher controls release). */
     @property({ type: Boolean }) hidesolution = false;
 
@@ -99,6 +107,8 @@ export class KaraExercise extends LitElement {
     private _testCode        = '';
     private _expectedWorldStr = '';   // target world for visual diff on failure
     private _showExpected    = false;
+    private _fileTemplates: { name: string; code: string }[] = [];
+    private _exerciseFiles?: FileSpec[];
 
     /** Programmatic overrides used by kara-editor-page when loading from a permalink.
      *  Empty string is a no-op so Lit bindings with a missing field don't clobber defaults. */
@@ -146,6 +156,8 @@ export class KaraExercise extends LitElement {
             .replace(/^\s*\n/, '');
         if (domCode.trim()) this._userCode = domCode;
 
+        this._fileTemplates = readFileTemplates(this);
+
         const solutionEl = this.querySelector('kara-solution');
         if (solutionEl) this._solutionCode = dedent(solutionEl.textContent ?? '');
 
@@ -181,6 +193,11 @@ export class KaraExercise extends LitElement {
 
     private get _readyCode(): string { return this._prefix; }
 
+    /** Extra files for <bottom-exercise>. Computed once: a new array would reset its tabs. */
+    private _filesForExercise(): FileSpec[] {
+        return this._exerciseFiles ??= mergeFiles(this._fileTemplates, this.files);
+    }
+
     private readonly _onTestResult = (e: Event) => {
         const report = (e as CustomEvent).detail as { passed: boolean };
         this._showExpected = !report.passed && !!this._expectedWorldStr;
@@ -210,6 +227,9 @@ export class KaraExercise extends LitElement {
             nodebug:    this.nodebug             || undefined,
             maxenergy:  this.maxenergy           || undefined,
             maxmemory:  this.maxmemory           || undefined,
+            files:      exercise?.sharedExtraFiles(),
+            multifile:  this.multifile           || undefined,
+            mainfile:   this.mainfile            || undefined,
         });
         const url = new URL(PERMALINK_BASE);
         url.searchParams.set('x', encoded);
@@ -233,6 +253,9 @@ export class KaraExercise extends LitElement {
                 ?nodebug=${this.nodebug}
                 maxenergy=${this.maxenergy}
                 maxmemory=${this.maxmemory}
+                ?multifile=${this.multifile}
+                mainfile=${this.mainfile || nothing}
+                .files=${this._filesForExercise()}
                 .permalinkOverride=${this._permalink}
                 ?hidesolution=${this.hidesolution}
                 ?autofit=${true}

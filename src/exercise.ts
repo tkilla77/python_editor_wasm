@@ -2,6 +2,7 @@ import { LitElement, css, html, nothing } from 'lit'
 import { customElement, property, query, state } from 'lit/decorators.js'
 import './editor.js' // side-effect: registers <bottom-editor>
 import type { BottomEditor, FileSpec } from './editor.js'
+import { readFileTemplates, mergeFiles } from './file-templates.js'
 import type { TestReport } from './pyodide-runtime.js'
 import { type ExerciseStatus } from './exercise-state.js'
 
@@ -153,11 +154,7 @@ export class BottomExercise extends LitElement {
         const solutionText = solutionTemplate?.content.textContent ?? solutionScript?.textContent ?? '';
         if (solutionText) this._solutionCode = BottomExercise.dedent(solutionText);
 
-        this._fileTemplates = Array.from(this.querySelectorAll(':scope > template[filename]'))
-            .map(t => ({
-                name: t.getAttribute('filename')!,
-                code: ((t as HTMLTemplateElement).content.textContent ?? '').replace(/^\n/, ''),
-            }));
+        this._fileTemplates = readFileTemplates(this);
 
         // H5P server state injected before DOM attachment takes priority over starter code
         if (this._pendingState?.code) this.code = this._pendingState.code;
@@ -241,12 +238,9 @@ export class BottomExercise extends LitElement {
         if (!this.multifile && this._fileTemplates.length === 0 && this.files.length === 0) {
             return this._editorFiles = [];
         }
-        const override = (name: string) => this.files.find(f => f.name === name);
-        const authored = new Set(this._fileTemplates.map(t => t.name));
         return this._editorFiles = [
             { name: this.mainfile || 'main.py', code: this.code || this._starterCode },
-            ...this._fileTemplates.map(t => ({ name: t.name, code: override(t.name)?.code ?? t.code, initial: t.code })),
-            ...this.files.filter(f => !authored.has(f.name)),
+            ...mergeFiles(this._fileTemplates, this.files),
         ];
     }
 
@@ -412,7 +406,7 @@ export class BottomExercise extends LitElement {
             zip:      this.zip                  || undefined,
             timeout:      this.timeout !== '30'     ? this.timeout : undefined,
             showswitcher: this.showswitcher         || undefined,
-            files:        this._sharedExtraFiles(),
+            files:        this.sharedExtraFiles(),
             multifile:    this.multifile            || undefined,
             mainfile:     this.mainfile             || undefined,
             stepmode:     this.stepmode             || undefined,
@@ -429,7 +423,7 @@ export class BottomExercise extends LitElement {
     }
 
     /** Extra files for a permalink: all but the main file, minus unchanged zip files. */
-    private _sharedExtraFiles(): FileSpec[] | undefined {
+    sharedExtraFiles(): FileSpec[] | undefined {
         const rest = (this._editor?.sharedFiles() ?? []).slice(1);
         return rest.length ? rest : undefined;
     }

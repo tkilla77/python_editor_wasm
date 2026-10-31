@@ -1,6 +1,8 @@
 import { LitElement, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import './editor.js'
+import type { FileSpec } from './editor.js'
+import { readFileTemplates, mergeFiles } from './file-templates.js'
 import karaShimSrc from './kara-shim.py?raw'
 
 // Minimal container — needs a name so the browser treats it as a block element
@@ -34,12 +36,20 @@ export class KaraEditor extends LitElement {
     @property({ type: Boolean }) stepmode   = false;
     @property({ type: Boolean }) showenergy = false;
     @property({ type: Boolean }) nodebug    = false;
+    /** Show file tabs even without <template filename> children. */
+    @property({ type: Boolean }) multifile  = false;
+    /** Tab name of the main file in multi-file mode. */
+    @property() mainfile                    = '';
+    /** Current contents of extra files (from a permalink), overriding the templates. */
+    @property({ attribute: false }) files: FileSpec[] = [];
 
     // Each instance gets its own isolated Pyodide runtime.
     private readonly _sessionId = `kara-${crypto.randomUUID()}`;
 
     private _worldStr = DEFAULT_WORLD;
     private _userCode = '';
+    private _fileTemplates: { name: string; code: string }[] = [];
+    private _editorFiles?: FileSpec[];
 
     connectedCallback() {
         super.connectedCallback();
@@ -67,6 +77,19 @@ export class KaraEditor extends LitElement {
             .join('')
             .replace(/^\s*\n/, '');
         if (domCode.trim()) this._userCode = domCode;
+        this._fileTemplates = readFileTemplates(this);
+    }
+
+    /** Files for the inner editor ([] = single file). Computed once: a new array would reset its tabs. */
+    private _filesForEditor(): FileSpec[] {
+        if (this._editorFiles) return this._editorFiles;
+        if (!this.multifile && this._fileTemplates.length === 0 && this.files.length === 0) {
+            return this._editorFiles = [];
+        }
+        return this._editorFiles = [
+            { name: this.mainfile || 'main.py', code: this._userCode },
+            ...mergeFiles(this._fileTemplates, this.files),
+        ];
     }
 
     /** Set world programmatically (overrides <kara-world> child). */
@@ -99,8 +122,13 @@ export class KaraEditor extends LitElement {
         const url = new URL(PERMALINK_BASE);
         url.searchParams.set('world', this._worldStr);
         // Read live editor content rather than the stale initial value.
-        const currentCode = (this.renderRoot?.querySelector('bottom-editor') as any)?.sourceCode ?? this._userCode;
+        const editor = this.renderRoot?.querySelector('bottom-editor') as any;
+        const currentCode = editor?.sourceCode ?? this._userCode;
         if (currentCode.trim()) url.searchParams.set('code', currentCode);
+        const extra = (editor?.sharedFiles() ?? []).slice(1);
+        if (extra.length) url.searchParams.set('files', JSON.stringify(extra));
+        if (this.multifile) url.searchParams.set('multifile', '1');
+        if (this.mainfile)  url.searchParams.set('mainfile', this.mainfile);
         if (this.step !== 200)    url.searchParams.set('step', String(this.step));
         if (this.timeout !== '30') url.searchParams.set('timeout', this.timeout);
         if (this.stepmode)   url.searchParams.set('stepmode', '1');
@@ -130,6 +158,9 @@ export class KaraEditor extends LitElement {
                 ?stepmode=${this.stepmode}
                 ?showenergy=${this.showenergy}
                 ?nodebug=${this.nodebug}
+                ?multifile=${this.multifile}
+                mainfile=${this.mainfile || nothing}
+                .files=${this._filesForEditor()}
             ></bottom-editor>`;
     }
 

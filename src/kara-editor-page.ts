@@ -21,6 +21,9 @@ export class KaraEditorPage extends LitElement {
     private _stepmode = false;
     private _showenergy = false;
     private _nodebug = false;
+    private _files: any[] = [];
+    private _multifile = false;
+    private _mainfile = '';
 
     // Exercise mode: decoded from ?x=
     @state() private _decoded?: ExercisePermalinkState;
@@ -37,6 +40,9 @@ export class KaraEditorPage extends LitElement {
             this._stepmode = isOn(params.get('stepmode'));
             this._showenergy = isOn(params.get('showenergy'));
             this._nodebug = isOn(params.get('nodebug'));
+            this._multifile = isOn(params.get('multifile'));
+            this._mainfile = params.get('mainfile') ?? '';
+            try { this._files = JSON.parse(params.get('files') ?? '[]'); } catch { this._files = []; }
             if (params.has('autorun')) {
                 const v = params.get('autorun');
                 this._autorun = !(v === 'false' || v === '0');
@@ -90,6 +96,9 @@ export class KaraEditorPage extends LitElement {
                     ?stepmode=${!!s.stepmode}
                     ?showenergy=${!!s.showenergy}
                     ?nodebug=${!!s.nodebug}
+                    ?multifile=${!!s.multifile}
+                    mainfile=${s.mainfile ?? ''}
+                    .files=${s.files ?? []}
                     maxenergy=${s.maxenergy ?? 0}
                     maxmemory=${s.maxmemory ?? 0}
                 ></kara-exercise>`;
@@ -103,6 +112,9 @@ export class KaraEditorPage extends LitElement {
                 ?stepmode=${this._stepmode}
                 ?showenergy=${this._showenergy}
                 ?nodebug=${this._nodebug}
+                ?multifile=${this._multifile}
+                mainfile=${this._mainfile}
+                .files=${this._files}
                 .world=${this._world}
                 .code=${this._code}
             ></kara-editor>`;

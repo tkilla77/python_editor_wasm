@@ -259,6 +259,31 @@ while not kara.treeFront():
 <td><code>30</code></td>
 <td>Maximum run time in seconds; <code>inf</code> to disable</td>
 </tr>
+<tr>
+<td><code>stepmode</code></td>
+<td>off</td>
+<td>Run plays the program line by line (see <a href="index.html#stepping">step mode</a>)</td>
+</tr>
+<tr>
+<td><code>nodebug</code></td>
+<td>off</td>
+<td>Switch off breakpoints (see <a href="index.html#stepping">breakpoints</a>)</td>
+</tr>
+<tr>
+<td><code>showenergy</code></td>
+<td>off</td>
+<td>Show how many lines each run executed (see <a href="index.html#stepping">energy</a>)</td>
+</tr>
+<tr>
+<td><code>multifile</code></td>
+<td>off</td>
+<td>Show file tabs so students can add their own modules (see <a href="#multi-file">Multiple files</a>)</td>
+</tr>
+<tr>
+<td><code>mainfile</code></td>
+<td><code>main.py</code></td>
+<td>Tab name of the main program in multi-file mode</td>
+</tr>
 </tbody></table>
 <hr>
 <h2>Labyrinth Example</h2>
@@ -308,6 +333,34 @@ call them from loops, pass them to <code>map</code> or <code>sorted</code>, or c
 
 go_and_return(3)
 </code></pre>
+
+<hr>
+<h2 id="multi-file">Multiple files</h2>
+<p>Like <code>&lt;bottom-editor&gt;</code>, both <code>&lt;kara-editor&gt;</code> and
+<code>&lt;kara-exercise&gt;</code> accept <code>&lt;template filename&gt;</code> children, plus the
+<code>multifile</code> and <code>mainfile</code> attributes. <code>kara</code> is available in every file
+without importing it, so helper modules can move Kara too. While Kara moves inside a helper, the
+main program's line that called it is highlighted.</p>
+<pre><code class="language-html">&lt;kara-editor&gt;
+from moves import go
+go(3)
+  &lt;template filename=&quot;moves.py&quot;&gt;
+def go(n):
+    for _ in range(n):
+        kara.move()
+  &lt;/template&gt;
+&lt;/kara-editor&gt;
+</code></pre>
+<kara-editor>
+from moves import go
+go(3)
+  <template filename="moves.py">
+def go(n):
+    for _ in range(n):
+        kara.move()
+  </template>
+</kara-editor>
+<p>Run always executes the main program. Permalinks carry the extra files.</p>
 
 <hr>
 <h2>Exceptions</h2>

@@ -103,3 +103,80 @@ test('breakpoints work in Kara code alongside the animation delay', async ({ pag
     await page.evaluate(() => (window as any).__run);
     expect(await page.evaluate(`${inner}.outputText`)).toContain('done');
 });
+
+const HELPER = 'def go(n):\n    for _ in range(n):\n        kara.move()';
+
+/** A fresh <kara-editor> with a helper.py template; returns once Python is ready. */
+async function karaWithHelper(page: any, step: number) {
+    await page.goto('/kara.html');
+    await page.evaluate(async ({ step, helper }: any) => {
+        document.querySelector('kara-editor-page')!.remove();
+        const k = document.createElement('kara-editor') as any;
+        k.setAttribute('step', String(step));
+        k.innerHTML = 'from helper import go\nstart = kara.x\ngo(2)\nprint("moved", kara.x - start)'
+            + `<template filename="helper.py">${helper}</template>`;
+        document.body.append(k);
+        await k.updateComplete;
+        (window as any).__ed = k.shadowRoot.querySelector('bottom-editor');
+        await (window as any).__ed.ready;
+    }, { step, helper: HELPER });
+}
+
+test('Kara can be moved from a helper module in another file tab', async ({ page }) => {
+    await karaWithHelper(page, 250);
+    expect(await page.evaluate(() => (window as any).__ed.files.map((f: any) => f.name))).toEqual(['main.py', 'helper.py']);
+    await page.evaluate(() => { (window as any).__run = (window as any).__ed.evaluatePython(); });
+    // Moves inside the helper highlight the main-file line that called it.
+    await page.waitForFunction(() => (window as any).__ed.shadowRoot.querySelector('.cm-step-line')?.textContent === 'go(2)');
+    await page.evaluate(() => (window as any).__run);
+    expect(await page.evaluate(() => (window as any).__ed.outputText)).toContain('moved 2');
+});
+
+test('kara-editor permalink carries extra files', async ({ page }) => {
+    await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t: string) => { (window as any).__clip = t; } } });
+    });
+    await karaWithHelper(page, 0);
+    await page.evaluate(async () => {
+        const ed = (window as any).__ed;
+        ed._switchTab(1); ed.replaceDoc('def go(n):\n    kara.turnLeft()'); ed._switchTab(0);
+        await ed.copyPermalink();
+    });
+    const url = new URL(await page.evaluate(() => (window as any).__clip));
+    await page.goto(url.pathname.replace('/editor/stable', '') + url.search);
+    const inner = 'document.querySelector("kara-editor-page").shadowRoot.querySelector("kara-editor").shadowRoot.querySelector("bottom-editor")';
+    await page.waitForFunction(`${inner}?.files.length === 2`);
+    expect(await page.evaluate(`${inner}.files[1]`)).toEqual({ name: 'helper.py', code: 'def go(n):\n    kara.turnLeft()' });
+    await page.evaluate(`${inner}.ready`);
+    await page.evaluate(`${inner}.revertCode()`);
+    expect(await page.evaluate(`${inner}.files[1].code`)).toBe(HELPER);
+});
+
+test('kara-exercise supports extra files, in tests and permalinks', async ({ page }) => {
+    await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t: string) => { (window as any).__clip = t; } } });
+    });
+    await page.goto('/kara.html');
+    const report = await page.evaluate(async (helper: string) => {
+        const k = document.createElement('kara-exercise') as any;
+        k.step = 0;
+        k.innerHTML = 'from helper import go\nstart = kara.x\ngo(3)'
+            + `<template filename="helper.py">${helper}</template>`
+            + '<kara-tests>assert kara.x == start + 3</kara-tests>';
+        document.body.append(k);
+        await k.updateComplete;
+        const ex = k.shadowRoot.querySelector('bottom-exercise');
+        await ex.updateComplete;
+        await ex.shadowRoot.querySelector('bottom-editor').ready;
+        await ex.runTests();
+        await k._permalink();
+        return ex._testReport;
+    }, HELPER);
+    expect(report.passed).toBe(true);
+
+    const url = new URL(await page.evaluate(() => (window as any).__clip));
+    await page.goto(url.pathname.replace('/editor/stable', '') + url.search);
+    const inner = 'document.querySelector("kara-editor-page").shadowRoot.querySelector("kara-exercise").shadowRoot.querySelector("bottom-exercise").shadowRoot.querySelector("bottom-editor")';
+    await page.waitForFunction(`${inner}?.files.length === 2`);
+    expect(await page.evaluate(`${inner}.files[1]`)).toEqual({ name: 'helper.py', code: HELPER });
+});
