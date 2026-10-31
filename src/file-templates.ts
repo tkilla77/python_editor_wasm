@@ -1,8 +1,9 @@
 import type { FileSpec } from './editor.js';
 
-/** Extra files declared as direct <template filename="..."> children of `host`. */
+/** Extra files declared as direct <template filename="..."> children of `host`
+ *  (not solution templates, which also carry a filename). */
 export function readFileTemplates(host: Element): { name: string; code: string }[] {
-    return Array.from(host.querySelectorAll(':scope > template[filename]')).map(t => ({
+    return Array.from(host.querySelectorAll(':scope > template[filename]:not([data-type])')).map(t => ({
         name: t.getAttribute('filename')!,
         code: ((t as HTMLTemplateElement).content.textContent ?? '').replace(/^\n/, ''),
     }));

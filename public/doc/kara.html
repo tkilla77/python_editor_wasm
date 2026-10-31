@@ -427,7 +427,7 @@ assert kara.onLeaf(), "Kara should be standing on the leaf"
 <tbody>
 <tr><td><code>&lt;kara-world&gt;</code></td><td>Grid world definition (same format as in <code>&lt;kara-editor&gt;</code>)</td></tr>
 <tr><td>Text nodes</td><td>Starter code shown in the editor</td></tr>
-<tr><td><code>&lt;kara-solution&gt;</code></td><td>Reference solution revealed when the student clicks "Show solution"</td></tr>
+<tr><td><code>&lt;kara-solution&gt;</code></td><td>Reference solution revealed when the student clicks "Show solution". With a <code>filename</code> attribute, it is the solution for that file instead of the main program (see <a href="#multi-file">Multiple files</a>)</td></tr>
 <tr><td><code>&lt;kara-tests&gt;</code></td><td>Python assertions run after the student's code; <code>kara</code> and world helpers are in scope. May contain a <code>&lt;kara-world&gt;</code> child to specify an expected final world state (see below).</td></tr>
 </tbody>
 </table>

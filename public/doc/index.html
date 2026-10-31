@@ -529,6 +529,19 @@ def sum_to(n):
 &lt;!-- base64 (multi-line, no escaping needed) --&gt;
 &lt;bottom-exercise solution=&quot;data:text/plain;base64,ZGVmIHN1bV90...&quot;&gt;...&lt;/bottom-exercise&gt;
 </code></pre>
+<p>In a <a href="#multi-file">multi-file</a> exercise, give a solution a <code>filename</code> to make it the
+solution for that file; a solution without <code>filename</code> belongs to the main file. Show solution
+replaces each file that has a solution and leaves the others as they are. A file the student
+deleted comes back.</p>
+<pre><code class="language-html">&lt;bottom-exercise multifile&gt;
+  &lt;template data-type=&quot;starter&quot;&gt;from toolbox import square&lt;/template&gt;
+  &lt;template filename=&quot;toolbox.py&quot;&gt;def square(n):
+    pass&lt;/template&gt;
+  &lt;template data-type=&quot;solution&quot; filename=&quot;toolbox.py&quot;&gt;def square(n):
+    return n * n&lt;/template&gt;
+&lt;/bottom-exercise&gt;
+</code></pre>
+<p><code>&lt;script type=&quot;text/x-solution&quot; filename=&quot;…&quot;&gt;</code> works the same way.</p>
 <p><code>solved</code> and <code>viewed-solution</code> are both terminal states: showing the solution
 after solving keeps the <code>solved</code> badge; passing tests after viewing the solution
 keeps the <code>viewed-solution</code> badge.</p>

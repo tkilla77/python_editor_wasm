@@ -5,6 +5,8 @@ export interface ExercisePermalinkState {
     starter?: string;
     tests?: string;
     solution?: string;
+    /** Solutions for extra files. */
+    solutions?: { name: string; code: string }[];
     prompt?: string;
     layout?: string;
     zip?: string;

@@ -63,11 +63,18 @@ async function main() {
             ex.appendChild(t);
         }
 
-        // Solution
+        // Solutions: the main file's, then one per extra file
         if (state.solution) {
             const t = document.createElement('template') as HTMLTemplateElement;
             t.dataset.type = 'solution';
             t.content.textContent = state.solution;
+            ex.appendChild(t);
+        }
+        for (const f of state.solutions ?? []) {
+            const t = document.createElement('template') as HTMLTemplateElement;
+            t.dataset.type = 'solution';
+            t.setAttribute('filename', f.name);
+            t.content.textContent = f.code;
             ex.appendChild(t);
         }
 

@@ -92,6 +92,7 @@ export class KaraEditorPage extends LitElement {
                     .promptHtml=${s.prompt ? sanitizeHtml(s.prompt) : ''}
                     .code=${s.code ?? ''}
                     .solution=${s.solution ?? ''}
+                    .solutions=${s.solutions ?? []}
                     .testCode=${s.tests ?? ''}
                     ?stepmode=${!!s.stepmode}
                     ?showenergy=${!!s.showenergy}

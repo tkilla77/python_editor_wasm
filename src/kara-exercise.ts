@@ -104,6 +104,7 @@ export class KaraExercise extends LitElement {
     private _promptHtml      = '';
     private _userCode        = '';
     private _solutionCode    = '';
+    private _fileSolutions: { name: string; code: string }[] = [];
     private _testCode        = '';
     private _expectedWorldStr = '';   // target world for visual diff on failure
     private _showExpected    = false;
@@ -116,6 +117,8 @@ export class KaraExercise extends LitElement {
     set promptHtml(h: string) { if (h) { this._promptHtml = h; this.requestUpdate(); } }
     set code(c: string)       { if (c) { this._userCode   = c; this.requestUpdate(); } }
     set solution(s: string)   { if (s) { this._solutionCode = s; this.requestUpdate(); } }
+    /** Solutions for extra files (from a permalink). */
+    set solutions(list: { name: string; code: string }[]) { if (list?.length) { this._fileSolutions = list; this.requestUpdate(); } }
     set testCode(t: string) {
         if (!t) return;
         this._testCode = t;
@@ -158,8 +161,12 @@ export class KaraExercise extends LitElement {
 
         this._fileTemplates = readFileTemplates(this);
 
-        const solutionEl = this.querySelector('kara-solution');
+        // Without filename: the main program's solution. With filename: that file's.
+        const solutionEl = this.querySelector(':scope > kara-solution:not([filename])');
         if (solutionEl) this._solutionCode = dedent(solutionEl.textContent ?? '');
+        const fileSolutions = Array.from(this.querySelectorAll(':scope > kara-solution[filename]'))
+            .map(el => ({ name: el.getAttribute('filename')!, code: dedent(el.textContent ?? '') }));
+        if (fileSolutions.length) this._fileSolutions = fileSolutions;
 
         const testsEl = this.querySelector('kara-tests');
         if (testsEl) {
@@ -219,6 +226,7 @@ export class KaraExercise extends LitElement {
             prompt:   this._promptHtml           || undefined,
             // Omit solution when hidesolution — absence IS the obfuscation.
             solution: this.hidesolution ? undefined : (this._solutionCode.trim() || undefined),
+            solutions: this.hidesolution || !this._fileSolutions.length ? undefined : this._fileSolutions,
             tests:    this._testCode.trim()      || undefined,
             step:     this.step !== 200          ? this.step    : undefined,
             timeout:  this.timeout !== '30'      ? this.timeout : undefined,
@@ -247,6 +255,7 @@ export class KaraExercise extends LitElement {
                 .transformLineOffset=${this._prefixLineCount}
                 .readyCode=${this._readyCode}
                 .solution=${this._solutionCode}
+                .fileSolutions=${this._fileSolutions}
                 .tests=${this._testCode}
                 ?stepmode=${this.stepmode}
                 ?showenergy=${this.showenergy}

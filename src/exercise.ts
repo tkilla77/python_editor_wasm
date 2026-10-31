@@ -94,6 +94,10 @@ export class BottomExercise extends LitElement {
      *  solution to students, e.g. after a lesson. */
     @property({ type: Boolean }) hidesolution: boolean = false;
 
+    /** Solutions for extra files, in addition to <template data-type="solution" filename>
+     *  children. Used by <kara-exercise>. */
+    @property({ attribute: false }) fileSolutions: { name: string; code: string }[] = [];
+
     // ── Kara / custom-transform pass-throughs ─────────────────────────────────
 
     /** Forwarded to <bottom-editor>: run via the async path so library code can block. */
@@ -127,6 +131,7 @@ export class BottomExercise extends LitElement {
     private _starterCode: string = '';
     private _testCode: string = '';
     private _solutionCode: string = '';
+    private _fileSolutionTemplates: { name: string; code: string }[] = [];
     private _attempts: number = 0;
     private _solvedAt?: number;
     private _pendingState?: ExerciseH5PState;
@@ -149,10 +154,17 @@ export class BottomExercise extends LitElement {
         const testText = testTemplate?.content.textContent ?? testScript?.textContent ?? '';
         if (testText) this._testCode = BottomExercise.dedent(testText);
 
-        const solutionTemplate = this.querySelector('template[data-type="solution"]') as HTMLTemplateElement | null;
-        const solutionScript   = this.querySelector('script[type="text/x-solution"]') as HTMLScriptElement | null;
+        // Without filename: the main file's solution. With filename: that file's.
+        const solutionTemplate = this.querySelector('template[data-type="solution"]:not([filename])') as HTMLTemplateElement | null;
+        const solutionScript   = this.querySelector('script[type="text/x-solution"]:not([filename])') as HTMLScriptElement | null;
         const solutionText = solutionTemplate?.content.textContent ?? solutionScript?.textContent ?? '';
         if (solutionText) this._solutionCode = BottomExercise.dedent(solutionText);
+        this._fileSolutionTemplates = Array.from(this.querySelectorAll(
+            ':scope > template[data-type="solution"][filename], :scope > script[type="text/x-solution"][filename]'))
+            .map(el => ({
+                name: el.getAttribute('filename')!,
+                code: BottomExercise.dedent((el instanceof HTMLTemplateElement ? el.content.textContent : el.textContent) ?? ''),
+            }));
 
         this._fileTemplates = readFileTemplates(this);
 
@@ -338,11 +350,21 @@ export class BottomExercise extends LitElement {
         return this.solution;
     }
 
-    /** Show the solution immediately, bypassing the confirmation dialog. */
+    /** Solutions for extra files (not the main one). */
+    private get _fileSolutions(): { name: string; code: string }[] {
+        return [...this._fileSolutionTemplates, ...this.fileSolutions];
+    }
+
+    private _hasSolution(): boolean {
+        return !!this._resolvedSolution() || this._fileSolutions.length > 0;
+    }
+
+    /** Show the solution immediately, bypassing the confirmation dialog. Files without a solution stay as they are. */
     showSolution() {
-        const code = this._resolvedSolution();
-        if (!code || !this._editor) return;
-        this._editor.sourceCode = code;
+        if (!this._hasSolution() || !this._editor) return;
+        const main = this._resolvedSolution();
+        if (main) this._editor.sourceCode = main;
+        for (const f of this._fileSolutions) this._editor.setFileCode(f.name, f.code);
         if (this._status !== 'solved') this._status = 'viewed-solution';
         this._confirmingSolution = false;
         this._testReport = undefined;
@@ -401,6 +423,7 @@ export class BottomExercise extends LitElement {
             starter:  this._starterCode         || undefined,
             tests:    this._testCode            || undefined,
             solution: this.hidesolution ? undefined : (this._resolvedSolution() || undefined),
+            solutions: this.hidesolution || !this._fileSolutions.length ? undefined : this._fileSolutions,
             prompt:   this._getPromptHtml()     || undefined,
             layout:   this.layout  !== 'console' ? this.layout  : undefined,
             zip:      this.zip                  || undefined,
@@ -480,7 +503,7 @@ export class BottomExercise extends LitElement {
     }
 
     private _renderSolution() {
-        if (this.hidesolution || !this._resolvedSolution()) return nothing;
+        if (this.hidesolution || !this._hasSolution()) return nothing;
         if (this._confirmingSolution) {
             return html`
                 <exercise-solution-confirm>

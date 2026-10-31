@@ -348,6 +348,7 @@ export class BottomEditor extends LitElement {
         this._tabIdx = 0;
     }
     get files(): { name: string; code: string }[] {
+        if (this._editor && this._tabs.length > 0) this._tabs[this._tabIdx].code = this._editor.state.doc.toString();
         return this._tabs.map(f => ({ name: f.name, code: f.code }));
     }
 
@@ -496,6 +497,29 @@ export class BottomEditor extends LitElement {
                 );
             }, 2000);
         }
+    }
+
+    /**
+     * Replace one file's content; the main file is the same as setting sourceCode.
+     * A file the student deleted comes back.
+     */
+    setFileCode(name: string, code: string) {
+        if (this._tabs.length === 0 || name === this._tabs[0].name) {
+            this.sourceCode = code;
+            return;
+        }
+        const idx = this._tabs.findIndex(t => t.name === name);
+        if (idx === this._tabIdx) {
+            this.replaceDoc(code);
+            return;
+        }
+        if (idx >= 0) {
+            this._tabs = this._tabs.map((t, i) => i === idx ? { ...t, code } : t);
+        } else {
+            const authored = this._initialTabs.find(t => t.name === name);
+            this._tabs = [...this._tabs, authored ? { ...authored, code } : { name, code, initialCode: '', added: true }];
+        }
+        this._saveState();
     }
 
     /** Trigger an immediate save (used by <bottom-exercise> after state transitions). */
