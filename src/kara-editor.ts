@@ -10,7 +10,6 @@ if (!customElements.get('kara-world')) {
 }
 
 import { dedentWorld } from './kara-world.js'
-import { transformKaraCode } from './kara-transform.js'
 
 const DEFAULT_WORLD = `
 ###########
@@ -89,7 +88,7 @@ export class KaraEditor extends LitElement {
 
     // Stable reference — Lit won't diff-update bottom-editor on every render.
     private readonly _transform = (editorCode: string): string => {
-        return this._prefix + transformKaraCode(editorCode);
+        return this._prefix + editorCode;
     };
 
     private get _readyCode(): string {
@@ -117,6 +116,7 @@ export class KaraEditor extends LitElement {
                 layout="split"
                 .sourceCode=${this._userCode}
                 .transformCode=${this._transform}
+                .asyncRun=${true}
                 .transformLineOffset=${this._prefixLineCount}
                 .readyCode=${this._readyCode}
                 .permalinkCallback=${this._permalink}

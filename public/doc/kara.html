@@ -168,7 +168,10 @@ kara.putLeaf()
 <td>Pick up the leaf on the current cell</td>
 </tr>
 </tbody></table>
-<p><code>await</code> is inserted automatically — just write <code>kara.move()</code>, not <code>await kara.move()</code>.</p>
+<p>Each action pauses for the animation delay (the <code>step</code> attribute, in milliseconds), and the
+line that Kara is executing is highlighted meanwhile. Other statements run at full speed. The
+animation needs a current browser (Chrome/Edge 137+, Firefox 153+, Safari 27+); older browsers
+run Kara without the delay and show only the final world.</p>
 <hr>
 <h2>Sensors</h2>
 <table>
@@ -291,9 +294,8 @@ while not kara.onLeaf():
 
 <hr>
 <h2>User-defined functions</h2>
-<p>Regular Python <code>def</code> functions work as expected — the editor automatically
-makes them <code>async</code> and inserts <code>await</code> before Kara commands, so you never need
-to write those yourself.</p>
+<p>Kara commands are ordinary Python functions, so your own functions work as usual: you can
+call them from loops, pass them to <code>map</code> or <code>sorted</code>, or call them recursively.</p>
 <pre><code class="language-python">def go_and_return(steps):
     for i in range(steps):
         kara.move()

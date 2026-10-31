@@ -4,7 +4,6 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js'
 import './exercise.js'
 import karaShimSrc from './kara-shim.py?raw'
 import { dedentWorld, renderKaraWorld } from './kara-world.js'
-import { transformKaraCode } from './kara-transform.js'
 import { encodeExercise } from './exercise-permalink.js'
 
 // Minimal custom elements so the browser doesn't treat them as unknown inline.
@@ -178,7 +177,7 @@ export class KaraExercise extends LitElement {
     }
 
     private readonly _transform = (editorCode: string): string =>
-        this._prefix + transformKaraCode(editorCode);
+        this._prefix + editorCode;
 
     private get _readyCode(): string { return this._prefix; }
 
@@ -224,6 +223,7 @@ export class KaraExercise extends LitElement {
                 layout="split"
                 .code=${this._userCode}
                 .transformCode=${this._transform}
+                .asyncRun=${true}
                 .transformLineOffset=${this._prefixLineCount}
                 .readyCode=${this._readyCode}
                 .solution=${this._solutionCode}

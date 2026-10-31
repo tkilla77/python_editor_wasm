@@ -413,6 +413,10 @@ async function init(baseURL: string, indexURL: string) {
             return 'yield';
         };
         (self as any)._step_yield = () => new Promise(r => setTimeout(r, 0));
+        (self as any)._show_line = (lineNo: number) => {
+            flushStdout();
+            post('lineUpdate', { runId: currentRunId, line: lineNo });
+        };
         (self as any)._step_wait = () => new Promise<string>(r => { stepResolve = r; });
         (self as any)._pyWrite = (text: string) => {
             stdoutBuffer += text;
@@ -452,6 +456,20 @@ builtins.input = _input
 `, { filename: '<bottom-init>' });
         await py.runPythonAsync(`\nfrom js import console\n`);
         // Snapshot globals after init so RESET_GLOBALS knows what to preserve.
+        // Hook for animated libraries (Kara): highlight the student's line that is running.
+        py.runPython(`
+import sys as __show_sys
+def __show_user_line__():
+    g = globals()
+    lo, hi = g.get('__energy_min_line__', 0), g.get('__energy_max_line__', 0)
+    f = __show_sys._getframe(1)
+    while f is not None:
+        if f.f_code.co_filename == '<exec>' and lo < f.f_lineno <= hi:
+            from js import _show_line
+            _show_line(f.f_lineno)
+            return
+        f = f.f_back
+`, { filename: '<bottom-init>' });
         await py.runPython(`__init_globals__ = frozenset(globals()) | {'__init_globals__'}`);
         post('ready', { canStep });
     } catch (err: any) {
@@ -640,9 +658,11 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 : code;
             // Stepping blocks via run_sync, which only works under runPythonAsync.
             const useStepTrace = canStep && !!(msg as any).step;
-            syncRun = !needsAsync && !useStepTrace;
+            // async: library code may block with run_sync (e.g. Kara's animation delay).
+            const runAsync = needsAsync || useStepTrace || !!(msg as any).async;
+            syncRun = !runAsync;
             const runFilename: string = (msg as any).filename ?? '<exec>';
-            const runCode = needsAsync || useStepTrace
+            const runCode = runAsync
                 ? (c: string) => py.runPythonAsync(c, { filename: runFilename })
                 : (c: string) => Promise.resolve(py.runPython(c, { filename: runFilename }));
             // The trace slows every line, so only install it when someone reads the count.
@@ -736,8 +756,10 @@ self.onmessage = async (ev: MessageEvent<Msg>) => {
                 ? code.replace(/\binput\s*\(/g, 'await input(')
                 : code;
             const useStepTrace = canStep && !!(msg as any).step;
-            syncRun = !needsAsync && !useStepTrace;
-            const runCode = needsAsync || useStepTrace
+            // async: library code may block with run_sync (e.g. Kara's animation delay).
+            const runAsync = needsAsync || useStepTrace || !!(msg as any).async;
+            syncRun = !runAsync;
+            const runCode = runAsync
                 ? (c: string) => py.runPythonAsync(c)
                 : (c: string) => Promise.resolve(py.runPython(c));
             try {

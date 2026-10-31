@@ -224,6 +224,10 @@ export class BottomEditor extends LitElement {
     @property({ attribute: false })
     codePrefix: string = '';
 
+    /** Run through the async path so library code can block (Kara's animation delay). */
+    @property({ attribute: false })
+    asyncRun = false;
+
     /**
      * Optional transform applied to the full code (codePrefix + editor text)
      * just before execution. Use this to inject wrapping or rewrite syntax.
@@ -926,6 +930,11 @@ export class BottomEditor extends LitElement {
         if (this._stepPlaying) this._scheduleAutoStep();
     }
 
+    /** A library (Kara) reports the line it is animating; the debugger's own highlight wins. */
+    private _onLine = (line: number) => {
+        if (!this._stepping) this._updateStepLine(line - this._prefixLines());
+    };
+
     /** Start a run: 'run' (Run button), 'step' (paused on line 1) or 'play' (auto-step). */
     private _startRun(mode: 'run' | 'step' | 'play') {
         this._pendingMode = mode;
@@ -954,7 +963,8 @@ export class BottomEditor extends LitElement {
                 this._extraFiles(),
                 (energy: number) => { if (this._showsEnergy) this._energy = energy; },
                 step?.onStep,
-                { lineOffset: this._prefixLines(), countEnergy: this.showenergy, ...step?.opts },
+                { lineOffset: this._prefixLines(), countEnergy: this.showenergy, async: this.asyncRun, ...step?.opts },
+                this._onLine,
             );
             if (this.autofit) this._handleFitRequest();
         } catch (err: any) {
@@ -966,6 +976,7 @@ export class BottomEditor extends LitElement {
             if (this._buttons) this._buttons.running = false;
             if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
             this._endStepping();
+            this._updateStepLine(null);
         }
     }
 
@@ -1028,8 +1039,9 @@ export class BottomEditor extends LitElement {
             }, this._extraFiles(), {
                 lineOffset: this._prefixLines(),
                 countEnergy: this.showenergy || !!opts?.countEnergy,
+                async: this.asyncRun,
                 ...step?.opts,
-            }, step?.onStep, () => this._endStepping());
+            }, step?.onStep, () => this._endStepping(), this._onLine);
             this._energy = this._showsEnergy || opts?.countEnergy ? report.energy ?? null : null;
             return report;
         } catch (err: any) {
@@ -1042,6 +1054,7 @@ export class BottomEditor extends LitElement {
             if (this._buttons) this._buttons.running = false;
             if (this._offscreenCanvas && !this._swCanvas) this._swCanvasHasNew = true;
             this._endStepping();
+            this._updateStepLine(null);
         }
     }
 

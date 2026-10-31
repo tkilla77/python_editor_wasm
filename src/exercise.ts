@@ -95,6 +95,8 @@ export class BottomExercise extends LitElement {
 
     // ── Kara / custom-transform pass-throughs ─────────────────────────────────
 
+    /** Forwarded to <bottom-editor>: run via the async path so library code can block. */
+    @property({ attribute: false }) asyncRun = false;
     /** Optional code transform forwarded to the inner <bottom-editor>. */
     @property({ attribute: false }) transformCode?: (code: string) => string;
     /** Extra prefix lines added by transformCode for error-line mapping. */
@@ -443,6 +445,7 @@ export class BottomExercise extends LitElement {
                 .permalinkCallback=${this.permalinkOverride ?? (() => this.shareExercise())}
                 .onRun=${() => this.runTests()}
                 .transformCode=${this.transformCode}
+                .asyncRun=${this.asyncRun}
                 .transformLineOffset=${this.transformLineOffset}
                 .readyCode=${this.readyCode}
                 .storageKey=${this._effectiveId() ?? ''}

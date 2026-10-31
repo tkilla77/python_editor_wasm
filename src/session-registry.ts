@@ -1,4 +1,4 @@
-import { PyodideRuntime, type RuntimeCallbacks, type TestReport, type StepUpdateCallback, type RunOptions } from './pyodide-runtime.js';
+import { PyodideRuntime, type RuntimeCallbacks, type TestReport, type StepUpdateCallback, type RunOptions, type LineCallback } from './pyodide-runtime.js';
 
 export type MemberCallbacks = {
     onLog:    (data: string) => void;
@@ -36,15 +36,16 @@ export class EditorHandle {
         onEnergy?: (energy: number) => void,
         onStepUpdate?: StepUpdateCallback,
         opts?: RunOptions,
+        onLine?: LineCallback,
     ) {
-        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs, extraFiles, onEnergy, onStepUpdate, opts);
+        return this._runtime.runAs(code, onStdout, this.editorId, this._timeoutMs, extraFiles, onEnergy, onStepUpdate, opts, onLine);
     }
     /** Run setup code (readyCode); its lines never count as energy. */
     runSetup(code: string) {
         return this.run(code, () => {}, undefined, undefined, undefined, { filename: '<bottom-ready>' });
     }
-    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void): Promise<TestReport> {
-        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles, opts, onStepUpdate, onStepDone);
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void, onLine?: LineCallback): Promise<TestReport> {
+        return this._runtime.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, this._timeoutMs, extraFiles, opts, onStepUpdate, onStepDone, onLine);
     }
     loadZip(url: string) { return this._runtime.loadZip(url); }
     setCanvas(canvas: OffscreenCanvas) { return this._runtime.setCanvasFor(canvas, this.editorId); }

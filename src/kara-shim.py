@@ -7,6 +7,7 @@ available as a global and `_kara_setup(world_str, step_ms)` has been called.
 import asyncio
 import math
 import pyodide_js as _pjs
+from pyodide.ffi import run_sync as _run_sync, can_run_sync as _can_run_sync
 
 # Cell types
 _EMPTY = 0
@@ -59,45 +60,45 @@ class _Kara:
 
     # ------------------------------------------------------------------ moves
 
-    async def move(self):
+    def move(self):
         g = self._g
         dx, dy = _DIRS[g.kara_dir]
         nx, ny = g.kara_x + dx, g.kara_y + dy
         front  = g.at(nx, ny)
         if front == _TREE:
-            await self._step()
+            self._step()
             raise KaraException('Tree blocking the path!')
         if front == _MUSH:
             mx2, my2 = nx + dx, ny + dy
             if g.at(mx2, my2) not in (_EMPTY, _LEAF):
-                await self._step()
+                self._step()
                 raise KaraException('Cannot push mushroom — blocked!')
             g.cells[ny][nx]   = _EMPTY
             g.cells[my2][mx2] = _MUSH
         g.kara_x, g.kara_y = nx, ny
-        await self._step()
+        self._step()
 
-    async def turnLeft(self):
+    def turnLeft(self):
         self._g.kara_dir = (self._g.kara_dir - 1) % 4
-        await self._step()
+        self._step()
 
-    async def turnRight(self):
+    def turnRight(self):
         self._g.kara_dir = (self._g.kara_dir + 1) % 4
-        await self._step()
+        self._step()
 
-    async def putLeaf(self):
+    def putLeaf(self):
         g = self._g
         if g.cells[g.kara_y][g.kara_x] == _LEAF:
             raise KaraException('Already a leaf here!')
         g.cells[g.kara_y][g.kara_x] = _LEAF
-        await self._step()
+        self._step()
 
-    async def removeLeaf(self):
+    def removeLeaf(self):
         g = self._g
         if g.cells[g.kara_y][g.kara_x] != _LEAF:
             raise KaraException('No leaf here!')
         g.cells[g.kara_y][g.kara_x] = _EMPTY
-        await self._step()
+        self._step()
 
     # --------------------------------------------------------------- sensors
 
@@ -144,10 +145,15 @@ class _Kara:
 
     # ---------------------------------------------------------------- internals
 
-    async def _step(self):
+    def _step(self):
         _kara_draw()
-        if self._ms > 0:
-            await asyncio.sleep(self._ms / 1000)
+        # Blocking needs JSPI and a run started via runPythonAsync; without it,
+        # Kara still works, just without the animation delay.
+        if self._ms > 0 and _can_run_sync():
+            show = globals().get('__show_user_line__')
+            if show:
+                show()
+            _run_sync(asyncio.sleep(self._ms / 1000))
 
 
 # ---------------------------------------------------------------------------

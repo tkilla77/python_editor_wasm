@@ -22,7 +22,12 @@ export type RunOptions = {
     /** Stepped runs: 'wait' pauses on the first line, 'free' runs until a breakpoint. */
     stepStart?: 'wait' | 'free';
     breakpoints?: number[];
+    /** Run via runPythonAsync even without awaits, so library code can block with run_sync. */
+    async?: boolean;
 };
+
+/** Called with the running line (worker numbering) when a library reports progress. */
+export type LineCallback = (line: number) => void;
 
 export type StepUpdateCallback = (line: number, locals: Record<string, string>, energy: number) => void;
 
@@ -51,6 +56,7 @@ export class PyodideRuntime {
         onEnergy?: (energy: number) => void;
         onStepUpdate?: StepUpdateCallback;
         onStepDone?: () => void;
+        onLine?: LineCallback;
     }>();
     private interruptBuffer?: Uint8Array;
     /** True when the browser supports JSPI, which stepping needs. Known once ready. */
@@ -83,8 +89,9 @@ export class PyodideRuntime {
         onEnergy?: (energy: number) => void,
         onStepUpdate?: StepUpdateCallback,
         opts?: RunOptions,
+        onLine?: LineCallback,
     ): Promise<void> {
-        return this.runAs(code, onStdout, this.editorId, undefined, extraFiles, onEnergy, onStepUpdate, opts);
+        return this.runAs(code, onStdout, this.editorId, undefined, extraFiles, onEnergy, onStepUpdate, opts, onLine);
     }
 
     runAs(
@@ -96,6 +103,7 @@ export class PyodideRuntime {
         onEnergy?: (energy: number) => void,
         onStepUpdate?: StepUpdateCallback,
         opts?: RunOptions,
+        onLine?: LineCallback,
     ): Promise<void> {
         // Stepped runs are paced by the user (who can press Stop), so they never time out.
         const tms = onStepUpdate ? Infinity : timeoutMs ?? this.RUN_TIMEOUT_MS;
@@ -109,7 +117,7 @@ export class PyodideRuntime {
                     this.terminateAndRespawn();
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
-                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onEnergy, onStepUpdate });
+                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onEnergy, onStepUpdate, onLine });
                 this.worker?.postMessage({ type: 'run', code, runId, editorId, extraFiles, step: !!onStepUpdate, ...opts });
             });
         };
@@ -122,12 +130,12 @@ export class PyodideRuntime {
      * Run user code, then run test assertions in the same Python namespace.
      * Resolves with a structured TestReport. Rejects if user code errors.
      */
-    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void): Promise<TestReport> {
-        return this.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, undefined, extraFiles, opts, onStepUpdate, onStepDone);
+    runWithTests(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void, onLine?: LineCallback): Promise<TestReport> {
+        return this.runWithTestsAs(code, tests, readyCode, onStdout, this.editorId, undefined, extraFiles, opts, onStepUpdate, onStepDone, onLine);
     }
 
     /** onStepUpdate steps through the user's code only; onStepDone fires before the tests start. */
-    runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void): Promise<TestReport> {
+    runWithTestsAs(code: string, tests: string, readyCode: string, onStdout: (data: string) => void, editorId: string, timeoutMs?: number, extraFiles?: { name: string; code: string }[], opts?: RunOptions, onStepUpdate?: StepUpdateCallback, onStepDone?: () => void, onLine?: LineCallback): Promise<TestReport> {
         // Stepped runs are paced by the user (who can press Stop), so they never time out.
         const tms = onStepUpdate ? Infinity : timeoutMs ?? this.RUN_TIMEOUT_MS;
         const doRun = async (): Promise<TestReport> => {
@@ -140,7 +148,7 @@ export class PyodideRuntime {
                     this.terminateAndRespawn();
                     reject(new Error(`Execution timed out after ${secs}s`));
                 }, tms);
-                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onStepUpdate, onStepDone });
+                this.pendingRuns.set(runId, { resolve, reject, timeout, onStdout, onStepUpdate, onStepDone, onLine });
                 this.worker?.postMessage({ type: 'runWithTests', code, tests, readyCode, runId, editorId, extraFiles, step: !!onStepUpdate, ...opts });
             });
         };
@@ -362,6 +370,10 @@ export class PyodideRuntime {
         if (msg.type === 'stepUpdate') {
             const run = msg.runId !== undefined ? this.pendingRuns.get(msg.runId) : undefined;
             run?.onStepUpdate?.(msg.line, msg.locals ?? {}, msg.energy ?? 0);
+            return;
+        }
+        if (msg.type === 'lineUpdate') {
+            this.pendingRuns.get(msg.runId)?.onLine?.(msg.line);
             return;
         }
         if (msg.type === 'stepDone') {
